@@ -370,6 +370,7 @@ class ygHintView(QGraphicsItem, ygSelectable):
                 g._remove_labels()
 
     # Adapted from https://stackoverflow.com/questions/6340351/iterating-through-list-of-list-in-python
+    # Presumed public domain.
     def _traverse(self, o):
         if isinstance(o, list):
             for value in o:
@@ -501,8 +502,6 @@ class ygHintView(QGraphicsItem, ygSelectable):
             point as untouched.
 
         """
-        # if self.yg_hint.hint_type() in ["function", "macro"]:
-        #    return
         self._touch_untouch(self._target_list(), False)
 
     def _process_click_on_hint(self, obj, with_shift, is_left):
@@ -696,11 +695,6 @@ class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
         # parent setup not needed
         self.parent = parent
         self.setCursor(Qt.CursorShape.CrossCursor)
-        # measuring the bounding box for the two end-points.
-        # begin_x = p1.glocation.x()
-        # begin_y = p1.glocation.y()
-        # end_x = p2.glocation.x()
-        # end_y = p2.glocation.y()
         begin_a = p1.attachment_point(p2.center_point)
         begin_x = begin_a.x()
         begin_y = begin_a.y()
@@ -995,7 +989,6 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
                 p = p.main_point()
             ptv = self.yg_viewer.yg_point_view_index[p.id]
             h = HintPointMarker(self.yg_viewer, ptv, self.hint_type, name=k)
-            # h.setZValue(zcounter)
             zcounter += 1
             marker_list.append(h)
         return marker_list
@@ -1188,7 +1181,6 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
 
     def __init__(self, viewer, yg_point, gwidget):
         self._is_selected = False
-        # self.id = uuid.uuid1()
         self.yg_point = yg_point
         if yg_point.on_curve:
             self.diameter = POINT_ONCURVE_DIA
@@ -1302,10 +1294,9 @@ class ygGlyphViewer(QGraphicsScene):
 
     sig_new_hint = pyqtSignal(object)
     sig_viewer_ready = pyqtSignal()
-    sig_reverse_hint = pyqtSignal(object) # was rev_hint
+    sig_reverse_hint = pyqtSignal(object)
     sig_change_hint_color = pyqtSignal(object)
     sig_off_curve_visibility = pyqtSignal()
-    #sig_make_set = pyqtSignal(object)
     sig_make_macfunc = pyqtSignal(object)
     sig_assign_macfunc_point = pyqtSignal(object)
     sig_edit_macfunc_params = pyqtSignal(object)
@@ -1356,7 +1347,6 @@ class ygGlyphViewer(QGraphicsScene):
         self.sig_change_hint_color.connect(self.change_hint_color)
         self.sig_edit_macfunc_params.connect(self.edit_macfunc_params)
         self.sig_off_curve_visibility.connect(self.toggle_off_curve_visibility)
-        # self.sig_make_set.connect(self.make_set)
         self.sig_make_macfunc.connect(self.make_macfunc)
         self.sig_macfunc_target.connect(self.macfunc_target)
         self.sig_macfunc_ref.connect(self.macfunc_ref)
@@ -1854,8 +1844,6 @@ class ygGlyphViewer(QGraphicsScene):
                     ppp = pp[counter]
                     if type(ppp) is ygPointView:
                         ppp = self.yg_glyph.points_to_labels(ppp.yg_point)
-                    #if type(ppp) is ygSetView: # Is this needed? Try without it.
-                    #    ppp = ppp.yg_set
                     pt_dict[p] = ppp
                     counter += 1
                 except IndexError:
@@ -1864,12 +1852,6 @@ class ygGlyphViewer(QGraphicsScene):
             h = {"ptid": pt_dict, hint_type: other_params}
             yg_hint = ygHint(self.yg_glyph, h)
 
-            # And make a ygParams object to hold these parameters
-            # yg_params = ygModel.ygParams(hint_type, name, pt_dict, other_params)
-
-            # Build the hint and notify the model of its existence.
-            # yg_hint = ygModel.ygHint(self.yg_glyph, yg_params, None, other_args=other_params)
-            # yg_hint.hint_type() = hint_type
             self.sig_new_hint.emit(yg_hint)
 
 
@@ -2156,8 +2138,7 @@ class ygGlyphViewer(QGraphicsScene):
         # Test whether user can make a set. The rules are:
         #    1. More than one point must be selected.
         #    2. One selected point must be touched by a shift, align or
-        #       interpolate instruction (types 1 and 2). This becomes the
-        #       main point.***
+        #       interpolate instruction (types 1 and 2).
         touched_point = None
         num_of_selected_points = len(selected_points)
         try:
@@ -2169,12 +2150,6 @@ class ygGlyphViewer(QGraphicsScene):
                             break
         except Exception:
             pass
-
-        #cmenu.addSeparator()
-        #make_set = cmenu.addAction("Make set")
-        #if not touched_point:
-        #    make_set.setEnabled(False)
-        #    make_set.setVisible(False)
 
         # Functions and macros. Each is marked for which params are points, which are control
         # values, and which are others. For each count up the point params and show only those
@@ -2219,11 +2194,8 @@ class ygGlyphViewer(QGraphicsScene):
 
         if action == toggle_off_curve_visibility:
             self.sig_off_curve_visibility.emit()
-            # self.toggle_off_curve_visibility()
         if action == toggle_point_number_visibility:
             self.sig_toggle_point_numbers.emit()
-        #if touched_point and (action == make_set):
-        #    self.sig_make_set.emit({"selected_points": selected_points, "touched_point": touched_point})
         if hint and (action == reverse_hint):
             self.sig_reverse_hint.emit(hint.yg_hint)
         if hint and action in cv_anchor_action_list:
@@ -2279,8 +2251,6 @@ class MyView(QGraphicsView):
         self.original_transform = self.transform()
         self.yg_font = font
         self.preferences = preferences
-        # self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        # self.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     def setup_goto_signal(self, o):
         self.sig_goto.connect(o)
@@ -2319,22 +2289,29 @@ class MyView(QGraphicsView):
 
     def switch_from_font_viewer(self, gname):
         self.parent().parent().disconnect_glyph_pane()
-        # self.sender().disconnect()
         self.switch_to(gname)
         self.parent().parent().setup_glyph_pane_connections()
-
 
     def switch_to(self, gname):
         self.viewer.yg_glyph.save_source()
         new_glyph = ygGlyph(self.preferences, self.yg_font, gname)
         self.viewer = ygGlyphViewer(self.preferences, new_glyph)
-        # self.preferences.set_current_glyph(self.preferences[self.yg_font.full_name()], gname)
         self.preferences.set_current_glyph(self.yg_font.full_name(), gname)
         self.setScene(self.viewer)
         self.centerOn(self.viewer.glyphwidget.center_x, self.sceneRect().center().y())
         self.parent().parent().set_window_title()
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
+
+    def switch_to_x(self):
+        if self.viewer:
+            self.viewer.yg_glyph.switch_to_vector("x")
+            self.parent().parent().set_window_title()
+
+    def switch_to_y(self):
+        if self.viewer:
+            self.viewer.yg_glyph.switch_to_vector("y")
+            self.parent().parent().set_window_title()
 
     def set_background(self):
         self.setBackgroundBrush(QBrush(QColor(200,200,200,255)))
