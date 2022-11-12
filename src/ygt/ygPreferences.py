@@ -1,4 +1,6 @@
 import yaml
+import os
+import platform
 from yaml import Loader, Dumper
 import sys
 
@@ -64,17 +66,28 @@ class ygPreferences(dict):
             self["points_as"] = val
 
     def save_config(self):
+        config_dir = os.path.expanduser('~/.ygt/')
+        if not os.path.isdir(config_dir):
+            try:
+                os.mkdir(config_dir)
+            except Exception as e:
+                print("Exception while saving preferences:")
+                print(e)
+                return
+        config_file = os.path.join(config_dir, "ygt_config.yaml")
         save_dict = {}
         k = self.keys()
         for kk in k:
             if not kk in ["top_window", "current_font"]:
                 save_dict[kk] = self[kk]
-        with open("yg_config.yaml", "w") as f:
+        with open(config_file, "w") as f:
             f.write(yaml.dump(save_dict, sort_keys=False, Dumper=Dumper))
 
 def open_config(top_window):
     try:
-        with open("yg_config.yaml", 'r') as pstream:
+        config_path = os.path.expanduser('~/.ygt/ygt_config.yaml')
+        print(config_path)
+        with open(config_path, 'r') as pstream:
             pref_dict = yaml.safe_load(pstream)
         p = ygPreferences()
         k = pref_dict.keys()
