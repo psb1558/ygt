@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 from fontTools import ttLib
 import yaml
+import os
 from yaml import Dumper
 import uuid
 import sys
@@ -119,9 +120,22 @@ class ygFont:
     """
     def __init__(self, source_file, yaml_filename=None):
         self.source_file = SourceFile(source_file, yaml_filename=yaml_filename)
+        # Things will break if we're not in the same directory as the yaml file.
+        # Try to chdir in that case, but if things don't work out, just skip it.
+        d = None
+        if isinstance(source_file, str) and source_file:
+            d = os.path.dirname(source_file)
+        elif yaml_filename:
+            d = os.path.dirname(yaml_filename)
+        if d and os.path.isdir(d) and d != os.getcwd():
+            os.chdir(d)
         self.source      = self.source_file.get_source()
         self.font_files  = FontFiles(self.source)
-        self.ft_font     = ttLib.TTFont(self.font_files.in_font())
+        fontfile = self.font_files.in_font()
+        try:
+            self.ft_font = ttLib.TTFont(fontfile)
+        except FileNotFoundError:
+            raise Exception("Can't find font file " + str(fontfile))
         self.glyphs      = ygGlyphs(self.source).data
         self.defaults    = ygDefaults(self, self.source)
         self.cvt         = ygcvt(self, self.source)
@@ -637,6 +651,16 @@ class ygGlyph(QObject):
 
         self.sig_hints_changed.connect(self.hints_changed)
 
+    def switch_to_vector(self, new_vector):
+        if self._current_vector == new_vector:
+            return
+        self.save_source()
+        self._current_vector = new_vector
+        self._yaml_add_parents(self.current_block())
+        self._yaml_supply_refs(self.current_block())
+        self.sig_hints_changed.emit(self.hints())
+        self.send_yaml_to_editor()
+
     def current_vector(self):
         return self._current_vector
 
@@ -822,14 +846,15 @@ class ygGlyph(QObject):
         self.sig_hints_changed.emit(self.hints())
         self.send_yaml_to_editor()
 
-    def hints_changed(self, hint_list):
+    def hints_changed(self, hint_list, dirty=True):
         """ Called by signal. *** Is this the best way to do this? Calling
             ygGlyphView directly? Figure out something else (compare
             sig_glyph_source_ready, for which we didn't have to import
             anything).
 
         """
-        self.set_dirty()
+        if dirty:
+            self.set_dirty()
         from .ygHintEditor import ygGlyphViewer
         if self.glyph_viewer:
             self.glyph_viewer.install_hints(hint_list)
