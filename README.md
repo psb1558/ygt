@@ -25,6 +25,6 @@ You will generally want to keep the font view window open alongside the main win
 In this window, glyphs that are already hinted are highlighted in blue, and you can navigate to any glyph by clicking on its image. YAML source for functions, macros, the cvt table, and the cvar table (for variable fonts) can be edited in other windows:
 ![cvt editing window](images/cvt.png)
 
-This is the cvt table. Graphical methods for editing it and some or most of the others will be added eventually.
+This is the cvt table. Graphical methods for editing it and some or most of the others will be added in due course.
 
 This project may be too big for one person. I invite anyone with an interest in TrueType hinting and some knowledge of one or more of ygt’s major dependencies (PyQt6, fontTools, and FreeType) to contribute by adding features, fixing bugs, or cleaning up my amateurish Python code. All contributors will be credited.
