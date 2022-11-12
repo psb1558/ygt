@@ -1,6 +1,7 @@
 import sys
 import os
 import copy
+import platform
 import freetype
 from .ygModel import ygFont, ygGlyph
 from .fontViewDialog import fontViewDialog
@@ -79,7 +80,6 @@ class MainWindow(QMainWindow):
 
         self.save_action = self.file_menu.addAction("Save")
         self.save_action.setShortcut(QKeySequence.StandardKey.Save)
-        # self.save_action.setEnabled(False)
 
         self.save_as_action = self.file_menu.addAction("Save As...")
         self.save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs)
@@ -89,7 +89,6 @@ class MainWindow(QMainWindow):
 
         self.save_font_action = self.file_menu.addAction("Export Font...")
         self.save_font_action.setShortcut(QKeySequence("Ctrl+e"))
-        # self.save_font_action.setEnabled(False)
 
         self.quit_action = self.file_menu.addAction("Quit")
         self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)
@@ -132,13 +131,8 @@ class MainWindow(QMainWindow):
 
         self.preview_menu.addSeparator()
 
-        self.pv_set_size_action = self.preview_menu.addAction("Points per Em...")
+        self.pv_set_size_action = self.preview_menu.addAction("Pixels per Em...")
         self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+p"))
-
-        # self.pv_toggle_hinting_action = QAction("Show hinting", checkable=True)
-        # self.preview_menu.addAction(self.pv_toggle_hinting_action)
-
-        # self.preview_menu.aboutToShow.connect(self.preview_menu_about_to_show)
 
         self.view_menu = self.menu.addMenu("&View")
 
@@ -177,6 +171,8 @@ class MainWindow(QMainWindow):
         vector_action_group.addAction(self.vertical_action)
         vector_action_group.addAction(self.horizontal_action)
         self.vertical_action.setChecked(True)
+        self.vertical_action.setEnabled(False)
+        self.horizontal_action.setEnabled(False)
 
         cursor_action_group = QActionGroup(self.toolbar)
         cursor_action_group.setExclusive(True)
@@ -187,7 +183,6 @@ class MainWindow(QMainWindow):
         cursor_icon.addPixmap(QPixmap(self.icon_path + "cursor-icon-off.png"), state=QIcon.State.Off)
         self.cursor_action.setIcon(cursor_icon)
         self.cursor_action.setCheckable(True)
-        # self.cursor_action.setChecked(True)
 
         self.toolbar.insertSeparator(self.cursor_action)
 
@@ -197,11 +192,12 @@ class MainWindow(QMainWindow):
         hand_icon.addPixmap(QPixmap(self.icon_path + "hand-icon-off.png"), state=QIcon.State.Off)
         self.hand_action.setIcon(hand_icon)
         self.hand_action.setCheckable(True)
-        # self.hand_action.setChecked(False)
 
         cursor_action_group.addAction(self.cursor_action)
         cursor_action_group.addAction(self.hand_action)
         self.cursor_action.setChecked(True)
+        self.cursor_action.setEnabled(False)
+        self.hand_action.setEnabled(False)
 
         self.black_action = self.toolbar.addAction("Black Distance (B)")
         self.black_action.setIcon(QIcon(QPixmap(self.icon_path + "black_distance.png")))
@@ -360,6 +356,8 @@ class MainWindow(QMainWindow):
         self.shift_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
         self.align_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
         self.make_set_action.triggered.connect(self.glyph_pane.viewer.make_set)
+        self.vertical_action.triggered.connect(self.glyph_pane.switch_to_y)
+        self.horizontal_action.triggered.connect(self.glyph_pane.switch_to_x)
 
     def setup_edit_connections(self):
         self.edit_cvt_action.triggered.connect(self.edit_cvt)
@@ -368,36 +366,6 @@ class MainWindow(QMainWindow):
         self.edit_functions_action.triggered.connect(self.edit_functions)
         self.edit_macros_action.triggered.connect(self.edit_macros)
         self.edit_defaults_action.triggered.connect(self.edit_defaults)
-
-    #def disconnect_hint(self):
-    #    try:
-    #        self.black_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
-    #    try:
-    #        self.white_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
-    #    try:
-    #        self.gray_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
-    #    try:
-    #        self.anchor_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
-    #    try:
-    #        self.interpolate_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
-    #    try:
-    #        self.shift_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
-    #    try:
-    #        self.align_action.triggered.disconnect(self.glyph_pane.viewer.make_hint_from_selection)
-    #    except Exception:
-    #        pass
 
     def setup_preview_connections(self):
         self.save_current_glyph_action.triggered.connect(self.preview_current_glyph)
@@ -473,16 +441,6 @@ class MainWindow(QMainWindow):
         self.source_editor.disconnect_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
         self.disconnect_cursor()
 
-    #def setup_connections(self):
-    #    # This can safely be run when the program has just started, but not
-    #    # later.
-    #    self.setup_glyph_pane_connections()
-    #    self.setup_file_connections()
-    #    self.setup_hint_connections()
-    #    self.setup_nav_connections()
-    #    self.setup_zoom_connections()
-    #    self.setup_preview_connections()
-
     def add_preview(self, previewer):
         self.yg_preview = previewer
         self.preview_scroller = QScrollArea()
@@ -531,7 +489,6 @@ class MainWindow(QMainWindow):
         f = QFileDialog.getOpenFileName(self, "Open TrueType font or YAML file",
                                                "",
                                                "Files (*.ttf *.yaml)")
-        print(type(f))
         try:
             os.chdir(os.path.split(f[0])[0])
             self._open(f)
@@ -558,6 +515,10 @@ class MainWindow(QMainWindow):
         self.interpolate_action.setEnabled(True)
         self.anchor_action.setEnabled(True)
         self.make_set_action.setEnabled(True)
+        self.vertical_action.setEnabled(True)
+        self.horizontal_action.setEnabled(True)
+        self.cursor_action.setEnabled(True)
+        self.hand_action.setEnabled(True)
 
         if filename and len(filename) > 0:
             self.preferences.add_recent(filename)
@@ -595,7 +556,6 @@ class MainWindow(QMainWindow):
                 self.yg_font = ygFont(yaml_source, yaml_filename=filename)
             else:
                 self.yg_font = ygFont(filename)
-            # This is not working.
             if ("current_glyph" in self.preferences and
                 self.yg_font.full_name() in self.preferences["current_glyph"]):
                 initGlyph = self.preferences["current_glyph"][self.yg_font.full_name()]
@@ -621,6 +581,7 @@ class MainWindow(QMainWindow):
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
         if self.glyph_pane:
             base += " -- " + self.glyph_pane.viewer.yg_glyph.gname
+            base += " (" + self.glyph_pane.viewer.yg_glyph.current_vector() + ")"
         self.setWindowTitle(base)
 
     def show_error_message(self, msg_list):
@@ -689,7 +650,9 @@ class MainWindow(QMainWindow):
             self.yg_preview.set_size(text)
 
     def quit(self):
-        if self.yg_font.clean():
+        if self.yg_font == None:
+            self.app.quit()
+        elif self.yg_font.clean():
             self.preferences.save_config()
             self.app.quit()
         else:
@@ -712,7 +675,7 @@ class MainWindow(QMainWindow):
 # if __name__ == "__main__":
 def main():
 
-    print(os.path.split(__file__)[0])
+    # print(os.path.split(__file__)[0])
 
     app = QApplication([])
     top_window = MainWindow(app)
