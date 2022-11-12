@@ -95,7 +95,7 @@ GLYPH_WIDGET_MARGIN =            50
 POINT_ONCURVE_DIA =              8
 POINT_OFFCURVE_DIA =             6
 
-hint_color = {"anchor":      HINT_ANCHOR_COLOR,
+HINT_COLOR = {"anchor":      HINT_ANCHOR_COLOR,
               "align":       HINT_ALIGN_COLOR,
               "shift":       HINT_SHIFT_COLOR,
               "interpolate": HINT_INTERPOLATE_COLOR,
@@ -108,7 +108,7 @@ hint_color = {"anchor":      HINT_ANCHOR_COLOR,
               "function":    HINT_FUNC_COLOR,
               "set":         SET_COLOR}
 
-selected_hint_color = {"anchor":      HINT_ANCHOR_SELECT_COLOR,
+SELECTED_HINT_COLOR = {"anchor":      HINT_ANCHOR_SELECT_COLOR,
                        "align":       HINT_ALIGN_SELECT_COLOR,
                        "shift":       HINT_SHIFT_SELECT_COLOR,
                        "interpolate": HINT_INTERPOLATE_SELECT_COLOR,
@@ -610,9 +610,9 @@ class ArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
         is_selected = kwargs["is_selected"]
         hint_type = kwargs["hint_type"]
         if is_selected:
-            pen_color = selected_hint_color[hint_type]
+            pen_color = SELECTED_HINT_COLOR[hint_type]
         else:
-            pen_color = hint_color[hint_type]
+            pen_color = HINT_COLOR[hint_type]
         pen = QPen(pen_color)
         pen.setWidth(SET_WIDTH)
         brush = QBrush(pen_color)
@@ -651,9 +651,9 @@ class ygBorderLine(QGraphicsLineItem, ygGraphicalHintComponent):
         is_selected = kwargs["is_selected"]
         hint_type = kwargs["hint_type"]
         if is_selected:
-            pen_color = selected_hint_color[hint_type]
+            pen_color = SELECTED_HINT_COLOR[hint_type]
         else:
-            pen_color = hint_color[hint_type]
+            pen_color = HINT_COLOR[hint_type]
         pen = QPen(pen_color)
         pen.setWidth(FUNC_BORDER_WIDTH)
         pen.setDashPattern([1,2])
@@ -818,9 +818,9 @@ class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
         pen = QPen()
         pen.setWidth(HINT_ARROW_WIDTH)
         if is_selected:
-            pen.setColor(selected_hint_color[hint_type])
+            pen.setColor(SELECTED_HINT_COLOR[hint_type])
         else:
-            pen.setColor(hint_color[hint_type])
+            pen.setColor(HINT_COLOR[hint_type])
         if hint_type == "whitespace":
             pen.setDashPattern([2,2])
         if hint_type == "grayspace":
@@ -889,11 +889,11 @@ class HintPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
         pen = QPen()
         pen.setWidth(HINT_ANCHOR_WIDTH)
         if is_selected:
-            pen.setColor(selected_hint_color[hint_type])
+            pen.setColor(SELECTED_HINT_COLOR[hint_type])
             if self.label:
                 self.label.show()
         else:
-            pen.setColor(hint_color[hint_type])
+            pen.setColor(HINT_COLOR[hint_type])
             if self.label:
                 self.label.hide()
         self.setPen(pen)
@@ -967,9 +967,9 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
         is_selected = kwargs["is_selected"]
         hint_type = kwargs["hint_type"]
         if is_selected:
-            pen_color = selected_hint_color[hint_type]
+            pen_color = SELECTED_HINT_COLOR[hint_type]
         else:
-            pen_color = hint_color[hint_type]
+            pen_color = HINT_COLOR[hint_type]
         pen = QPen(pen_color)
         pen.setWidth(FUNC_BORDER_WIDTH)
         pen.setDashPattern([1,2])
