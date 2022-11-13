@@ -33196,6 +33196,1246 @@ glyphs:
         - 7
         - 27
         rel: interpolate
+  uni1FBD:
+    y:
+      points:
+      - ptid: 15
+        points:
+        - ptid: 0
+          rel: grayspace
+          round: false
+  uni1FBE:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 14
+          rel: blackspace
+        - ptid: 4
+          rel: grayspace
+          round: false
+        pos: lc-baseline-undershoot
+  uni1FBF:
+    y:
+      points:
+      - ptid: 15
+        points:
+        - ptid: 0
+          rel: grayspace
+          round: false
+  uni1FC0:
+    y:
+      points:
+      - ptid: 14
+        points:
+        - ptid: 8
+          rel: shift
+        - ptid: 2
+          rel: grayspace
+          points:
+          - ptid: 11
+            rel: blackspace
+  uni1FCD:
+    y:
+      points:
+      - ptid: 16
+        points:
+        - ptid: 28
+          rel: shift
+        - ptid: 0
+          rel: grayspace
+          points:
+          - ptid: 22
+            rel: shift
+  uni1FCE:
+    y:
+      points:
+      - ptid: 16
+        points:
+        - ptid: 27
+          rel: shift
+        - ptid: 0
+          rel: grayspace
+          points:
+          - ptid: 26
+            rel: shift
+  uni1FCF:
+    y:
+      points:
+      - ptid: 15
+        points:
+        - ptid:
+          - 35
+          - 29
+          rel: shift
+        - ptid: 0
+          rel: grayspace
+      - ptid: 23
+        ref: 35
+        rel: grayspace
+        points:
+        - ptid: 32
+          rel: blackspace
+  uni1FDD:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid: 27
+          rel: shift
+        - ptid: 0
+          rel: grayspace
+          points:
+          - ptid: 21
+            rel: shift
+  uni1FDE:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid: 26
+          rel: shift
+        - ptid: 0
+          rel: grayspace
+          points:
+          - ptid: 25
+            rel: shift
+  uni1FDF:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid:
+          - 36
+          - 30
+          rel: shift
+          round: true
+        - ptid: 0
+          rel: grayspace
+      - ptid: 24
+        ref: 36
+        rel: grayspace
+        points:
+        - ptid: 33
+          rel: blackspace
+  uni1FED:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 12
+          rel: shift
+        - ptid: 6
+          rel: blackspace
+          dist: period-width
+          points:
+          - ptid: 18
+            rel: shift
+          - ptid: 25
+            rel: shift
+      - ptid: 24
+        ref:
+        - 0
+        - 6
+        rel: interpolate
+  uni1FEF:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 6
+          rel: blackspace
+  uni1FFD:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 5
+          rel: blackspace
+  uni1FFE:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid: 0
+          rel: grayspace
+  endash:
+    y:
+      points:
+      - ptid: 12
+        points:
+        - ptid: 5
+          rel: blackspace
+  emdash:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 5
+          rel: blackspace
+  uni2015:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 5
+          rel: blackspace
+  quoteleft:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 6
+          rel: grayspace
+  quoteright:
+    y:
+      points:
+      - ptid: 17
+        points:
+        - ptid: 0
+          rel: grayspace
+  quotesinglbase:
+    y:
+      points:
+      - ptid: 16
+        points:
+        - ptid: 0
+          rel: grayspace
+  quotereversed:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid: 0
+          rel: grayspace
+  dagger:
+    y:
+      points:
+      - ptid: 40
+      - ptid: 80
+      - ptid:
+        - 10
+        - 30
+        - 50
+        - 70
+        ref:
+        - 80
+        - 40
+        rel: interpolate
+  daggerdbl:
+    y:
+      points:
+      - ptid: 66
+      - ptid: 0
+      - ptid:
+        - 36
+        - 56
+        - 10
+        - 30
+        - 76
+        - 96
+        - 102
+        - 122
+        ref:
+        - 0
+        - 66
+        rel: interpolate
+  bullet:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 8
+          rel: blackspace
+  uni2023:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 1
+          rel: blackspace
+  onedotenleader:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 6
+          rel: blackspace
+          dist: period-width
+  ellipsis:
+    y:
+      points:
+      - ptid: 12
+        points:
+        - ptid:
+          - 24
+          - 0
+          rel: shift
+        - ptid: 18
+          rel: blackspace
+          dist: period-width
+          points:
+          - ptid:
+            - 30
+            - 6
+            rel: shift
+  uni2027:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 6
+          rel: blackspace
+          dist: period-width
+  perthousand:
+    y:
+      points:
+      - ptid: 46
+        pos: lc-baseline-undershoot
+        points:
+        - ptid: 81
+          rel: shift
+        - ptid: 0
+          rel: shift
+        - ptid: 62
+          rel: blackspace
+          points:
+          - ptid: 97
+            rel: shift
+      - ptid: 54
+        points:
+        - ptid: 89
+          rel: shift
+        - ptid: 71
+          rel: blackspace
+          points:
+          - ptid: 106
+            rel: shift
+      - ptid: 11
+        points:
+        - ptid: 27
+          rel: blackspace
+      - ptid: 19
+        points:
+        - ptid: 6
+          rel: shift
+        - ptid: 36
+          rel: blackspace
+  uni2031:
+    y:
+      points:
+      - ptid: 46
+        pos: lc-baseline-undershoot
+        points:
+        - ptid:
+          - 81
+          - 116
+          rel: shift
+        - ptid: 0
+          rel: shift
+        - ptid: 62
+          rel: blackspace
+          points:
+          - ptid:
+            - 97
+            - 132
+            rel: shift
+      - ptid: 54
+        points:
+        - ptid:
+          - 89
+          - 124
+          rel: shift
+        - ptid: 71
+          rel: blackspace
+          points:
+          - ptid:
+            - 106
+            - 141
+            rel: shift
+      - ptid: 19
+        points:
+        - ptid: 6
+          rel: shift
+        - ptid: 36
+          rel: blackspace
+      - ptid: 11
+        points:
+        - ptid: 27
+          rel: blackspace
+  minute:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 7
+          rel: blackspace
+  uni2034:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid:
+          - 20
+          - 40
+          rel: shift
+        - ptid: 9
+          rel: blackspace
+          points:
+          - ptid:
+            - 29
+            - 49
+            rel: shift
+  uni2035:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 10
+          rel: blackspace
+  uni2036:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 17
+          rel: shift
+        - ptid: 10
+          rel: blackspace
+          points:
+          - ptid: 27
+            rel: shift
+  uni2037:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid:
+          - 17
+          - 35
+          rel: shift
+        - ptid: 10
+          rel: blackspace
+          points:
+          - ptid:
+            - 27
+            - 45
+            rel: shift
+  uni203B:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 14
+          rel: shift
+      - ptid: 21
+        points:
+        - ptid: 7
+          rel: shift
+      - ptid:
+        - 63
+        - 57
+        ref:
+        - 0
+        - 21
+        rel: interpolate
+        round: true
+      - ptid:
+        - 27
+        ref:
+        - 0
+        - 21
+        rel: interpolate
+        round: true
+      - ptid: 39
+        ref: 27
+        rel: shift
+      - ptid: 33
+        ref: 27
+        rel: blackspace
+        dist: period-width
+        points:
+        - ptid: 45
+          rel: shift
+      - ptid: 51
+        ref: 57
+        rel: blackspace
+        dist: period-width
+      - ptid: 69
+        ref: 63
+        rel: blackspace
+        dist: period-width
+  exclamdbl:
+    y:
+      points:
+      - ptid: 60
+        points:
+        - ptid: 25
+          rel: shift
+        - ptid: 66
+          rel: blackspace
+          dist: period-width
+          points:
+          - ptid: 31
+            rel: shift
+          - ptid: 37
+            rel: whitespace
+            points:
+            - ptid: 0
+              rel: shift
+            - ptid: 48
+              rel: blackspace
+              points:
+              - ptid: 12
+                rel: shift
+  uni203D:
+    y:
+      points:
+      - ptid: 26
+        points:
+        - ptid: 32
+          rel: blackspace
+          dist: period-width
+          points:
+          - ptid: 0
+            rel: whitespace
+            points:
+            - ptid: 15
+              rel: blackspace
+      - ptid:
+        - 23
+        - 38
+        - 44
+        ref:
+        - 0
+        - 15
+        rel: interpolate
+  uni203E:
+    y:
+      points:
+      - ptid: 3
+        points:
+        - ptid: 2
+          rel: blackspace
+  uni203F:
+    y:
+      points:
+      - ptid: 13
+        points:
+        - ptid:
+          - 10
+          - 15
+          rel: shift
+        - ptid: 0
+          rel: blackspace
+  uni2040:
+    y:
+      points:
+      - ptid: 23
+        points:
+        - ptid:
+          - 0
+          - 20
+          rel: shift
+        - ptid: 10
+          rel: blackspace
+  uni2041:
+    y:
+      points:
+      - ptid: 7
+      - ptid: 0
+        points:
+        - ptid: 21
+          rel: shift
+      - ptid:
+        - 22
+        - 14
+        ref:
+        - 0
+        - 7
+        rel: interpolate
+  uni2043:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid: 0
+          rel: blackspace
+  fraction:
+    y:
+      points:
+      - ptid: 0
+      - ptid: 7
+  uni2045:
+    y:
+      points:
+      - ptid: 6
+        points:
+        - ptid: 12
+          rel: blackspace
+      - ptid: 31
+        points:
+        - ptid: 27
+          rel: blackspace
+      - ptid: 22
+        ref:
+        - 31
+        - 6
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 17
+          rel: blackspace
+  uni2046:
+    y:
+      points:
+      - ptid: 26
+        points:
+        - ptid: 20
+          rel: blackspace
+      - ptid: 0
+        points:
+        - ptid: 5
+          rel: blackspace
+      - ptid: 10
+        ref:
+        - 0
+        - 26
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 15
+          rel: blackspace
+  uni2047:
+    y:
+      points:
+      - ptid: 88
+        points:
+        - ptid: 38
+          rel: shift
+        - ptid: 94
+          rel: blackspace
+          dist: period-width
+          points:
+          - ptid: 44
+            rel: shift
+          - ptid: 50
+            rel: shift
+            points:
+            - ptid: 0
+              rel: shift
+            - ptid: 71
+              rel: grayspace
+              points:
+              - ptid: 21
+                rel: shift
+          - ptid: 50
+            rel: whitespace
+  uni204A:
+    y:
+      points:
+      - ptid: 41
+        pos: xheight
+        points:
+        - ptid: 18
+          rel: blackspace
+      - ptid: 0
+        pos: lc-descender
+        points:
+        - ptid: 11
+          rel: blackspace
+  uni204B:
+    y:
+      points:
+      - ptid: 43
+        pos: baseline
+        points:
+        - ptid: 4
+          rel: blackspace
+          points:
+          - ptid:
+            - 46
+            - 35
+            rel: shift
+      - ptid: 15
+        pos: cap-height
+        points:
+        - ptid: 9
+          rel: blackspace
+          points:
+          - ptid: 51
+            rel: shift
+      - ptid: 29
+        ref:
+        - 43
+        - 15
+        rel: interpolate
+        round: true
+  uni204C:
+    y:
+      points:
+      - ptid: 3
+        pos: baseline
+        points:
+        - ptid: 34
+          rel: blackspace
+          points:
+          - ptid: 38
+            rel: shift
+      - ptid: 20
+        points:
+        - ptid: 27
+          rel: blackspace
+          points:
+          - ptid: 43
+            rel: shift
+  uni204D:
+    y:
+      points:
+      - ptid: 35
+        pos: baseline
+        points:
+        - ptid: 4
+          rel: blackspace
+          points:
+          - ptid: 38
+            rel: shift
+      - ptid: 18
+        points:
+        - ptid: 11
+          rel: blackspace
+          points:
+          - ptid: 43
+            rel: shift
+  uni204F:
+    y:
+      points:
+      - ptid: 22
+        points:
+        - ptid: 12
+          rel: grayspace
+        - ptid: 0
+          rel: whitespace
+          points:
+          - ptid: 6
+            rel: blackspace
+  uni2050:
+    y:
+      points:
+      - ptid: 25
+        points:
+        - ptid: 38
+          rel: blackspace
+      - ptid: 6
+        points:
+        - ptid: 19
+          rel: blackspace
+      - ptid:
+        - 35
+        - 22
+        ref:
+        - 25
+        - 6
+        rel: interpolate
+      - ptid: 16
+        ref: 22
+        rel: shift
+      - ptid: 41
+        ref: 35
+        rel: shift
+  uni2052:
+    y:
+      points:
+      - ptid: 12
+        points:
+        - ptid: 0
+          rel: shift
+        - ptid: 18
+          rel: blackspace
+      - ptid: 30
+        points:
+        - ptid: 6
+          rel: shift
+        - ptid: 24
+          rel: blackspace
+  uni2057:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid:
+          - 20
+          - 40
+          - 60
+          rel: shift
+        - ptid: 9
+          rel: blackspace
+          points:
+          - ptid:
+            - 29
+            - 49
+            - 69
+            rel: shift
+  uni205C:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid:
+          - 12
+          - 24
+          rel: shift
+      - ptid: 5
+        points:
+        - ptid:
+          - 42
+          - 54
+          rel: shift
+      - ptid: 4
+        ref:
+        - 5
+        - 0
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 1
+          rel: blackspace
+          points:
+          - ptid: 10
+            rel: shift
+        - ptid: 7
+          rel: shift
+      - ptid: 36
+        ref: 42
+        rel: blackspace
+        points:
+        - ptid: 48
+          rel: shift
+      - ptid: 18
+        ref: 12
+        rel: blackspace
+        points:
+        - ptid: 30
+          rel: shift
+  uni2070:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 19
+          rel: blackspace
+      - ptid: 9
+        points:
+        - ptid: 28
+          rel: blackspace
+  uni2071:
+    y:
+      points:
+      - ptid: 56
+        points:
+        - ptid: 40
+          rel: blackspace
+          points:
+          - ptid: 49
+            rel: shift
+      - ptid: 29
+        points:
+        - ptid: 23
+          rel: grayspace
+          points:
+          - ptid: 20
+            rel: blackspace
+        - ptid: 4
+          rel: whitespace
+          points:
+          - ptid: 10
+            rel: blackspace
+      - ptid:
+        - 2
+        - 35
+        ref:
+        - 56
+        - 29
+        rel: interpolate
+  uni2074:
+    y:
+      points: []
+  uni2075:
+    y:
+      points:
+      - ptid: 31
+        points:
+        - ptid: 39
+          rel: blackspace
+      - ptid: 0
+        points:
+        - ptid: 12
+          rel: blackspace
+      - ptid: 19
+        ref:
+        - 0
+        - 31
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 48
+          rel: blackspace
+  uni2076:
+    y:
+      points:
+      - ptid: 10
+        points:
+        - ptid: 13
+          rel: shift
+      - ptid: 0
+        points:
+        - ptid: 30
+          rel: blackspace
+      - ptid: 22
+        points:
+        - ptid: 38
+          rel: blackspace
+  uni2077:
+    y:
+      points:
+      - ptid: 25
+        points:
+        - ptid: 10
+          rel: blackspace
+      - ptid: 0
+  uni2078:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 23
+          rel: blackspace
+      - ptid: 12
+        points:
+        - ptid: 41
+          rel: blackspace
+      - ptid:
+        - 6
+        - 29
+        - 35
+        - 17
+        ref:
+        - 12
+        - 0
+        rel: interpolate
+  uni2079:
+    y:
+      points:
+      - ptid: 20
+        points:
+        - ptid: 38
+          rel: blackspace
+      - ptid: 13
+        points:
+        - ptid: 30
+          rel: blackspace
+      - ptid: 0
+        points:
+        - ptid: 4
+          rel: shift
+  uni207A:
+    y:
+      points:
+      - ptid: 0
+      - ptid: 5
+      - ptid: 4
+        ref:
+        - 0
+        - 5
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 1
+          rel: blackspace
+          points:
+          - ptid: 10
+            rel: shift
+        - ptid: 7
+          rel: shift
+  uni207B:
+    y:
+      points:
+      - ptid: 0
+        points:
+        - ptid: 4
+          rel: blackspace
+  uni207C:
+    y:
+      points:
+      - ptid: 4
+        points:
+        - ptid: 5
+          rel: blackspace
+          points:
+          - ptid: 0
+            rel: whitespace
+            points:
+            - ptid: 1
+              rel: blackspace
+  uni207D:
+    y:
+      points:
+      - ptid: 0
+      - ptid: 12
+  uni207E:
+    y:
+      points:
+      - ptid: 16
+      - ptid: 0
+  uni207F:
+    y:
+      points:
+      - ptid: 84
+        points:
+        - ptid: 52
+          rel: shift
+        - ptid: 4
+          rel: blackspace
+          points:
+          - ptid:
+            - 77
+            - 59
+            - 45
+            rel: shift
+      - ptid: 35
+        points:
+        - ptid: 23
+          rel: shift
+          round: true
+          points:
+          - ptid: 16
+            rel: grayspace
+            points:
+            - ptid: 12
+              rel: blackspace
+        - ptid: 67
+          rel: blackspace
+        - ptid: 30
+          rel: grayspace
+  uni208A:
+    y:
+      points:
+      - ptid: 5
+      - ptid: 1
+        ref:
+        - 0
+        - 5
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 4
+          rel: blackspace
+          points:
+          - ptid: 7
+            rel: shift
+        - ptid: 10
+          rel: shift
+  uni208B:
+    y:
+      points:
+      - ptid: 4
+        points:
+        - ptid: 0
+          rel: blackspace
+  uni208C:
+    y:
+      points:
+      - ptid: 1
+        points:
+        - ptid: 0
+          rel: blackspace
+          points:
+          - ptid: 5
+            rel: whitespace
+            points:
+            - ptid: 4
+              rel: blackspace
+  uni208D:
+    y:
+      points:
+      - ptid: 13
+      - ptid: 0
+  uni208E:
+    y:
+      points:
+      - ptid: 0
+      - ptid: 16
+  Euro:
+    y:
+      points:
+      - ptid: 27
+        points:
+        - ptid: 42
+          rel: blackspace
+      - ptid: 0
+        points:
+        - ptid: 70
+          rel: blackspace
+      - ptid:
+        - 66
+        - 46
+        ref:
+        - 0
+        - 27
+        rel: interpolate
+        round: true
+      - ptid: 54
+        ref: 46
+        rel: blackspace
+        points:
+        - ptid: 16
+          rel: shift
+      - ptid: 58
+        ref: 66
+        rel: blackspace
+        points:
+        - ptid: 12
+          rel: shift
+      - ptid: 5
+        ref: 66
+        rel: shift
+      - ptid: 23
+        ref: 46
+        rel: shift
+  uni20B0:
+    y:
+      points:
+      - ptid: 32
+        pos: lc-baseline-undershoot
+        points:
+        - ptid: 54
+          rel: shift
+        - ptid: 42
+          rel: shift
+      - ptid: 0
+        points:
+        - ptid: 5
+          rel: shift
+      - ptid: 21
+        points:
+        - ptid: 65
+          rel: blackspace
+      - ptid: 47
+        ref:
+        - 32
+        - 21
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 38
+          rel: shift
+      - ptid:
+        - 13
+        - 73
+        ref:
+        - 21
+        - 32
+        rel: interpolate
+  uni20DD:
+    y:
+      points:
+      - ptid: 10
+        points:
+        - ptid: 30
+          rel: blackspace
+      - ptid: 0
+        points:
+        - ptid: 20
+          rel: blackspace
+  uni2108:
+    y:
+      points:
+      - ptid: 43
+        points:
+        - ptid: 29
+          rel: blackspace
+          dist: cap-round-stem
+        pos: cap-height-overshoot
+      - ptid: 0
+        points:
+        - ptid: 19
+          rel: blackspace
+          dist: cap-round-stem
+        pos: cap-baseline-undershoot
+      - ptid: 70
+        ref:
+        - 0
+        - 43
+        round: true
+        rel: interpolate
+        points:
+        - ptid: 67
+          dist: cap-bar
+          rel: blackspace
+  uni2114:
+    y:
+      points:
+      - ptid:
+          base: 21
+          pt-a: 24
+          pt-b: 28
+          pt-b-sh: 14
+          pt-a-sh: 18
+        macro:
+          nm: lc-serif
+      - ptid:
+          pt-a: 104
+          pt-b: 115
+        macro:
+          nm: lc-round-stem
+          cv: lc-baseline-undershoot
+          stem-cv: lc-round-stem
+      - ptid: 110
+        ref: 104
+        rel: grayspace
+      - ptid: 0
+        ref: 104
+        rel: shift
+      - ptid:
+          pt-a: 96
+          pt-b: 123
+        macro:
+          nm: lc-round-stem
+          cv: xheight
+          stem-cv: lc-round-stem
+      - ptid:
+          p1: 76
+          p2: 68
+          p3: 64
+        macro:
+          nm: lc-ascender-top
+      - ptid: 54
+        ref: 76
+        rel: shift
+      - ptid: 45
+        ref: 68
+        rel: shift
+      - ptid: 41
+        ref: 64
+        rel: shift
+      - ptid: 82
+        ref:
+        - 76
+        - 21
+        rel: interpolate
+        round: true
+        points:
+        - ptid: 89
+          rel: blackspace
+          points:
+          - ptid:
+            - 31
+            - 10
+            rel: shift
+        - ptid:
+          - 38
+          - 61
+          rel: shift
 uni01E5:
   y:
     points:
