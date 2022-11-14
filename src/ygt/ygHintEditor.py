@@ -57,10 +57,10 @@ import inspect
 
 
 HINT_ARROW_WIDTH =               3
-HINT_ARROWHEAD_WIDTH =           1
+# HINT_ARROWHEAD_WIDTH =           1
 HINT_ANCHOR_WIDTH =              3
 HINT_LINK_WIDTH =                1
-SET_WIDTH =                      2
+HINT_ARROWHEAD_WIDTH =                      2
 HINT_COLLECTION_COLOR =          QColor(0,255,0,128)
 HINT_COLLECTION_SELECT_COLOR =   QColor(0,205,0,128)
 HINT_ANCHOR_COLOR =              QColor(255,0,255,128)
@@ -94,6 +94,7 @@ FUNC_BORDER_WIDTH =              2
 GLYPH_WIDGET_MARGIN =            50
 POINT_ONCURVE_DIA =              8
 POINT_OFFCURVE_DIA =             6
+HINT_BUTTON_DIA =                6
 
 HINT_COLOR = {"anchor":      HINT_ANCHOR_COLOR,
               "align":       HINT_ALIGN_COLOR,
@@ -128,13 +129,16 @@ SELECTED_HINT_COLOR = {"anchor":      HINT_ANCHOR_SELECT_COLOR,
 # ygSelectable: inherited by objects that can be selected.
 # ygHintView(QGraphicsItem, ygSelectable): Interface with a hint (ygModel.ygHint)
 # ygGraphicalHintComponent: Superclass for a visible piece of a hint.
-# ArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
+# ygArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
 #                    Arrowhead component of a visible hint.
 # ygBorderLine(QGraphicsLineItem, ygGraphicalHintComponent):
 #                    Borderline around certain hints.
-# HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
+# ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
 #                    Stem of a visible hint
-# HintPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
+# ygHintButton(QGraphicsEllipseItem, ygGraphicalHintComponent):
+#                    A button to display in the middle of a hint stem. Makes it
+#                    easier to select with mouse.
+# ygPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
 #                    Thickens and adds color to a point.
 # ygPointable: superclass for objects that an arrow can point at.
 # ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable):
@@ -225,6 +229,12 @@ class GlyphWidget(QWidget):
         zero_x = abs(f['head'].xMin) + GLYPH_WIDGET_MARGIN
         zero_y = abs(f['head'].yMax) + GLYPH_WIDGET_MARGIN
         return x_size, y_size, zero_x, zero_y
+
+    # Scaling a fontTools glyph.
+    # 1. Get coordinates.
+    # c = f['glyf']._getCoordinatesAndControls('a', f['hmtx'].metrics)[0]
+    # c.scale((0.5,0.5))
+    # f['glyf']._setCoordinates('a', c, f['hmtx'].metrics)
 
     def __init__(self, viewer, yg_font, yg_glyph):
         super().__init__()
@@ -405,11 +415,11 @@ class ygHintView(QGraphicsItem, ygSelectable):
         return False
 
     def mouse_over_point(self, pt):
-        """ In ygHintView. Returns a HintPointMarker.
+        """ In ygHintView. Returns a ygPointMarker.
         """
         if len(self.graphical_hint) >= 1:
             for g in self.graphical_hint:
-                if type(g) is HintPointMarker and g.contains(pt):
+                if type(g) is ygPointMarker and g.contains(pt):
                     return g
         return None
 
@@ -513,6 +523,7 @@ class ygHintView(QGraphicsItem, ygSelectable):
                 self.yg_glyph_view.yg_selection._add_object(self, False)
 
     def _prepare_graphics(self):
+        # In ygHintView
         if len(self.graphical_hint) >= 1:
             for c in self.graphical_hint:
                 if isinstance(c, ygGraphicalHintComponent):
@@ -546,12 +557,12 @@ class ygGraphicalHintComponent:
 
 
 
-class ArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
+class ygArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
     """ Arrowhead to mount on the end of a line
 
         A reference should be kept only in ygHintView.
 
-        This is separate from the line (HintArrowLine) it goes with, chiefly so that
+        This is separate from the line (ygHintStem) it goes with, chiefly so that
         it can be clickable.
     """
     def __init__(self, tip, direction, hint_type, id, parent=None):
@@ -605,7 +616,7 @@ class ArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
         self._prepare_graphics(is_selected=False, hint_type=self.hint_type)
 
     def _prepare_graphics(self, **kwargs):
-        # For ArrowHead
+        # For ygArrowHead
         is_selected = kwargs["is_selected"]
         hint_type = kwargs["hint_type"]
         if is_selected:
@@ -613,10 +624,10 @@ class ArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
         else:
             pen_color = HINT_COLOR[hint_type]
         pen = QPen(pen_color)
-        pen.setWidth(SET_WIDTH)
-        brush = QBrush(pen_color)
+        pen.setWidth(HINT_ARROWHEAD_WIDTH)
+        # brush = QBrush(pen_color)
         self.setPen(pen)
-        self.setBrush(brush)
+        # self.setBrush(brush)
 
     def setPos(self, qpf):
         # These little offsets were made by experimentation.  But see if they
@@ -632,7 +643,8 @@ class ArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
         super().setPos(nqp)
 
     def mousePressEvent(self, event):
-        # In ArrowHead
+        # In ygArrowHead
+        # This doesn't seem to be working. Why not?
         with_shift = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier) == Qt.KeyboardModifier.ShiftModifier
         is_left = event.button() == Qt.MouseButton.LeftButton
         self.parentItem()._process_click_on_hint(self, with_shift, is_left)
@@ -667,7 +679,7 @@ class ygBorderLine(QGraphicsLineItem, ygGraphicalHintComponent):
 
 
 
-class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
+class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
     """ Line for connecting related points
 
     The connecting line with arrow represents a hint. There are different kinds,
@@ -694,6 +706,7 @@ class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
             self.id = uuid.uuid1()
         # parent setup not needed
         self.parent = parent
+        self._center_point = None
         self.setCursor(Qt.CursorShape.CrossCursor)
         begin_a = p1.attachment_point(p2.center_point)
         begin_x = begin_a.x()
@@ -775,38 +788,49 @@ class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
                 topPoint = self.lineEnd
         # The "0.33" that governs the length of the handles for the cubic drawing
         # needs to be abstracted, so it can change with the shape of the box.
-        partial_y_distance = ydistance * 0.33
-        partial_x_distance = xdistance * 0.33
+        partial_y_distance = ydistance * 0.25
+        partial_x_distance = xdistance * 0.25
         if self.shape == "invisible":
             path = QPainterPath()
         elif self.shape in ["y only", "x only"]:
             path = QPainterPath(self.lineBegin)
             path.lineTo(self.lineEnd)
+            self._center_point = self.find_mid_point(self.lineBegin, self.lineEnd)
         elif self.shape in ["tall", "tallish"]:
             handle1 = QPointF(topPoint.x(), topPoint.y() + partial_y_distance)
             handle2 = QPointF(bottomPoint.x(), bottomPoint.y() - partial_y_distance)
+            self._center_point = self.find_mid_point(handle1, handle2)
             if self.arrowhead_direction == "up":
                 path = QPainterPath(bottomPoint)
-                path.cubicTo(handle2, handle1, topPoint)
+                path.quadTo(handle2, self._center_point)
+                path.quadTo(handle1, topPoint)
+                # path.cubicTo(handle2, handle1, topPoint)
             else:
                 path = QPainterPath(topPoint)
-                path.cubicTo(handle1, handle2, bottomPoint)
+                path.quadTo(handle1, self._center_point)
+                path.quadTo(handle2, bottomPoint)
+                # path.cubicTo(handle1, handle2, bottomPoint)
         elif self.shape in ["flat", "flattish"]:
             handle1 = QPointF(leftPoint.x() + partial_x_distance, leftPoint.y())
             handle2 = QPointF(rightPoint.x() - partial_x_distance, rightPoint.y())
+            self._center_point = self.find_mid_point(handle1, handle2)
             if self.arrowhead_direction == "left":
                 path = QPainterPath(rightPoint)
-                path.cubicTo(handle2, handle1, leftPoint)
+                path.quadTo(handle2, self._center_point)
+                path.quadTo(handle1, leftPoint)
+                # path.cubicTo(handle2, handle1, leftPoint)
             else:
                 path = QPainterPath(leftPoint)
-                path.cubicTo(handle1, handle2, rightPoint)
+                path.quadTo(handle1, self._center_point)
+                path.quadTo(handle2, rightPoint)
+                # path.cubicTo(handle1, handle2, rightPoint)
         else:
             print("What's going on?")
         self.setPath(path)
         self._prepare_graphics(is_selected=False, hint_type=self.hint_type)
 
     def _prepare_graphics(self, **kwargs):
-        # For HintArrowLine
+        # For ygHintStem
         is_selected = kwargs["is_selected"]
         hint_type = kwargs["hint_type"]
         pen = QPen()
@@ -821,6 +845,16 @@ class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
             pen.setDashPattern([4,2])
         self.setPen(pen)
 
+    def find_mid_point(self, pt1, pt2):
+        """ For placing the point in the middle of a quadratic curve: get the
+            mid-point on a line between two points.
+        """
+        l = QLineF(pt1, pt2)
+        return l.center()
+
+    def center_point(self):
+        return self._center_point
+
     def _adjustPoint(self, adjustment, x, y):
         return QPointF(x + adjustment[0], y + adjustment[1])
 
@@ -828,14 +862,56 @@ class HintArrowLine(QGraphicsPathItem, ygGraphicalHintComponent):
         return self.lineEnd
 
     def mousePressEvent(self, event):
-        # In HintArrowLine
+        # In ygHintStem
         with_shift = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier) == Qt.KeyboardModifier.ShiftModifier
         is_left = event.button() == Qt.MouseButton.LeftButton
         self.parentItem()._process_click_on_hint(self, with_shift, is_left)
 
 
 
-class HintPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
+class ygHintButton(QGraphicsEllipseItem, ygGraphicalHintComponent):
+    """ A button to display mid-stem, to make an easy target for a mouse.
+    """
+    def __init__(self, viewer, location, hint):
+        """ viewer: a ygGlyphViewer object
+            location: QPoint
+            hint: ygModel.ygHint
+        """
+        self.viewer = viewer
+        self.diameter = HINT_BUTTON_DIA + 2
+        loc_offset = self.diameter - (self.diameter / 2)
+        self.location = QPointF(location.x() - loc_offset, location.y() - loc_offset)
+        self.yg_hint = hint
+        super().__init__(QRectF(self.location, QSizeF(self.diameter, self.diameter)))
+        self.setCursor(Qt.CursorShape.CrossCursor)
+        self._prepare_graphics(is_selected=False, hint_type=self.yg_hint.hint_type())
+
+    def _prepare_graphics(self, **kwargs):
+        # for ygHintButton
+        is_selected = kwargs["is_selected"]
+        hint_type = kwargs["hint_type"]
+        pen = QPen()
+        brush = QBrush()
+        pen.setWidth(HINT_ANCHOR_WIDTH)
+        if is_selected:
+            color = SELECTED_HINT_COLOR[hint_type]
+        else:
+            color = HINT_COLOR[hint_type]
+        brush.setColor(color)
+        pen.setColor(color)
+        self.setPen(pen)
+        self.setBrush(brush)
+
+    def mousePressEvent(self, event):
+        # In ygHintButton
+        with_shift = ((QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier) ==
+                      Qt.KeyboardModifier.ShiftModifier)
+        is_left = event.button() == Qt.MouseButton.LeftButton
+        self.parentItem()._process_click_on_hint(self, with_shift, is_left)
+
+
+
+class ygPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
     """ pt has got to be a ygPointView.
     """
     def __init__(self, viewer, pt, hint_type, name=None, id=None, parent=None):
@@ -843,7 +919,6 @@ class HintPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
         self.name = name
         self.label = None
         # This is "placed" when user has associated it with a point.
-        self.placed = False
         self.x = self.pt.glocation.x() - 1
         self.y = self.pt.glocation.y() - 1
         self.glocation = QPointF(self.x, self.y)
@@ -877,7 +952,7 @@ class HintPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
             self.viewer.removeItem(self.label_proxy)
 
     def _prepare_graphics(self, **kwargs):
-        # For HintPointMarker
+        # For ygPointMarker
         is_selected = kwargs["is_selected"]
         hint_type = kwargs["hint_type"]
         pen = QPen()
@@ -896,7 +971,7 @@ class HintPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
         return self.viewer
 
     def mousePressEvent(self, event):
-        # In HintPointMarker
+        # In ygPointMarker
         with_shift = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier) == Qt.KeyboardModifier.ShiftModifier
         is_left = event.button() == Qt.MouseButton.LeftButton
         self.parentItem()._process_click_on_hint(self, with_shift, is_left)
@@ -988,7 +1063,7 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
             if type(p) is ygSet:
                 p = p.main_point()
             ptv = self.yg_viewer.yg_point_view_index[p.id]
-            h = HintPointMarker(self.yg_viewer, ptv, self.hint_type, name=k)
+            h = ygPointMarker(self.yg_viewer, ptv, self.hint_type, name=k)
             zcounter += 1
             marker_list.append(h)
         return marker_list
@@ -1644,7 +1719,7 @@ class ygGlyphViewer(QGraphicsScene):
             if type(target) is ygSet:
                 target = target.main_point()
             gtarget = self.yg_point_view_index[target.id]
-            hpm = HintPointMarker(self, gtarget, "anchor")
+            hpm = ygPointMarker(self, gtarget, "anchor")
             yg_hint_view = ygHintView(self, hint, hpm)
             yg_hint_view._touch_all_points()
             yg_hint_view._prepare_graphics()
@@ -1662,10 +1737,11 @@ class ygGlyphViewer(QGraphicsScene):
                 print("Warning: ref is None (target is " + str(target.index) + ")")
             ref = self.resolve_point_identifier(hint.main_ref())
             gref = self.yg_point_view_index[ref.id]
-            ha = HintArrowLine(gref, gtarget, 0, hint_type, parent=self)
-            ah = ArrowHead(ha.endPoint(), ha.arrowhead_direction, hint_type, ha.id, parent=self)
+            ha = ygHintStem(gref, gtarget, 0, hint_type, parent=self)
+            hb = ygHintButton(self, ha.center_point(), hint)
+            ah = ygArrowHead(ha.endPoint(), ha.arrowhead_direction, hint_type, ha.id, parent=self)
             ah.setPos(ha.endPoint())
-            glist = [ha, ah]
+            glist = [ha, hb, ah]
             if type(gtarget) is ygSetView:
                 glist.extend(gtarget.visible_objects())
             yg_hint_view = ygHintView(self, hint, glist)
@@ -1691,13 +1767,15 @@ class ygGlyphViewer(QGraphicsScene):
             ref_two = self.resolve_point_identifier(ref_list.point_list()[1])
             gref.append(self.yg_point_view_index[ref_one.id])
             gref.append(self.yg_point_view_index[ref_two.id])
-            ha1 = HintArrowLine(gref[0], gtarget, 0, hint_type, parent=self)
-            ha2 = HintArrowLine(gref[1], gtarget, 0, hint_type, parent=self)
-            ah1 = ArrowHead(ha1.endPoint(), ha1.arrowhead_direction, hint_type, ha1.id, parent=self)
-            ah2 = ArrowHead(ha2.endPoint(), ha2.arrowhead_direction, hint_type, ha2.id, parent=self)
+            ha1 = ygHintStem(gref[0], gtarget, 0, hint_type, parent=self)
+            hb1 = ygHintButton(self, ha1.center_point(), hint)
+            ha2 = ygHintStem(gref[1], gtarget, 0, hint_type, parent=self)
+            ah1 = ygArrowHead(ha1.endPoint(), ha1.arrowhead_direction, hint_type, ha1.id, parent=self)
+            hb2 = ygHintButton(self, ha2.center_point(), hint)
+            ah2 = ygArrowHead(ha2.endPoint(), ha2.arrowhead_direction, hint_type, ha2.id, parent=self)
             ah1.setPos(ha1.endPoint())
             ah2.setPos(ha2.endPoint())
-            glist = [ha1, ah1, ha2, ah2]
+            glist = [ha1, hb1, ah1, ha2, hb2, ah2]
             if type(gtarget) is ygSetView:
                 glist.extend(gtarget.visible_objects())
             yg_hint_view = ygHintView(self, hint, glist)
@@ -2069,13 +2147,13 @@ class ygGlyphViewer(QGraphicsScene):
         # Rearrange point params for functions and macros
 
         disable_point_params = False
-        # target_point will be HintPointMarker. The pt attribute for that is
+        # target_point will be ygPointMarker. The pt attribute for that is
         # a ygPointView object.
         target_point = None
         swap_old_name = None
         point_list = []
         try:
-            # mouse_over_point actually returns a HintPointMarker.
+            # mouse_over_point actually returns a ygPointMarker.
             target_point = hint.mouse_over_point(QPointF(event.scenePos()))
             if hint.yg_hint.hint_type() == "macro":
                 mafu = ygMacro(hint.yg_hint.name, self.yg_glyph.yg_font)
