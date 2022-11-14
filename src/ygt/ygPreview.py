@@ -134,8 +134,8 @@ class ygPreview(QWidget):
         for row in self.Z:
             for col in row:
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
-                color = QColor(53,30,16,col)
-                # color = QColor(255-col,255-col,255-col,255)
+                color = QColor(101,53,15,col)
+                # color = QColor(53,30,16,col)
                 qb = QBrush(color)
                 painter.fillRect(qr,qb)
                 xposition += self.pixel_size
