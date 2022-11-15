@@ -566,14 +566,14 @@ class MainWindow(QMainWindow):
             viewer = ygGlyphViewer(self.preferences, modelGlyph)
             view = MyView(self.preferences, viewer, self.yg_font)
             self.add_glyph_pane(view)
-            view.centerOn(view.viewer.glyphwidget.center_x, view.sceneRect().center().y())
-            self.set_background()
+            view.centerOn(view.viewer.center_x, view.sceneRect().center().y())
+            # self.set_background()
             self.set_window_title()
             self.setup_editor_connections()
         # self.show()
 
-    def set_background(self):
-        self.glyph_pane.set_background()
+    # def set_background(self):
+    #    self.glyph_pane.set_background()
 
     def set_window_title(self):
         base = "YG"

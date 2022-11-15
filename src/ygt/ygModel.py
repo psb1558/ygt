@@ -846,6 +846,9 @@ class ygGlyph(QObject):
         self.sig_hints_changed.emit(self.hints())
         self.send_yaml_to_editor()
 
+    def refresh_hints(self):
+        self.sig_hints_changed.emit(self.hints())
+
     def hints_changed(self, hint_list, dirty=True):
         """ Called by signal. *** Is this the best way to do this? Calling
             ygGlyphView directly? Figure out something else (compare

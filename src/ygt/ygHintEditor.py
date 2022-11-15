@@ -1,5 +1,6 @@
 import sys
 import uuid
+import copy
 # import ygPreferences
 from .macfuncDialog import macfuncDialog
 from .ygModel import (ygSet,
@@ -125,7 +126,6 @@ SELECTED_HINT_COLOR = {"anchor":      HINT_ANCHOR_SELECT_COLOR,
 # Classes in this file:
 
 # QtPen (BasePen): copied from fontTools so we could drop a reference to Qt5.
-# GlyphWidget(QWidget): Displays glyph outline.
 # ygSelectable: inherited by objects that can be selected.
 # ygHintView(QGraphicsItem, ygSelectable): Interface with a hint (ygModel.ygHint)
 # ygGraphicalHintComponent: Superclass for a visible piece of a hint.
@@ -207,101 +207,6 @@ class QtPen(BasePen):
 # Likewise, data shouldn't be manipulated here, but only in the model. This
 # file can send requests to the Model to perform certain editing tasks. Then
 # the model will send a signal that the display should be refreshed.
-
-
-class GlyphWidget(QWidget):
-    """ Widget for displaying glyph outline.
-
-        This is not interactive at all, but displayed like a background. The
-        points and hints you interact with are in ygGlyphViewer (the
-        QGraphicsScene). This class also stores translation info so other
-        widgets can position their stuff correctly, and provides a convenience
-        function for converting font coordinates to Qt coordinates.
-
-        Redo this so that this widget is sized according to the dimensions in the
-        head table and doesn't change from glyph to glyph.
-
-    """
-    def _calc_canvas_size(self, yg_font):
-        f = yg_font.ft_font
-        x_size = abs(f['head'].xMin) + abs(f['head'].xMax) + (GLYPH_WIDGET_MARGIN * 2)
-        y_size = abs(f['head'].yMin) + abs(f['head'].yMax) + (GLYPH_WIDGET_MARGIN * 2)
-        zero_x = abs(f['head'].xMin) + GLYPH_WIDGET_MARGIN
-        zero_y = abs(f['head'].yMax) + GLYPH_WIDGET_MARGIN
-        return x_size, y_size, zero_x, zero_y
-
-    # Scaling a fontTools glyph.
-    # 1. Get coordinates.
-    # c = f['glyf']._getCoordinatesAndControls('a', f['hmtx'].metrics)[0]
-    # c.scale((0.5,0.5))
-    # f['glyf']._setCoordinates('a', c, f['hmtx'].metrics)
-
-    def __init__(self, viewer, yg_font, yg_glyph):
-        super().__init__()
-        self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
-        self.preferences = yg_glyph.preferences
-        self.ft_glyph = yg_glyph.ft_glyph
-        self.ft_glyph.recalcBounds(yg_font.ft_font['glyf'])
-        self.canvas_size = self._calc_canvas_size(yg_font)
-        self.adv, self.lsb = yg_font.ft_font['hmtx'].metrics[yg_glyph.glyph_name()]
-        self.setMinimumSize(self.canvas_size[0], self.canvas_size[1])
-        self.xTranslate = self.canvas_size[2]
-        self.yTranslate = self.canvas_size[3]
-        glyph_set = {yg_glyph.glyph_name(): self.ft_glyph}
-        self.path = QPainterPath()
-        self.qt_pen = QtPen(glyph_set, path=self.path)
-        self.ft_glyph.draw(self.qt_pen, yg_font.ft_font['glyf'])
-        self.center_x = self.xTranslate + round(self.adv / 2)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-
-        brush = QBrush()
-        brush.setColor(QColor('white'))
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        rect = QRect(0, 0, self.width(), self.height())
-        painter.fillRect(rect, brush)
-
-        painter.scale(1.0, -1.0)
-        painter.translate(QPointF(self.xTranslate, self.yTranslate * -1))
-
-        pen = painter.pen()
-
-        if self.preferences["show_metrics"]:
-            pen.setWidth(1)
-            pen.setColor(QColor(50,50,50,50))
-            painter.setPen(pen)
-            painter.drawLine(QLine(-abs(self.xTranslate),0,self.width(),0))
-            ya = -abs(self.yTranslate)
-            painter.drawLine(QLine(0,ya,0,self.height()))
-            painter.drawLine(QLine(self.adv,ya,self.adv,self.height()))
-
-        pen.setWidth(CHAR_OUTLINE_WIDTH)
-        pen.setColor(QColor("gray"))
-        painter.setPen(pen)
-        painter.drawPath(self.path)
-        painter.end()
-
-    def _font2Qt(self, x, y, onCurve=False):
-        """ Converts font coordinate system to Qt, for positioning points
-
-            The font coordinate system has zero at the baseline and
-            higher y values towards the top. The Qt system has 0,0
-            at the top left of the canvas and higher y values towards
-            the bottom.
-        """
-        thisx = x + self.xTranslate
-        thisy = (y * -1) + abs(self.yTranslate)
-        if onCurve:
-            adjust = POINT_ONCURVE_DIA / 2
-        else:
-            adjust = POINT_OFFCURVE_DIA / 2
-        # These are the coordinates for the points
-        # print("x: " + str(thisx - adjust))
-        # print("y: " + str(thisy - adjust))
-        return QPointF(thisx - adjust, thisy - adjust)
-
-
 
 class ygSelectable:
 
@@ -1254,15 +1159,17 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
 
     """
 
-    def __init__(self, viewer, yg_point, gwidget):
+    def __init__(self, viewer, yg_point):
         self._is_selected = False
         self.yg_point = yg_point
         if yg_point.on_curve:
             self.diameter = POINT_ONCURVE_DIA
         else:
             self.diameter = POINT_OFFCURVE_DIA
-        # glocation is a QPointF
-        self.glocation = gwidget._font2Qt(self.yg_point.font_x, self.yg_point.font_y, self.yg_point.on_curve)
+        # glocation is a QPointF. Initialize at 0,0: must be set later.
+        self.glocation = QPointF(0,0)
+        # was:
+        # self.glocation = viewer._font2Qt(self.yg_point.font_x, self.yg_point.font_y, self.yg_point.on_curve)
         super().__init__(QRectF(self.glocation, QSizeF(self.diameter, self.diameter)))
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.border_width = 1
@@ -1284,6 +1191,7 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
         return self.glocation
 
     def _prepare_graphics(self):
+        # For ygPointView
         if self._is_yg_selected():
             if self.yg_point.on_curve:
                 brushColor = POINT_ONCURVE_SELECTED
@@ -1303,6 +1211,9 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
 
     def get_scene(self):
         return self.viewer
+
+    def has_label(self):
+        return self.point_number_label != None
 
     def add_label(self):
         if self.point_number_label:
@@ -1382,7 +1293,7 @@ class ygGlyphViewer(QGraphicsScene):
     sig_macfunc_ref = pyqtSignal(object)
     sig_toggle_point_numbers = pyqtSignal()
 
-    def __init__(self, preferences, yg_glyph):
+    def __init__(self, preferences, yg_glyph, zoom_factor=1.0):
         """ yg_glyph is a ygGlyph object from ygModel.
         """
         self.preferences = preferences
@@ -1391,29 +1302,55 @@ class ygGlyphViewer(QGraphicsScene):
         self.yg_hint_view_index = {}
         self.yg_hint_view_list = []
         super(ygGlyphViewer, self).__init__()
+
+        # Current display preferences
+
+        self.off_curve_points_showing = self.preferences.show_off_curve_points()
+        self.point_numbers_showing = self.preferences.show_point_numbers()
+
+        # Setup glyph info
+
         self.yg_glyph = yg_glyph
         self.vector = self.yg_glyph.current_vector()
         # Try to get rid of ref to this scene in the model's ygGlyph class.
         self.yg_glyph.glyph_viewer = self
-        self.glyphwidget = GlyphWidget(self, self.yg_glyph.yg_font, self.yg_glyph)
-        self.glyphwidget.move(0,0)
-        self.addWidget(self.glyphwidget)
+
+        # Make graphical points
+
+        for p in self.yg_glyph.points():
+            yg_point_view = ygPointView(self, p)
+            self.yg_point_view_index[p.id] = yg_point_view
+            self.yg_point_view_list.append(yg_point_view)
+            # self.addItem(yg_point_view)
+
+        self.zoom_factor = zoom_factor
+        self.adv = 0
+        self.lsb = 0
+        self.xTranslate = 0
+        self.yTranslate = 0
+        self.original_coordinates = None
+        self.scale_glyph()
+        self.center_x = self.xTranslate + round(self.adv / 2)
+        self.center_x = self.xTranslate + round(self.adv / 2)
+
+        # Setup for selecting
+
         self.selectionRect = None          # The rubber band. None when no selection is underway.
         self.dragBeginPoint = QPointF(0,0) # Set whenever left mouse button is pressed, in case of rubber band selection
         self.yg_selection = ygSelection(self)
-        self.off_curve_points_showing = self.preferences.show_off_curve_points()
-        self.point_numbers_showing = self.preferences.show_point_numbers()
-        for p in self.yg_glyph.points():
-            yg_point_view = ygPointView(self, p, self.glyphwidget)
-            self.yg_point_view_index[p.id] = yg_point_view
-            self.yg_point_view_list.append(yg_point_view)
-            yg_point_view._prepare_graphics()
-            self.addItem(yg_point_view)
-            if not yg_point_view.yg_point.on_curve and not self.off_curve_points_showing:
-                yg_point_view.hide()
-            if yg_point_view.isVisible() and self.point_numbers_showing:
-                yg_point_view.add_label()
 
+        # Add the points.
+
+        for p in self.yg_point_view_list:
+            p._prepare_graphics()
+            # self.addItem(p)
+            if not p.yg_point.on_curve and not self.off_curve_points_showing:
+                p.hide()
+            if p.isVisible() and self.point_numbers_showing:
+                p.add_label()
+            self.addItem(p)
+
+        # Setup connections.
 
         self.sig_new_hint.connect(self.add_hint)
         self.sig_change_cv.connect(self.change_cv)
@@ -1428,9 +1365,139 @@ class ygGlyphViewer(QGraphicsScene):
         self.sig_toggle_point_numbers.connect(self.toggle_point_numbers)
         self.sig_round_hint.connect(self.toggle_hint_rounding)
 
-        # We've drawn the points on the screen. Now get and display the hints.
+        # Get and display the hints.
 
         self.install_hints(self.yg_glyph.hints())
+        # self.size_report()
+
+    def size_report(self):
+        print("Zoom factor: " + str(self.zoom_factor))
+        print("xTranslate: " + str(self.xTranslate))
+        print("yTranslate: " + str(self.yTranslate))
+        ft_font = self.yg_glyph.yg_font.ft_font
+        oc = ft_font['glyf']._getCoordinatesAndControls(self.yg_glyph.gname,
+                                                        ft_font['hmtx'].metrics)[0]
+        print("First point: " + str(oc[0]))
+        print("Canvas rect: " + str(self.sceneRect()))
+        print("")
+
+    def set_zoom_factor(self, new_zoom):
+        self.zoom_factor = new_zoom
+        self.scale_glyph()
+        self.center_x = self.xTranslate + round(self.adv / 2)
+        self.center_x = self.xTranslate + round(self.adv / 2)
+        self.update()
+        self.yg_glyph.refresh_hints()
+        for p in self.yg_point_view_list:
+            if p.has_label():
+                p.add_label()
+        # self.size_report()
+
+    def scale_glyph(self):
+        # Start out clean, with coordinates as in original font. That way,
+        # zoom_factor always operates on the original, as opposed to the last
+        # value.
+        ft_font = self.yg_glyph.yg_font.ft_font
+        ft_glyph = self.yg_glyph.ft_glyph
+        if self.original_coordinates:
+            ft_font['glyf']._setCoordinates(self.yg_glyph.gname,
+                                            self.original_coordinates,
+                                            ft_font['hmtx'].metrics)
+        else:
+            self.original_coordinates = copy.deepcopy(ft_font['glyf']._getCoordinatesAndControls(self.yg_glyph.gname,
+                                                                                             ft_font['hmtx'].metrics)[0])
+        c = copy.deepcopy(self.original_coordinates)
+        c.scale((self.zoom_factor, self.zoom_factor))
+        ft_font['glyf']._setCoordinates(self.yg_glyph.glyph_name(), c, ft_font['hmtx'].metrics)
+        self.yg_glyph.ft_glyph.recalcBounds(self.yg_glyph.yg_font.ft_font['glyf'])
+        self.adv, self.lsb = self.yg_glyph.yg_font.ft_font['hmtx'].metrics[self.yg_glyph.glyph_name()]
+        self.canvas_size = self._calc_canvas_size()
+        self.setSceneRect(QRectF(0,0,self.canvas_size[0],self.canvas_size[1]))
+        self.xTranslate = self.canvas_size[2]
+        self.yTranslate = self.canvas_size[3]
+        c_index = 0
+        for cc in c:
+            try:
+                p = self.yg_point_view_list[c_index]
+                p.glocation = self._font2Qt(cc[0],
+                                            cc[1],
+                                            p.yg_point.on_curve)
+                p.setPos(p.glocation)
+                c_index += 1
+            except IndexError as e:
+                # print("Error in scale_glyph: " + str(e))
+                # fontTools coordinate list has phantom points at the end, which we ignore.
+                pass
+
+        glyph_set = {self.yg_glyph.glyph_name(): self.yg_glyph.ft_glyph}
+        self.path = QPainterPath()
+        self.qt_pen = QtPen(glyph_set, path=self.path)
+        self.yg_glyph.ft_glyph.draw(self.qt_pen, self.yg_glyph.yg_font.ft_font['glyf'])
+
+
+    def _calc_canvas_size(self):
+        """ This calculates a canvas that will do for the entire font. But maybe
+            a better approach would be to calculate it for each glyph. See the
+            absurd situation in Junicode, which has an extremely wide canvas
+            because of one glyph, threeemdash (U+2E3B). (The commented lines
+            would do this, but it may work better to dump this QWidget and have
+            this class draw on the QGraphicsScene via drawForeground.)
+        """
+        f = self.yg_glyph.yg_font.ft_font
+        x_size = abs(f['head'].xMin) + abs(f['head'].xMax) + (GLYPH_WIDGET_MARGIN * 2)
+        # x_size = abs(self.lsb) + abs(self.adv) + (GLYPH_WIDGET_MARGIN * 2)
+        y_size = abs(f['head'].yMin) + abs(f['head'].yMax) + (GLYPH_WIDGET_MARGIN * 2)
+        zero_x = abs(f['head'].xMin) + GLYPH_WIDGET_MARGIN
+        # zero_x = abs(self.lsb) + GLYPH_WIDGET_MARGIN
+        zero_y = abs(f['head'].yMax) + GLYPH_WIDGET_MARGIN
+        return (round(x_size * self.zoom_factor), round(y_size * self.zoom_factor),
+                round(zero_x * self.zoom_factor), round(zero_y * self.zoom_factor))
+
+    def _font2Qt(self, x, y, onCurve=False):
+        """ Converts font coordinate system to Qt, for positioning points
+
+            The font coordinate system has zero at the baseline and
+            higher y values towards the top. The Qt system has 0,0
+            at the top left of the canvas and higher y values towards
+            the bottom.
+        """
+        thisx = x + self.xTranslate
+        thisy = (y * -1) + abs(self.yTranslate)
+        if onCurve:
+            adjust = POINT_ONCURVE_DIA / 2
+        else:
+            adjust = POINT_OFFCURVE_DIA / 2
+        # These are the coordinates for the points
+        # print("x: " + str(thisx - adjust))
+        # print("y: " + str(thisy - adjust))
+        return QPointF(thisx - adjust, thisy - adjust)
+
+
+    def drawBackground(self, painter, rect):
+        """ The glyph outline is drawn as the background layer for this scene.
+            Points and hints are drawn in the hint layer
+        """
+        # brush = QBrush(QColor('white'))
+        # brush.setStyle(Qt.BrushStyle.SolidPattern)
+        # painter.fillRect(rect, brush)
+        painter.scale(1.0, -1.0)
+        painter.translate(QPointF(self.xTranslate, self.yTranslate * -1))
+
+        pen = painter.pen()
+
+        if self.preferences["show_metrics"]:
+            pen.setWidth(1)
+            pen.setColor(QColor(50,50,50,50))
+            painter.setPen(pen)
+            painter.drawLine(QLine(-abs(self.xTranslate),0,round(self.width()),0))
+            ya = -abs(self.yTranslate)
+            painter.drawLine(QLine(0, ya, 0, round(self.height())))
+            painter.drawLine(QLine(self.adv, ya, self.adv, round(self.height())))
+
+        pen.setWidth(CHAR_OUTLINE_WIDTH)
+        pen.setColor(QColor("gray"))
+        painter.setPen(pen)
+        painter.drawPath(self.path)
 
     def edit_macfunc_params(self, hint):
         ed_dialog = macfuncDialog(hint)
@@ -1924,7 +1991,9 @@ class ygGlyphViewer(QGraphicsScene):
                         ppp = self.yg_glyph.points_to_labels(ppp.yg_point)
                     pt_dict[p] = ppp
                     counter += 1
-                except IndexError:
+                except IndexError as e:
+                    # print("IndexError in make_macfunc_from_selection:")
+                    # print(e)
                     break
 
             h = {"ptid": pt_dict, hint_type: other_params}
@@ -2376,7 +2445,7 @@ class MyView(QGraphicsView):
         self.viewer = ygGlyphViewer(self.preferences, new_glyph)
         self.preferences.set_current_glyph(self.yg_font.full_name(), gname)
         self.setScene(self.viewer)
-        self.centerOn(self.viewer.glyphwidget.center_x, self.sceneRect().center().y())
+        self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
         self.parent().parent().set_window_title()
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
@@ -2391,20 +2460,26 @@ class MyView(QGraphicsView):
             self.viewer.yg_glyph.switch_to_vector("y")
             self.parent().parent().set_window_title()
 
-    def set_background(self):
-        self.setBackgroundBrush(QBrush(QColor(200,200,200,255)))
+    # def set_background(self):
+    #    self.setBackgroundBrush(QBrush(QColor(200,200,200,255)))
 
     def zoom(self, a):
-        """ Called by signal.
+        """ Called by signal. ***
         """
         self.sender().disconnect()
         sender_text = self.sender().text()
         if sender_text == "Original Size":
-            self.setTransform(self.original_transform)
+            self.viewer.set_zoom_factor(1)
+            # self.setTransform(self.original_transform)
         elif sender_text == "Zoom In":
-            self.scale(1.5, 1.5)
+            if self.viewer.zoom_factor <= 4.75:
+                self.viewer.set_zoom_factor(self.viewer.zoom_factor + 0.25)
+            # self.scale(1.5, 1.5)
         elif sender_text == "Zoom Out":
-            self.scale(0.75, 0.75)
+            if self.viewer.zoom_factor >= 0.5:
+                self.viewer.set_zoom_factor(self.viewer.zoom_factor - 0.25)
+            # self.scale(0.75, 0.75)
+        self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
         self.parent().parent().setup_zoom_connections()
 
     def keyPressEvent(self, event):
