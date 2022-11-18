@@ -246,6 +246,8 @@ class MainWindow(QMainWindow):
         self.compile_action = self.code_menu.addAction("Compile")
         self.compile_action.setShortcut(QKeySequence("Ctrl+r"))
 
+        self.cleanup_action = self.code_menu.addAction("Clean up")
+
         self.edit_cvt_action = self.code_menu.addAction("Edit cvt...")
 
         self.edit_prep_action = self.code_menu.addAction("Edit prep...")
@@ -358,6 +360,7 @@ class MainWindow(QMainWindow):
         self.make_set_action.triggered.connect(self.glyph_pane.viewer.make_set)
         self.vertical_action.triggered.connect(self.glyph_pane.switch_to_y)
         self.horizontal_action.triggered.connect(self.glyph_pane.switch_to_x)
+        self.cleanup_action.triggered.connect(self.glyph_pane.cleanup_yaml_code)
 
     def setup_edit_connections(self):
         self.edit_cvt_action.triggered.connect(self.edit_cvt)

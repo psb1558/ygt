@@ -16,6 +16,13 @@ class ygPreferences(dict):
         self["current_font"] = None
         self["show_metrics"] = True
         self["recents"] = []
+        self["zoom_factor"] = 1.0
+
+    def zoom_factor(self):
+        return self["zoom_factor"]
+
+    def set_zoom_factor(self, z):
+        self["zoom_factor"] = z
 
     def recents(self):
         return self["recents"]

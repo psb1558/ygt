@@ -6,7 +6,8 @@ from yaml import Dumper
 import uuid
 import sys
 import copy
-from . ygPreferences import ygPreferences
+from functools import cmp_to_key
+from .ygPreferences import ygPreferences
 
 hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
                    "stem": 3, "whitespace": 3, "blackspace": 3, "grayspace": 3,
@@ -651,6 +652,100 @@ class ygGlyph(QObject):
 
         self.sig_hints_changed.connect(self.hints_changed)
 
+    def _flatten_yaml_tree(self, tree):
+        """ Helper for _rebuild_yaml_tree
+
+        """
+        flat = []
+        for t in tree:
+            if "parent" in t:
+                del t["parent"]
+            flat.append(t)
+            if "points" in t:
+                flat.extend(self._flatten_yaml_tree(t["points"]))
+        return flat
+
+    def _place_ref_hints(self, new_tree, hint_list, placed_list, last_placed_len=0, depth=0):
+        """ Helper for _rebuild_yaml_tree
+
+        """
+        hint_len   = len(hint_list)
+        placed_len = len(placed_list)
+        # print("starting with list of " + str(len(new_tree)) + ", depth " + str(depth))
+        #for n in new_tree:
+        #    print("    " + str(n["ptid"]))
+        if hint_len == placed_len:
+            return True
+        for f in new_tree:
+            ptid = ygHint(self, f).target()
+            # if "ptid" in f and type(f["ptid"]) is not list and type(f["ptid"]) is not dict:
+            if type(ptid) is not list and type(ptid) is not dict:
+                for ff in hint_list:
+                    if not ff in placed_list and "ref" in ff:
+                        #if ff["ref"] == f["ptid"]:
+                        if ff["ref"] == ptid:
+                            if not "points" in f:
+                                f["points"] = []
+                            f["points"].append(ff)
+                            ff["parent"] = f
+                            placed_list.append(ff)
+                            break
+            if "points" in f:
+                self._place_ref_hints(f["points"], hint_list, placed_list,
+                                      last_placed_len = placed_len, depth=depth+1)
+
+    def rebuild_current_block(self):
+        flattened_tree = self._flatten_yaml_tree(copy.deepcopy(self.current_block()))
+        #ygHintSorter(self, flattened_tree).sort()
+        for f in flattened_tree:
+            if "points" in f:
+                del f["points"]
+        new_tree = self._rebuild_yaml_tree(flattened_tree)
+        # ygHintSorter(self, new_tree).sort()
+        # self.yaml_strip_extraneous_nodes(new_tree)
+        if self.current_vector() == "y":
+            self.y_block = new_tree
+        else:
+            self.x_block = new_tree
+        print(yaml.dump(self.current_block(), sort_keys=False, Dumper=Dumper))
+        # print(self.current_block())
+        self.sig_hints_changed.emit(self.hints())
+        self.send_yaml_to_editor()
+
+
+    def _rebuild_yaml_tree(self, hint_list):
+        """ hint_list must be a flattened version of a deepcopy of the original
+            tree.
+
+        """
+        new_tree = []
+        placed   = []
+        # First pass. place any functions and macros
+        for fff in hint_list:
+            if "function" in fff or "macro" in fff:
+                new_tree.append(fff)
+                placed.append(fff)
+        # Second pass. place any non-Caller nodes that lack an eligible ref
+        for fff in hint_list:
+            if ((not "function" in fff and not "macro" in fff and not "ref" in fff)
+                or ("ref" in fff and type(fff["ref"]) is list)):
+                new_tree.append(fff)
+                placed.append(fff)
+        # Third and afterwards pass:
+        self._place_ref_hints(new_tree, hint_list, placed)
+        #print("placed: " + str(len(placed)))
+        #print("hint_list: " + str(len(hint_list)))
+        if len(placed) < len(hint_list):
+            # unplaced = []
+            placed_ptid_list = []
+            for p in placed:
+                placed_ptid_list.append(p["ptid"])
+            for h in hint_list:
+                if not h["ptid"] in placed_ptid_list:
+                    # print(str(h["ptid"]) + " is unplaced")
+                    new_tree.append(h)
+        return ygHintSorter(new_tree).sort()
+
     def switch_to_vector(self, new_vector):
         if self._current_vector == new_vector:
             return
@@ -689,7 +784,6 @@ class ygGlyph(QObject):
     def points(self):
         return self.point_list
 
-    # Check if needed
     def save_editor_source(self, s):
         """ When the user has typed Ctrl+R to compile the contents of the
             editor pane, this function gets called to do the rest. It
@@ -853,12 +947,14 @@ class ygGlyph(QObject):
         """ Called by signal. *** Is this the best way to do this? Calling
             ygGlyphView directly? Figure out something else (compare
             sig_glyph_source_ready, for which we didn't have to import
-            anything).
+            anything).***
 
         """
         if dirty:
             self.set_dirty()
         from .ygHintEditor import ygGlyphViewer
+        #for h in hint_list:
+        #    print(h.main_ref())
         if self.glyph_viewer:
             self.glyph_viewer.install_hints(hint_list)
 
@@ -868,6 +964,7 @@ class ygGlyph(QObject):
         """
         flist = []
         for pt in source:
+            print("type of pt: " + str(type(pt)))
             flist.append(ygHint(self, pt))
             if ("points" in pt) and pt["points"]:
                 flist.extend(self._yaml_mk_hint_list(pt['points']))
@@ -1122,6 +1219,93 @@ class ygGlyphs:
 
 
 
+class Comparable(object):
+    def _compare(self, other, method):
+        try:
+            return method(self._cmpkey(), other._cmpkey())
+        except (AttributeError, TypeError):
+            return NotImplemented
+
+    def _mk_point_list(self, obj, key):
+        """ Helper for comparison functions.
+
+        """
+        hint = ygHint(None, obj)
+        if key == "ptid":
+            p = hint.target()
+        else:
+            p = hint.ref()
+        result = []
+        if type(p) is dict:
+            k = p.keys()
+            for kk in k:
+                if type(p[kk]) is list:
+                    result.extend(p[kk])
+                else:
+                    result.append(p[kk])
+        elif type(p) is list:
+            result.extend(p)
+        else:
+            result.append(p)
+        if "points" in obj and key == "ptid":
+            for o in obj["points"]:
+                result.extend(self._mk_point_list(o, key))
+        return(result)
+
+    def _comparer(self, obj1, obj2):
+        """ Helper for comparison functions.
+
+        """
+        p1 = self._mk_point_list(obj1, "ptid")
+        p2 = self._mk_point_list(obj2, "ptid")
+        r1 = self._mk_point_list(obj1, "ref")
+        r2 = self._mk_point_list(obj2, "ref")
+
+        # print("Comparing " + str(p1) + " / " + str(r1) + " and " + str(p2) + " / " + str(r2) + ":")
+        if r2 != None:
+            for r in r2:
+                if r != None and r in p1:
+                    return -1
+        if r1 != None:
+            for r in r1:
+                if r != None and r in p2:
+                    return 1
+        return 0
+
+    def __eq__(self, other):
+        return self == other
+
+    def __ne__(self, other):
+        return self != other
+
+    def __lt__(self, other):
+        return self._comparer(self._source, other._source) < 0
+
+    def __gt__(self, other):
+        return self._comparer(self._source, other._source) > 0
+
+    def __ge__(self, other):
+        return (self._comparer(self._source, other._source) > 0 or
+                self._source == other._source)
+
+    def __le__(self, other):
+        return (self._comparer(self._source, other._source) < 0 or
+                self._source == other._source)
+
+
+
+class ygHintSource(Comparable):
+    def __init__(self, s):
+        self._source = s
+
+    def _cmpkey(self):
+        return (self._source,)
+
+    def __hash__(self):
+        return hash(self._cmpkey())
+
+
+
 class ygHint(QObject):
     """ A hint. This wraps a point from the yaml source tree and provides
         a number of functions for accessing and altering it.
@@ -1144,7 +1328,8 @@ class ygHint(QObject):
         self._source = point
         self.yg_glyph = glyph
 
-        self.hint_changed_signal.connect(self.yg_glyph.hint_changed)
+        if self.yg_glyph != None:
+            self.hint_changed_signal.connect(self.yg_glyph.hint_changed)
 
     def source(self):
         return(self._source)
@@ -1172,7 +1357,8 @@ class ygHint(QObject):
 
         """
         if "alt-ptid" in self._source:
-            return self.yg_glyph.resolve_point_identifier(self._source["alt-ptid"])
+            # return self.yg_glyph.resolve_point_identifier(self._source["alt-ptid"])
+            return self._source["alt-ptid"]
         else:
             return self._source["ptid"]
 
@@ -1192,7 +1378,8 @@ class ygHint(QObject):
 
         """
         if "alt-ref" in self._source:
-            return self.yg_glyph.resolve_point_identifier(self._source["alt-ref"])
+            # return self.yg_glyph.resolve_point_identifier(self._source["alt-ref"])
+            return self.source["alt-ref"]
         else:
             if "ref" in self._source:
                 return self._source["ref"]
@@ -1388,6 +1575,21 @@ class ygHint(QObject):
             return self.id == other.id
         except:
             return False
+
+
+class ygHintSorter:
+    def __init__(self, list):
+        self.list = list
+
+    def sort(self):
+        sortable = []
+        for l in self.list:
+            sortable.append(ygHintSource(l))
+        ll = sorted(sortable)
+        result = []
+        for l in ll:
+            result.append(l._source)
+        return result
 
 
 
