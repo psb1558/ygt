@@ -121,8 +121,6 @@ class ygFont:
     """
     def __init__(self, source_file, yaml_filename=None):
         self.source_file = SourceFile(source_file, yaml_filename=yaml_filename)
-        # Things will break if we're not in the same directory as the yaml file.
-        # Try to chdir in that case, but if things don't work out, just skip it.
         d = None
         if isinstance(source_file, str) and source_file:
             d = os.path.dirname(source_file)
@@ -543,7 +541,9 @@ class ygSet:
     def __init__(self, point_list):
         self._point_list = point_list
         self.id = uuid.uuid1()
-        # The main point is the one the arrow is connected to.
+        # The main point is the one the arrow is connected to. It shouldn't be
+        # needed now, but the editor uses it against the possibility that a set
+        # will contain another set. See if this can be safely removed.
         self._main_point = None
 
     def point_list(self):
@@ -565,7 +565,6 @@ class ygSet:
         else:
             return self._point_list[0]
 
-    # Not currently used. Is it needed?
     def point_at_index(self, index):
         try:
             return self.point_list[index]
@@ -745,23 +744,16 @@ class ygGlyph(QObject):
 
     def _yaml_supply_refs(self, node):
         """ After "parent" properties have been added, walk the tree supplying
-            implicit references. If we can't find a reference, print a message
-            but don't crash (yet). ***Figure out a way to handle a failure
-            here gracefully.
+            implicit references. If we can't find a reference, let it go (it
+            doesn't seem to actually happen).
 
         """
         if type(node) is list:
             for n in node:
                 type_num = hint_type_nums[self._yaml_hint_type(n)]
                 if type_num in [1, 3]:
-                    if "parent" in n:
-                        hint_type = self._yaml_hint_type(n["parent"])
-                        if hint_type != "interpolate":
-                            n['ref'] = self._yaml_get_single_target(n['parent'])
-                        else:
-                            # Supply but do not replace a ref.
-                            if not "ref" in n:
-                                n["ref"] = self._yaml_get_single_target(n['parent'])
+                    if "parent" in n and not "ref" in n:
+                        n['ref'] = self._yaml_get_single_target(n['parent'])
                     else:
                         pass
                 if type_num == 2:
@@ -770,7 +762,7 @@ class ygGlyph(QObject):
                         reflist.append(self._yaml_get_single_target(n['parent']))
                         if "parent" in n["parent"]:
                             reflist.append(self._yaml_get_single_target(n["parent"]["parent"]))
-                    if len(reflist) == 2:
+                    if len(reflist) == 2 and not "ref" in n:
                         n["ref"] = reflist
                 if "points" in n:
                     self._yaml_supply_refs(n['points'])
@@ -905,7 +897,6 @@ class ygGlyph(QObject):
         if "rel" in n:
             return n["rel"]
         return "anchor"
-
 
     def _is_pt_obj(self, o):
         """ Whether an object is a 'point object' (a point or a container for
@@ -1266,7 +1257,7 @@ class Comparable(object):
         """ Helper for comparison functions. A return value of zero doesn't
             mean "equal," but rather "no match," which should (like "equal")
             result in no reordering of hints. Actually equal hints should not
-            oredinarily occur.
+            ordinarily occur.
 
         """
         p1 = self._mk_point_list(obj1, "ptid")
@@ -1332,8 +1323,6 @@ class ygHint(QObject):
 
     hint_changed_signal = pyqtSignal(object)
 
-    # target is required; ref must be present here, but can be None.
-    # def __init__(self, glyph, target, ref, other_args={}):
     def __init__(self, glyph, point):
         super().__init__()
         self.id = uuid.uuid1()
@@ -1391,20 +1380,14 @@ class ygHint(QObject):
         """
         self._source["ptid"] = tgt
 
-    def set_ref(self, pt):
-        changed = False
-        if type(pt) is ygPoint:
-            p = pt.preferred_label()
-        else:
-            p = pt
-        if p != None:
-            self._source["alt-ref"] = p
-            changed = True
-        if p == None and "alt-ref" in self._source:
-            del self._source["alt-ref"]
-            changed = True
-        if changed:
-            self.hint_changed_signal.emit(self)
+    # def set_ref(self, pt):
+    #    changed = False
+    #    if type(pt) is ygPoint:
+    #        p = pt.preferred_label()
+    #    else:
+    #        p = pt
+    #    if changed:
+    #        self.hint_changed_signal.emit(self)
 
     def hint_type(self):
         if "macro" in self._source:

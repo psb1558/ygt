@@ -964,14 +964,12 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
     def _make_point_markers(self):
         kk = self.point_dict.keys()
         marker_list = []
-        zcounter = 10
         for k in kk:
             p = self.point_dict[k]
             if type(p) is ygSet:
                 p = p.main_point()
             ptv = self.yg_viewer.yg_point_view_index[p.id]
             h = ygPointMarker(self.yg_viewer, ptv, self.hint_type, name=k)
-            zcounter += 1
             marker_list.append(h)
         return marker_list
 
@@ -1596,16 +1594,6 @@ class ygGlyphViewer(QGraphicsScene):
 
         """
         h.reverse_hint(h)
-
-    # def macfunc_target(self, _params):
-    #    hint = _params["hint"]
-    #    pt = _params["pt"]
-    #    hint.yg_hint.set_target(pt)
-
-    # def macfunc_ref(self, _params):
-    #    hint = _params["hint"]
-    #    pt = _params["pt"]
-    #    hint.yg_hint.set_ref(pt)
 
     def change_cv(self, param_dict):
         """ Recipient of a signal for adding or changeing a control value.
