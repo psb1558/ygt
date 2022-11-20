@@ -87,7 +87,8 @@ class macfuncDialog(QDialog):
     def accept(self):
         param_list = {"nm": self.yg_hint.macfunc_name()}
         for w in self.widgets:
-            param_list[w.itemAt(0).widget().text()] = w.itemAt(1).widget().text()
+            if w.itemAt(1).widget().text() != "None":
+                param_list[w.itemAt(0).widget().text()] = w.itemAt(1).widget().text()
         self.yg_hint._source[self.yg_hint.hint_type()] = param_list
         super().accept()
 

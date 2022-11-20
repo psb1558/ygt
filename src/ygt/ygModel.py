@@ -1475,7 +1475,11 @@ class ygHint(QObject):
         """
         cvtype = self.required_cv_type()
         if cvtype:
-            self._source[cvtype] = new_cv
+            if new_cv == "None":
+                if cvtype in self._source:
+                    del self._source[cvtype]
+            else:
+                self._source[cvtype] = new_cv
         self.hint_changed_signal.emit(self)
 
     def hint_has_changed(self, h):

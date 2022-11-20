@@ -2124,9 +2124,23 @@ class ygGlyphViewer(QGraphicsScene):
         set_anchor_cv = cmenu.addMenu("Set control value...")
         cv_list = self.yg_glyph.yg_font.cvt.get_list("pos", self.current_vector())
         cv_list.sort()
+        cv_list = ["None"] + cv_list
         if len(cv_list) > 0:
+            ccv = QAction("None", self, checkable=True)
+            if hint and (hint.yg_hint.cv() == None):
+                ccv.setChecked(True)
+            cv_anchor_action_list.append(ccv)
             for c in cv_list:
-                cv_anchor_action_list.append(set_anchor_cv.addAction(c))
+                ccv = QAction(c, self, checkable=True)
+                if hint != None:
+                    if ccv.text() == "None":
+                        if hint.yg_hint.cv() == None:
+                            ccv.setChecked(True)
+                    else:
+                        if c == hint.yg_hint.cv():
+                            ccv.setChecked(True)
+                    set_anchor_cv.addAction(ccv)
+                    cv_anchor_action_list.append(ccv)
         if hint == None or ntype != 0:
             for c in cv_anchor_action_list:
                 c.setEnabled(False)
@@ -2140,13 +2154,19 @@ class ygGlyphViewer(QGraphicsScene):
         set_stem_cv = cmenu.addMenu("Set control value...")
         cv_list = self.yg_glyph.yg_font.cvt.get_list("dist", self.current_vector())
         cv_list.sort()
+        cv_list = ["None"] + cv_list
         if len(cv_list) > 0:
             for c in cv_list:
                 ccv = QAction(c, self, checkable=True)
-                if hint and (c == hint.yg_hint.cv()):
-                    ccv.setChecked(True)
-                set_stem_cv.addAction(ccv)
-                cv_stem_action_list.append(ccv)
+                if hint != None:
+                    if ccv.text() == "None":
+                        if hint.yg_hint.cv() == None:
+                            ccv.setChecked(True)
+                    else:
+                        if c == hint.yg_hint.cv():
+                            ccv.setChecked(True)
+                    set_stem_cv.addAction(ccv)
+                    cv_stem_action_list.append(ccv)
         if hint == None or ntype != 3:
             for c in cv_stem_action_list:
                 c.setEnabled(False)
