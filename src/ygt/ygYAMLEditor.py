@@ -58,7 +58,7 @@ class ygYAMLEditor(QPlainTextEdit):
             self.setPlainText("[]\n")
 
     def setup_editor(self):
-        tags = r'\b(ptid|ref|rel|macro|function|alt-ptid|alt-ref|pos|dist|points|round)\:'
+        tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round)\:'
         twospace =   r'(  |\- )'
         fourspace =  r'(    |  \- )'
         sixspace =   r'(      |    \- )'

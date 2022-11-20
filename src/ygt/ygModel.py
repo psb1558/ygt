@@ -641,7 +641,7 @@ class ygGlyph(QObject):
         self.point_coord_dict = {}
         for p in self.point_list:
             self.point_coord_dict[p.coord] = p
-        self._current_vector = "y"
+        self._current_vector = self.preferences["current_vector"]
         # Fix up the source and build a tree of ygHhint objects.
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
@@ -652,8 +652,12 @@ class ygGlyph(QObject):
 
         self.sig_hints_changed.connect(self.hints_changed)
 
+    #
+    # Ordering and structuring YAML source
+    #
+
     def _flatten_yaml_tree(self, tree):
-        """ Helper for _rebuild_yaml_tree
+        """ Helper for rebuild_current_block
 
         """
         flat = []
@@ -665,96 +669,159 @@ class ygGlyph(QObject):
                 flat.extend(self._flatten_yaml_tree(t["points"]))
         return flat
 
-    def _place_ref_hints(self, new_tree, hint_list, placed_list, last_placed_len=0, depth=0):
-        """ Helper for _rebuild_yaml_tree
-
-        """
-        hint_len   = len(hint_list)
-        placed_len = len(placed_list)
-        # print("starting with list of " + str(len(new_tree)) + ", depth " + str(depth))
-        #for n in new_tree:
-        #    print("    " + str(n["ptid"]))
-        if hint_len == placed_len:
-            return True
-        for f in new_tree:
-            ptid = ygHint(self, f).target()
-            # if "ptid" in f and type(f["ptid"]) is not list and type(f["ptid"]) is not dict:
-            if type(ptid) is not list and type(ptid) is not dict:
-                for ff in hint_list:
-                    if not ff in placed_list and "ref" in ff:
-                        #if ff["ref"] == f["ptid"]:
-                        if ff["ref"] == ptid:
-                            if not "points" in f:
-                                f["points"] = []
-                            f["points"].append(ff)
-                            ff["parent"] = f
-                            placed_list.append(ff)
-                            break
-            if "points" in f:
-                self._place_ref_hints(f["points"], hint_list, placed_list,
-                                      last_placed_len = placed_len, depth=depth+1)
+    def place_all(self, hl):
+        block = []
+        unplaced = copy.copy(hl)
+        placed = []
+        placed_len = 0
+        while True:
+            last_placed_len = placed_len
+            for h in hl:
+                if not h in placed:
+                    r = self._add_hint(h, block, conditional=True)
+                    if r:
+                        placed.append(h)
+                        if h in unplaced:
+                            unplaced.remove(h)
+                    else:
+                        unplaced.append(h)
+            # There are two ways this loop breaks: 1) when nothing has been
+            # done on this iteration (the length of "placed" has not changed)
+            # and 2) the length of "unplaced" is zero
+            if last_placed_len == placed_len:
+                break
+            if len(unplaced) == 0:
+                break
+        # If there are still unplaced hints after the while loop, append them
+        # to the top level of the tree.
+        if len(unplaced) > 0:
+            for u in unplaced:
+                block.append(u)
+        return block
 
     def rebuild_current_block(self):
+        print("running rebuild_current_block")
         flattened_tree = self._flatten_yaml_tree(copy.deepcopy(self.current_block()))
-        #ygHintSorter(self, flattened_tree).sort()
         for f in flattened_tree:
             if "points" in f:
                 del f["points"]
-        new_tree = self._rebuild_yaml_tree(flattened_tree)
-        # ygHintSorter(self, new_tree).sort()
-        # self.yaml_strip_extraneous_nodes(new_tree)
+        new_tree = ygHintSorter(self.place_all(flattened_tree)).sort()
         if self.current_vector() == "y":
             self.y_block = new_tree
         else:
             self.x_block = new_tree
-        print(yaml.dump(self.current_block(), sort_keys=False, Dumper=Dumper))
-        # print(self.current_block())
         self.sig_hints_changed.emit(self.hints())
         self.send_yaml_to_editor()
 
-
-    def _rebuild_yaml_tree(self, hint_list):
-        """ hint_list must be a flattened version of a deepcopy of the original
-            tree.
+    def _yaml_mk_hint_list(self, source):
+        """ 'source' is a yaml "points" block--a list.
 
         """
-        new_tree = []
-        placed   = []
-        # First pass. place any functions and macros
-        for fff in hint_list:
-            if "function" in fff or "macro" in fff:
-                new_tree.append(fff)
-                placed.append(fff)
-        # Second pass. place any non-Caller nodes that lack an eligible ref
-        for fff in hint_list:
-            if ((not "function" in fff and not "macro" in fff and not "ref" in fff)
-                or ("ref" in fff and type(fff["ref"]) is list)):
-                new_tree.append(fff)
-                placed.append(fff)
-        # Third and afterwards pass:
-        self._place_ref_hints(new_tree, hint_list, placed)
-        #print("placed: " + str(len(placed)))
-        #print("hint_list: " + str(len(hint_list)))
-        if len(placed) < len(hint_list):
-            # unplaced = []
-            placed_ptid_list = []
-            for p in placed:
-                placed_ptid_list.append(p["ptid"])
-            for h in hint_list:
-                if not h["ptid"] in placed_ptid_list:
-                    # print(str(h["ptid"]) + " is unplaced")
-                    new_tree.append(h)
-        return ygHintSorter(new_tree).sort()
+        flist = []
+        for pt in source:
+            flist.append(ygHint(self, pt))
+            if ("points" in pt) and pt["points"]:
+                flist.extend(self._yaml_mk_hint_list(pt['points']))
+        return flist
 
-    def switch_to_vector(self, new_vector):
-        if self._current_vector == new_vector:
-            return
-        self.save_source()
-        self._current_vector = new_vector
-        self._yaml_add_parents(self.current_block())
-        self._yaml_supply_refs(self.current_block())
-        self.sig_hints_changed.emit(self.hints())
-        self.send_yaml_to_editor()
+    def _yaml_add_parents(self, node):
+        """ Walk through the yaml source for one 'points' block, adding 'parent'
+            items to each point dict so that we can easily climb the tree if we
+            have to.
+
+            We do this (and also supply refs) when we copy a "y" or "x" block
+            from the main source file so we don't have to do it elsewhere.
+
+        """
+        for pt in node:
+            if "points" in pt:
+                for ppt in pt["points"]:
+                    ppt["parent"] = pt
+                self._yaml_add_parents(pt['points'])
+        if self._current_vector == "y":
+            self.y_block = node
+        else:
+            self.x_block = node
+
+    def _yaml_supply_refs(self, node):
+        """ After "parent" properties have been added, walk the tree supplying
+            implicit references. If we can't find a reference, print a message
+            but don't crash (yet). ***Figure out a way to handle a failure
+            here gracefully.
+
+        """
+        if type(node) is list:
+            for n in node:
+                type_num = hint_type_nums[self._yaml_hint_type(n)]
+                if type_num in [1, 3]:
+                    if "parent" in n:
+                        hint_type = self._yaml_hint_type(n["parent"])
+                        if hint_type != "interpolate":
+                            n['ref'] = self._yaml_get_single_target(n['parent'])
+                        else:
+                            # Supply but do not replace a ref.
+                            if not "ref" in n:
+                                n["ref"] = self._yaml_get_single_target(n['parent'])
+                    else:
+                        pass
+                if type_num == 2:
+                    reflist = []
+                    if "parent" in n:
+                        reflist.append(self._yaml_get_single_target(n['parent']))
+                        if "parent" in n["parent"]:
+                            reflist.append(self._yaml_get_single_target(n["parent"]["parent"]))
+                    if len(reflist) == 2:
+                        n["ref"] = reflist
+                if "points" in n:
+                    self._yaml_supply_refs(n['points'])
+            if self._current_vector == "y":
+                self.y_block = node
+            else:
+                self.x_block = node
+
+    def yaml_strip_extraneous_nodes(self, node):
+        """ Walks the yaml tree, stripping out parent references and
+            explicit statements of implicit refs.
+
+        """
+        for pt in node:
+            if "parent" in pt:
+                h = ygHint(self, pt["parent"])
+                if ((not h.hint_type() in ["function", "macro"]) and
+                    len(h.target_list()) == 1):
+                    del pt["ref"]
+                del pt["parent"]
+            if "points" in pt:
+                self.yaml_strip_extraneous_nodes(pt["points"])
+
+    def _yaml_get_single_target(self, node):
+        """ This is for building the yaml tree. We need a single point (not a
+            list or dict) to hook a ref to. As we go through the possiblities
+            here, the returns become less plausible, but are always valid. The
+            caller doesn't have to deal with a null point.
+
+        """
+        if type(node["ptid"]) is str or type(node["ptid"]) is int:
+            return node["ptid"]
+        if type(node["ptid"]) is list:
+            return node["ptid"][0]
+        if type(node["ptid"]) is dict:
+            k = node["ptid"].keys()
+            random_point = 0
+            for kk in k:
+                random_point = node["ptid"][kk]
+                if type(random_point) is not list:
+                    break
+            if type(random_point) is list:
+                return(random_point[0])
+            else:
+                return random_point
+        return 0
+
+
+    #
+    # Accessing glyph data
+    #
 
     def current_vector(self):
         return self._current_vector
@@ -765,15 +832,6 @@ class ygGlyph(QObject):
         else:
             return self.x_block
 
-    def combine_point_blocks(self, block):
-        if len(block) > 0:
-            new_block = []
-            k = block.keys()
-            for kk in k:
-                new_block.extend(block[kk])
-            return new_block
-        return None
-
     def hints(self):
         """ Get a list of hints for the current vector, wrapped in ygHint
             objects.
@@ -783,6 +841,116 @@ class ygGlyph(QObject):
 
     def points(self):
         return self.point_list
+
+    def search_source(self, block, pt, ptype):
+        """ Search the yaml source for a point.
+
+            Parameters:
+            block (list): At the top level, should be self.current_block().
+
+            pt (ygPoint, int, or str): The point we're searching for
+
+            ptype (str): "ptid" to search for target points, "ref" to search
+            for ref points.
+
+        """
+
+        def pt_to_index(ppp):
+            if type(ppp) is ygPoint:
+                return ppp.index
+            return ppp
+
+        result = []
+        yaml_tree = self.current_block()
+        yg_pt = self.resolve_point_identifier(pt)
+        if type(yg_pt) is ygSet:
+            yg_pt = yg_pt.point_list()
+        elif type(yg_pt) is ygPoint:
+            yg_pt = [yg_pt.index]
+        else:
+            yg_pt = []
+        yg_pt = list(map(pt_to_index, yg_pt))
+        for ppt in block:
+            pppt = []
+            if ptype in ppt:
+                if ptype == "ref":
+                    if type(ppt["ref"]) is not list:
+                        pppt = [ppt["ref"]]
+                else:
+                    pppt = ygHint(self, ppt).target_list()
+                if any(elem in pppt for elem in yg_pt):
+                    result.append(ppt)
+            if "points" in ppt and len(ppt["points"]) > 0:
+                result.extend(self.search_source(ppt["points"], yg_pt, ptype))
+        return result
+
+    def glyph_name(self):
+        return self.gname
+
+    def xoffset(self):
+        if "xoffset" in self.props:
+            return self.props["xoffset"]
+        return 0
+
+    def yoffset(self):
+        if "yoffset" in self.props:
+            return self.props["yoffset"]
+        return 0
+
+    def _yaml_hint_type(self, n):
+        if "function" in n:
+            return "function"
+        if "macro" in n:
+            return "macro"
+        if "rel" in n:
+            return n["rel"]
+        return "anchor"
+
+
+    def _is_pt_obj(self, o):
+        """ Whether an object is a 'point object' (a point or a container for
+            points), which can appear in a ptid or ref field.
+
+        """
+        return type(o) is ygPoint or type(o) is ygSet or type(o) is ygParams
+
+    def _make_point_list(self):
+        """ Make a list of the points in a fontTools glyph structure.
+
+            Returns:
+            A list of ygPoint objects.
+
+        """
+        pt_list = []
+        point_index = 0
+        gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font['glyf'])
+        pointIndex = 0
+        for p in zip(gl[0], gl[2]):
+            is_on_curve = p[1] & 0x01 == 0x01
+            pt = ygPoint(None, point_index, p[0][0], p[0][1], self.xoffset(), self.yoffset(), is_on_curve)
+            point_index += 1
+            pt_list.append(pt)
+        return(pt_list)
+
+    #
+    # Navigation
+    #
+
+    def switch_to_vector(self, new_vector):
+        # Navigation
+        if self._current_vector == new_vector:
+            return
+        self.save_source()
+        self._current_vector = new_vector
+        self.preferences["current_vector"] = new_vector
+        self._yaml_add_parents(self.current_block())
+        self._yaml_supply_refs(self.current_block())
+        self.sig_hints_changed.emit(self.hints())
+        self.send_yaml_to_editor()
+
+    #
+    # Saving
+    #
 
     def save_editor_source(self, s):
         """ When the user has typed Ctrl+R to compile the contents of the
@@ -805,19 +973,64 @@ class ygGlyph(QObject):
         except Exception as e:
             self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
-    def add_hint(self, h):
-        ref = h.ref()
+    def save_source(self):
+        """ Saves the current block (y or x) to the in-memory yaml source.
+            This does not save to disk, but it must be run before saving to
+            disk.
+
+        """
+        if not self.clean():
+            tcopy = copy.deepcopy(self.current_block())
+            self.yaml_strip_extraneous_nodes(tcopy)
+            self.yg_font.save_glyph_source({"points": tcopy},
+                                           self.current_vector(),
+                                           self.gname)
+            self.set_clean()
+        # Also save the other things (cvt, etc.) if dirty.
+
+    #
+    # Editing
+    #
+
+    def combine_point_blocks(self, block):
+        # Editing
+        if len(block) > 0:
+            new_block = []
+            k = block.keys()
+            for kk in k:
+                new_block.extend(block[kk])
+            return new_block
+        return None
+
+    def _add_hint(self, h, block, conditional=False):
+        """ If conditional=False, function will always place a hint somewhere
+            in the tree (in the top level when it can't find another place).
+            When True, function will return False when it fails to place the
+            hint in the tree.
+        """
+        ref = None
+        if type(h) is ygHint:
+            h = h.source()
+        if "ref" in h:
+            ref = h["ref"]
         if ref == None or type(ref) is list:
-            self.current_block().append(h.source())
+            block.append(h)
         else:
-            matches = self.search_source(self.current_block(), ref, "ptid")
+            matches = self.search_source(block, ref, "ptid")
             if len(matches) > 0:
                 if not "points" in matches[0]:
                     matches[0]["points"] = []
-                matches[0]["points"].append(h.source())
-                h.source()["parent"] = matches[0]
+                matches[0]["points"].append(h)
+                h["parent"] = matches[0]
             else:
-                self.current_block().append(h.source())
+                if conditional:
+                    return False
+                else:
+                    block.append(h)
+        return True
+
+    def add_hint(self, h):
+        self._add_hint(h, self.current_block())
         self.sig_hints_changed.emit(self.hints())
         self.send_yaml_to_editor()
 
@@ -846,82 +1059,6 @@ class ygGlyph(QObject):
         self.sig_hints_changed.emit(self.hints())
         self.send_yaml_to_editor()
 
-    def search_source(self, block, pt, ptype):
-        """ Search the yaml source for a point.
-
-            Parameters:
-            block (list): At the top level, should be self.current_block().
-
-            pt (ygPoint, int, or str): The point we're searching for
-
-            ptype (str): "ptid" to search for target points, "ref" to search
-            for ref points.
-
-        """
-        result = []
-        yaml_tree = self.current_block()
-        yg_pt = self.resolve_point_identifier(pt)
-        for ppt in block:
-            if ptype in ppt:
-                pppt = self.resolve_point_identifier(ppt[ptype])
-                if yg_pt == pppt:
-                    result.append(ppt)
-            if "points" in ppt and len(ppt["points"]) > 0:
-                result.extend(self.search_source(ppt["points"], yg_pt, ptype))
-        return result
-
-    def glyph_name(self):
-        return self.gname
-
-    def xoffset(self):
-        if "xoffset" in self.props:
-            return self.props["xoffset"]
-        return 0
-
-    def yoffset(self):
-        if "yoffset" in self.props:
-            return self.props["yoffset"]
-        return 0
-
-    # Check if needed
-    def lookup_name(self, n):
-        """ points and sets can be named. Look up a name here: it will return
-            None if there is nothing by that name.
-        """
-        if n in self.names:
-            return self.names[n]
-        return None
-
-    def save_source(self):
-        """ Saves the current block (y or x) to the in-memory yaml source.
-            This does not save to disk, but it must be run before saving to
-            disk.
-
-        """
-        if not self.clean():
-            tcopy = copy.deepcopy(self.current_block())
-            self.yaml_strip_extraneous_nodes(tcopy)
-            self.yg_font.save_glyph_source({"points": tcopy},
-                                           self.current_vector(),
-                                           self.gname)
-            self.set_clean()
-        # Also save the other things (cvt, etc.) if dirty.
-
-    def set_yaml_editor(self, ed):
-        """ Registers a slot in a ygYAMLEditor object, for installing source.
-
-        """
-        self.sig_glyph_source_ready.connect(ed.install_source)
-        self.send_yaml_to_editor()
-
-    def send_yaml_to_editor(self):
-        """ Sends yaml source for the current x or y block to the editor pane.
-
-        """
-        new_yaml = copy.deepcopy(self.current_block())
-        self.yaml_strip_extraneous_nodes(new_yaml)
-        self.sig_glyph_source_ready.emit(yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper))
-
     def set_dirty(self):
         self._clean = False
         self.yg_font.set_dirty()
@@ -931,157 +1068,6 @@ class ygGlyph(QObject):
 
     def clean(self):
         return self._clean
-
-    def hint_changed(self, h):
-        """ Called by signal from ygHint. Rebuilds the hint tree in response.
-
-        """
-        self.set_dirty()
-        self.sig_hints_changed.emit(self.hints())
-        self.send_yaml_to_editor()
-
-    def refresh_hints(self):
-        self.sig_hints_changed.emit(self.hints())
-
-    def hints_changed(self, hint_list, dirty=True):
-        """ Called by signal. *** Is this the best way to do this? Calling
-            ygGlyphView directly? Figure out something else (compare
-            sig_glyph_source_ready, for which we didn't have to import
-            anything).***
-
-        """
-        if dirty:
-            self.set_dirty()
-        from .ygHintEditor import ygGlyphViewer
-        #for h in hint_list:
-        #    print(h.main_ref())
-        if self.glyph_viewer:
-            self.glyph_viewer.install_hints(hint_list)
-
-    def _yaml_mk_hint_list(self, source):
-        """ 'source' is a yaml "points" block--a list.
-
-        """
-        flist = []
-        for pt in source:
-            print("type of pt: " + str(type(pt)))
-            flist.append(ygHint(self, pt))
-            if ("points" in pt) and pt["points"]:
-                flist.extend(self._yaml_mk_hint_list(pt['points']))
-        return flist
-
-    def _yaml_add_parents(self, node):
-        """ Walk through the yaml source for one 'points' block, adding 'parent'
-            items to each point dict so that we can easily climb the tree if we
-            have to.
-
-            We do this (and also supply refs) when we copy a "y" or "x" block
-            from the main source file so we don't have to do it elsewhere.
-
-        """
-        for pt in node:
-            if "points" in pt:
-                for ppt in pt["points"]:
-                    ppt["parent"] = pt
-                self._yaml_add_parents(pt['points'])
-        if self._current_vector == "y":
-            self.y_block = node
-        else:
-            self.x_block = node
-
-    def yaml_strip_extraneous_nodes(self, node):
-        """ Walks the yaml tree, stripping out parent references and
-            implicit refs.
-
-        """
-        for pt in node:
-            if "parent" in pt:
-                del pt["parent"]
-                if "ref" in pt:
-                    del pt["ref"]
-            if "points" in pt:
-                self.yaml_strip_extraneous_nodes(pt["points"])
-
-    def _yaml_get_single_target(self, node):
-        """ This is for building the yaml tree. We need a single point (not a
-            list or dict) to hook a ref to. As we go through the possiblities
-            here, the returns become less plausible, but are always valid. The
-            caller doesn't have to deal with a null point.
-
-        """
-        if "alt-ptid" in node:
-            return node["alt-ptid"]
-        elif "ptid" in node:
-            if type(node["ptid"]) is str or type(node["ptid"]) is int:
-                return node["ptid"]
-            if type(node["ptid"]) is list:
-                return node["ptid"][0]
-            if type(node["ptid"]) is dict:
-                k = node["ptid"].keys()
-                random_point = 0
-                for kk in k:
-                    random_point = node["ptid"][kk]
-                    if type(random_point) is not list:
-                        break
-                if type(random_point) is list:
-                    return(random_point[0])
-                else:
-                    return random_point
-        return 0
-
-    # Check if needed
-    def _yaml_get_ref(self, node):
-        if "alt-ref" in node:
-            return node["alt-ptid"]
-        elif "ref" in node and (type(node["ref"]) is str or type(node["ref"]) is int):
-            return node["ptid"]
-        return None
-
-    def _yaml_hint_type(self, n):
-        if "function" in n:
-            return "function"
-        if "macro" in n:
-            return "macro"
-        if "rel" in n:
-            return n["rel"]
-        return "anchor"
-
-    def _yaml_supply_refs(self, node):
-        """ After "parent" properties have been added, walk the tree supplying
-            implicit references. If we can't find a reference, print a message
-            but don't crash (yet). ***Figure out a way to handle a failure
-            here gracefully.
-
-        """
-        if type(node) is list:
-            for n in node:
-                type_num = hint_type_nums[self._yaml_hint_type(n)]
-                if type_num in [1, 3]:
-                    if "parent" in n:
-                        n['ref'] = self._yaml_get_single_target(n['parent'])
-                    else:
-                        pass
-                if type_num == 2:
-                    reflist = []
-                    if "parent" in n:
-                        reflist.append(self._yaml_get_single_target(n['parent']))
-                        if "parent" in n["parent"]:
-                            reflist.append(self._yaml_get_single_target(n["parent"]["parent"]))
-                    if len(reflist) == 2:
-                        n["ref"] = reflist
-                if "points" in n:
-                    self._yaml_supply_refs(n['points'])
-            if self._current_vector == "y":
-                self.y_block = node
-            else:
-                self.x_block = node
-
-    def _is_pt_obj(self, o):
-        """ Whether an object is a 'point object' (a point or a container for
-            points), which can appear in a ptid or ref field.
-
-        """
-        return type(o) is ygPoint or type(o) is ygSet or type(o) is ygParams
 
     def points_to_labels(self, pts):
         """ Accepts a ygPoint, ygSet or ygParams object and converts it to a
@@ -1110,8 +1096,6 @@ class ygGlyph(QObject):
         if type(pts) is ygPoint:
             return(pts.preferred_label())
         return 0
-
-
 
     def resolve_point_identifier(self, ptid, depth=0):
         """ Get the ygPoint object identified by ptid. ***Failures are very
@@ -1151,8 +1135,6 @@ class ygGlyph(QObject):
             key_list = ptid.keys()
             for key in key_list:
                 p = self.resolve_point_identifier(ptid[key], depth=depth+1)
-                # if isinstance(p, ygPoint):
-                #     p.name = key
                 new_dict[key] = p
             return ygParams(None, None, new_dict, None)
         elif type(ptid) is int:
@@ -1184,23 +1166,48 @@ class ygGlyph(QObject):
         if self._is_pt_obj(result):
             return result
 
-    def _make_point_list(self):
-        """ Make a list of the points in a fontTools glyph structure.
+    #
+    # Signals and slots
+    #
 
-            Returns:
-            A list of ygPoint objects.
+    def set_yaml_editor(self, ed):
+        """ Registers a slot in a ygYAMLEditor object, for installing source.
 
         """
-        pt_list = []
-        point_index = 0
-        gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font['glyf'])
-        pointIndex = 0
-        for p in zip(gl[0], gl[2]):
-            is_on_curve = p[1] & 0x01 == 0x01
-            pt = ygPoint(None, point_index, p[0][0], p[0][1], self.xoffset(), self.yoffset(), is_on_curve)
-            point_index += 1
-            pt_list.append(pt)
-        return(pt_list)
+        self.sig_glyph_source_ready.connect(ed.install_source)
+        self.send_yaml_to_editor()
+
+    def send_yaml_to_editor(self):
+        """ Sends yaml source for the current x or y block to the editor pane.
+
+        """
+        new_yaml = copy.deepcopy(self.current_block())
+        self.yaml_strip_extraneous_nodes(new_yaml)
+        self.sig_glyph_source_ready.emit(yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper))
+
+    def hint_changed(self, h):
+        """ Called by signal from ygHint. Rebuilds the hint tree in response.
+
+        """
+        self.set_dirty()
+        self.sig_hints_changed.emit(self.hints())
+        self.send_yaml_to_editor()
+
+    def refresh_hints(self):
+        self.sig_hints_changed.emit(self.hints())
+
+    def hints_changed(self, hint_list, dirty=True):
+        """ Called by signal. *** Is this the best way to do this? Calling
+            ygGlyphView directly? Figure out something else (compare
+            sig_glyph_source_ready, for which we didn't have to import
+            anything).***
+
+        """
+        if dirty:
+            self.set_dirty()
+        from .ygHintEditor import ygGlyphViewer
+        if self.glyph_viewer:
+            self.glyph_viewer.install_hints(hint_list)
 
 
 
@@ -1220,6 +1227,8 @@ class ygGlyphs:
 
 
 class Comparable(object):
+    """ For ordering hints.
+    """
     def _compare(self, other, method):
         try:
             return method(self._cmpkey(), other._cmpkey())
@@ -1227,7 +1236,8 @@ class Comparable(object):
             return NotImplemented
 
     def _mk_point_list(self, obj, key):
-        """ Helper for comparison functions.
+        """ Helper for comparison functions. For target points, this will
+            recurse into dependent hints to build a complete list.
 
         """
         hint = ygHint(None, obj)
@@ -1253,7 +1263,10 @@ class Comparable(object):
         return(result)
 
     def _comparer(self, obj1, obj2):
-        """ Helper for comparison functions.
+        """ Helper for comparison functions. A return value of zero doesn't
+            mean "equal," but rather "no match," which should (like "equal")
+            result in no reordering of hints. Actually equal hints should not
+            oredinarily occur.
 
         """
         p1 = self._mk_point_list(obj1, "ptid")
@@ -1261,7 +1274,6 @@ class Comparable(object):
         r1 = self._mk_point_list(obj1, "ref")
         r2 = self._mk_point_list(obj2, "ref")
 
-        # print("Comparing " + str(p1) + " / " + str(r1) + " and " + str(p2) + " / " + str(r2) + ":")
         if r2 != None:
             for r in r2:
                 if r != None and r in p1:
@@ -1343,70 +1355,41 @@ class ygHint(QObject):
         if "points" in self._source:
             return self._source["points"]
 
-    def main_target(self):
-        return self._source["ptid"]
-
-    def alt_target(self):
-        if "alt-ptid" in self._source:
-            return self._source["alt-ptid"]
-        return None
-
     def target(self):
         """ May return a point identifier (index, name, coordinate-pair), a list,
             or a dict.
 
         """
-        if "alt-ptid" in self._source:
-            # return self.yg_glyph.resolve_point_identifier(self._source["alt-ptid"])
-            return self._source["alt-ptid"]
-        else:
-            return self._source["ptid"]
+        return self._source["ptid"]
 
-    def main_ref(self):
+    def target_list(self):
+        """ Always returns a list. Does not recurse.
+
+        """
+        t = self.target()
+        if type(t) is list:
+            return t
+        elif type(t) is dict:
+            result = []
+            v = t.values()
+            for vv in v:
+                if type(vv) is list:
+                    result.extend(vv)
+                else:
+                    result.append(vv)
+            return result
+        else:
+            return [t]
+
+    def ref(self):
         if "ref" in self._source:
             return self._source["ref"]
         return None
 
-    def alt_ref(self):
-        if "alt-ref" in self._source:
-            return self._source["alt-ref"]
-        return None
-
-    def ref(self):
-        """ May return a point identifier (index, name, coordinate-pair) or a
-            list.
-
-        """
-        if "alt-ref" in self._source:
-            # return self.yg_glyph.resolve_point_identifier(self._source["alt-ref"])
-            return self.source["alt-ref"]
-        else:
-            if "ref" in self._source:
-                return self._source["ref"]
-        return None
-
-    def set_main_target(self, tgt):
+    def set_target(self, tgt):
         """ tgt can be a point identifier or a set of them. no ygPoint objects.
         """
         self._source["ptid"] = tgt
-
-    def set_target(self, pt):
-        """ Sets the alt-ptid, not the ptid.
-
-        """
-        changed = False
-        if type(pt) is ygPoint:
-            p = pt.preferred_label()
-        else:
-            p = pt
-        if p != None:
-            self._source["alt-ptid"] = p
-            changed = True
-        if p == None and "alt-ptid" in self._source:
-            del self._source["alt-ptid"]
-            changed = True
-        if changed:
-            self.hint_changed_signal.emit(self)
 
     def set_ref(self, pt):
         changed = False
@@ -1578,6 +1561,12 @@ class ygHint(QObject):
 
 
 class ygHintSorter:
+    """ Will sort a (flat) list of hints into an order where hints with touched
+        points occur earlier in the list than hints with refs pointing to those
+        touched points. This sometimes fails, and I'm not sure why. See classes
+        ygModel.Comparable and ygModel.ygHintSource, helpers for this class.
+
+    """
     def __init__(self, list):
         self.list = list
 
@@ -1594,6 +1583,10 @@ class ygHintSorter:
 
 
 class ygPointSorter:
+    """ Will sort a list of points into left-to-right or up-to-down order,
+        depending on the current vector.
+
+    """
     def __init__(self, vector):
         self.vector = vector
 
