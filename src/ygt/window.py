@@ -540,8 +540,8 @@ class MainWindow(QMainWindow):
                 yaml_source["prep"] = {}
                 prep_code = """<code xmlns=\"http://xgridfit.sourceforge.net/Xgridfit2\">
                     <push>4 511</push>
-                    <command nm="SCANCTRL"/>
-                    <command nm="SCANTYPE"/>
+                    <command name="SCANCTRL"/>
+                    <command name="SCANTYPE"/>
                   </code>"""
                 yaml_source["prep"] = {"code": prep_code}
                 yaml_source["functions"] = {}
