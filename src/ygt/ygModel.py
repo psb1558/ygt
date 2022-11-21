@@ -137,6 +137,39 @@ class ygFont:
             raise Exception("Can't find font file " + str(fontfile))
         self.glyphs      = ygGlyphs(self.source).data
         self.defaults    = ygDefaults(self, self.source)
+        if len(self.source["cvt"]) == 0:
+            cvt = self.source["cvt"]
+            cvt["baseline"] = {"val": 0, "type": "pos", "vector": "y"}
+            try:
+                os2 = self.ft_font['OS/2']
+                cvt["cap-height"] = {"val": os2.sCapHeight,
+                                     "type": "pos",
+                                     "vector": "y"}
+                cvt["cap-height-overshoot"] = {"val": self.extreme_points("O")[0],
+                                               "type": "pos",
+                                               "vector": "y"}
+                cvt["cap-baseline-undershoot"] = {"val": self.extreme_points("O")[1],
+                                                "type": "pos",
+                                                "vector": "y"}
+                cvt["xheight"] = {"val": os2.sxHeight,
+                                  "type": "pos",
+                                  "vector": "y"}
+                cvt["xheight-overshoot"] = {"val": self.extreme_points("o")[0],
+                                            "type": "pos",
+                                            "vector": "y"}
+                cvt["lc-baseline-undershoot"] = {"val": self.extreme_points("o")[1],
+                                            "type": "pos",
+                                            "vector": "y"}
+                cvt["lc-ascender"] = {"val": self.extreme_points("b")[0],
+                                      "type": "pos",
+                                      "vector": "y"}
+                cvt["lc-descender"] = {"val": self.extreme_points("p")[1],
+                                       "type": "pos",
+                                       "vector": "y"}
+            except Exception as e:
+                print("Error while building cvt:")
+                print(e)
+                # pass
         self.cvt         = ygcvt(self, self.source)
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
@@ -186,6 +219,16 @@ class ygFont:
         for g in self.glyph_list:
             self.glyph_index[g[1]] = glyph_counter
             glyph_counter += 1
+
+    def extreme_points(self, glyph_name):
+        g = ygGlyph(None, self, glyph_name)
+        highest = -10000
+        lowest = 10000
+        plist = g.point_list
+        for p in plist:
+            highest = max(highest, p.font_y)
+            lowest = min(lowest, p.font_y)
+        return highest, lowest
 
     def family_name(self):
         return self.ft_font['name'].getName(1,3,1,0x409)
@@ -640,7 +683,10 @@ class ygGlyph(QObject):
         self.point_coord_dict = {}
         for p in self.point_list:
             self.point_coord_dict[p.coord] = p
-        self._current_vector = self.preferences["current_vector"]
+        if self.preferences:
+            self._current_vector = self.preferences["current_vector"]
+        else:
+            self._current_vector = "y"
         # Fix up the source and build a tree of ygHhint objects.
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
