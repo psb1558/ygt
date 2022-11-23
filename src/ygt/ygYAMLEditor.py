@@ -10,6 +10,7 @@ import yaml
 import re
 from yaml import Dumper
 import copy
+from .ygSchema import is_valid, set_error_message, error_message
 
 # From https://stackoverflow.com/questions/8640959/
 # how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data
@@ -27,6 +28,7 @@ yaml.representer.SafeRepresenter.add_representer(str, str_presenter)
 class ygYAMLEditor(QPlainTextEdit):
 
     sig_source_from_editor = pyqtSignal(object)
+    sig_status = pyqtSignal(object)
 
     def __init__(self, preferences, parent=None):
         super().__init__()
@@ -42,10 +44,23 @@ class ygYAMLEditor(QPlainTextEdit):
         self.setPlainText(text)
 
     def yaml_source(self):
+        err = False
         try:
-            self.sig_source_from_editor.emit(yaml.safe_load(self.toPlainText()))
+            s = yaml.safe_load(self.toPlainText())
         except Exception as e:
+            err = True
+        if not err:
+            try:
+                err = not is_valid({"points": s})
+            except SchemaError:
+                err = True
+        if err:
             self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+        else:
+            self.sig_source_from_editor.emit(s)
+
+    def setup_status_indicator(self, o):
+        self.sig_status.connect(o)
 
     def setup_editor_signals(self, f):
         self.sig_source_from_editor.connect(f)
@@ -54,8 +69,23 @@ class ygYAMLEditor(QPlainTextEdit):
         self.sig_source_from_editor.disconnect(f)
 
     def text_changed(self):
-        if len(self.toPlainText()) == 0:
+        valid = True
+        y = self.toPlainText()
+        if len(y) == 0:
             self.setPlainText("[]\n")
+        else:
+            try:
+                y = yaml.safe_load(y)
+            except Exception as e:
+                valid = False
+            if valid:
+                valid = is_valid({"points": y})
+            if valid:
+                set_error_message(None)
+            else:
+                if not error_message():
+                    set_error_message("error")
+                self.sig_status.emit(error_message())
 
     def setup_editor(self):
         tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round)\:'
