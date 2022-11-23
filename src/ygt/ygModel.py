@@ -609,6 +609,9 @@ class ygSet:
             return self._point_list[0]
 
     def point_at_index(self, index):
+        """ Instead of failing when index is out of range, return the last
+            item in the list.
+        """
         try:
             return self.point_list[index]
         except Exception:
