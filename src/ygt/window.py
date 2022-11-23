@@ -3,6 +3,7 @@ import os
 import copy
 import platform
 import freetype
+from .ygSchema import error_message
 from .ygModel import ygFont, ygGlyph
 from .fontViewDialog import fontViewDialog
 from .ygPreview import ygPreview
@@ -26,7 +27,8 @@ from PyQt6.QtWidgets import (
     QDialog,
     QScrollArea,
     QSizePolicy,
-    QGraphicsView
+    QGraphicsView,
+    QLabel
 )
 from PyQt6.QtGui import (
     QPainter,
@@ -46,11 +48,16 @@ class MainWindow(QMainWindow):
         self.macro_editor = None
         self.default_editor = None
         self.font_viewer = None
+        self.statusbar = self.statusBar()
+        self.statusbar_label = QLabel()
+        # self.statusbar_validity_label = QLabel()
+        self.statusbar.addWidget(self.statusbar_label)
+        # self.statusbar.addWidget(self.statusbar_validity_label)
 
         self.prog_path = os.path.split(__file__)[0]
         self.icon_path = self.prog_path + "/icons/"
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
-        self.setWindowTitle("ygt")
+        self.setWindowTitle("YGT")
         self.toolbar = self.addToolBar("Tools")
         self.toolbar.setIconSize(QSize(32,32))
         spacer = QWidget()
@@ -170,9 +177,7 @@ class MainWindow(QMainWindow):
 
         vector_action_group.addAction(self.vertical_action)
         vector_action_group.addAction(self.horizontal_action)
-        self.vertical_action.setChecked(True)
-        self.vertical_action.setEnabled(False)
-        self.horizontal_action.setEnabled(False)
+        # self.vertical_action.setChecked(True)
 
         cursor_action_group = QActionGroup(self.toolbar)
         cursor_action_group.setExclusive(True)
@@ -269,6 +274,18 @@ class MainWindow(QMainWindow):
 
         self.setup_edit_connections()
 
+    def set_vector_buttons(self):
+        """ To be run right after preferences are loaded and before a file is
+            loaded.
+
+        """
+        if self.preferences["current_vector"] == "y":
+            self.vertical_action.setChecked(True)
+        else:
+            self.horizontal_action.setChecked(True)
+        self.vertical_action.setEnabled(False)
+        self.horizontal_action.setEnabled(False)
+
     def set_mouse_panning(self, panning_on):
         if self.glyph_pane:
             if panning_on:
@@ -286,9 +303,16 @@ class MainWindow(QMainWindow):
         glyph = self.glyph_pane.viewer.yg_glyph.gname
         glyph_index = self.yg_font.name_to_index[glyph]
         # tmp_font = compile_one(self.yg_font.ft_font, source, glyph)
-        tmp_font, failed_glyph_list = compile_one(font, source, glyph)
+        emsg =  "Error compiling YAML or Xgridfit code. "
+        emsg += "Check the correctness of your code (including any "
+        emsg += "functions or macros and the prep program) and try again."
+        try:
+            tmp_font, failed_glyph_list = compile_one(font, source, glyph)
+        except Exception:
+            self.show_error_message(["Error", "Error", emsg])
+            return
         if len(failed_glyph_list) > 0:
-            # Make an error message
+            self.show_error_message(["Error", "Error", emsg])
             pass
         self.yg_preview.fetch_glyph(tmp_font, glyph_index)
         self.yg_preview.update()
@@ -435,6 +459,7 @@ class MainWindow(QMainWindow):
         self.setup_nav_connections()
         self.setup_zoom_connections()
         self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
+        self.source_editor.setup_status_indicator(self.set_status_validity_msg)
         self.setup_cursor_connections()
 
     def disconnect_glyph_pane(self):
@@ -474,7 +499,19 @@ class MainWindow(QMainWindow):
         in_file_name = self.yg_font.font_files.in_font()
         if new_file_name == None or in_file_name == None:
             return
-        compile_all(in_file_name, source, new_file_name)
+        emsg =  "Failed to generate the font. This most likely due to an error "
+        emsg += "in function, macro, or prep code or in your cvt or cvar "
+        emsg += "entries."
+        try:
+            failed_list = compile_all(in_file_name, source, new_file_name)
+        except Exception:
+            self.show_error_message(["Error", "Error", emsg])
+            return
+        if len(failed_list) > 0:
+            emsg = "Failed to compile one or more glyphs: "
+            for f in failed_list:
+                emsg += (f + " ")
+            self.show_error_message(["Error", "Error", emsg])
 
     def open_recent(self):
         f = self.sender().text()
@@ -579,13 +616,20 @@ class MainWindow(QMainWindow):
     #    self.glyph_pane.set_background()
 
     def set_window_title(self):
-        base = "YG"
+        """ And also the status bar
+        """
+        base = "YGT"
         if self.yg_font:
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
-        if self.glyph_pane:
-            base += " -- " + self.glyph_pane.viewer.yg_glyph.gname
-            base += " (" + self.glyph_pane.viewer.yg_glyph.current_vector() + ")"
         self.setWindowTitle(base)
+        status_text =  self.glyph_pane.viewer.yg_glyph.gname
+        status_text += " (" + self.glyph_pane.viewer.yg_glyph.current_vector() + ")"
+        self.statusbar_label.setText(status_text)
+
+    def set_status_validity_msg(self, t):
+        m = error_message()
+        if m:
+            self.statusbar.showMessage(m, 3000)
 
     def show_error_message(self, msg_list):
         msg = QMessageBox(self)
