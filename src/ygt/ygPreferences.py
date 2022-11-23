@@ -101,6 +101,7 @@ def open_config(top_window):
         for kk in k:
             p[kk] = pref_dict[kk]
         p["top_window"] = top_window
+        top_window.set_vector_buttons()
         return p
     except Exception as e:
         print("Exception in open_config:")
