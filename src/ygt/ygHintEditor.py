@@ -1421,15 +1421,13 @@ class ygGlyphViewer(QGraphicsScene):
         self.setSceneRect(QRectF(0,0,self.canvas_size[0],self.canvas_size[1]))
         self.xTranslate = self.canvas_size[2]
         self.yTranslate = self.canvas_size[3]
-        c_index = 0
-        for cc in c:
+        for c_index, cc in enumerate(c):
             try:
                 p = self.yg_point_view_list[c_index]
                 p.glocation = self._font2Qt(cc[0],
                                             cc[1],
                                             p.yg_point.on_curve)
                 p.setPos(p.glocation)
-                c_index += 1
             except IndexError as e:
                 # fontTools coordinate list has phantom points at the end, which we ignore.
                 pass
@@ -1990,14 +1988,12 @@ class ygGlyphViewer(QGraphicsScene):
             # arbitrary assignments, which user must clean up. First assign the
             # required params, then the optional ones.
             pt_dict = {}
-            counter = 0
-            for p in pt_names:
+            for counter, p in enumerate(pt_names):
                 try:
                     ppp = pp[counter]
                     if type(ppp) is ygPointView:
                         ppp = self.yg_glyph.points_to_labels(ppp.yg_point)
                     pt_dict[p] = ppp
-                    counter += 1
                 except IndexError as e:
                     # print("IndexError in make_macfunc_from_selection:")
                     # print(e)

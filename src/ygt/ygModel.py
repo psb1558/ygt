@@ -216,12 +216,10 @@ class ygFont:
         # (may decide, though, to display previews of them)
         self.name_to_index = {}
         raw_order_list = self.ft_font.getGlyphOrder()
-        order_index = 0
-        for gn in raw_order_list:
+        for order_index, gn in enumerate(raw_order_list):
             g = self.ft_font['glyf'][gn]
             if not g.isComposite():
                 self.name_to_index[gn] = order_index
-            order_index += 1
         # Get a list of tuples containing unicodes and glyph names. Still
         # omitting composites.
         for gn in glyph_names:
@@ -239,10 +237,8 @@ class ygFont:
         self.glyph_list.sort(key = lambda x : x[1])
         self.glyph_list.sort(key = lambda x : x[0])
         self.glyph_index = {}
-        glyph_counter = 0
-        for g in self.glyph_list:
+        for glyph_counter, g in enumerate(self.glyph_list):
             self.glyph_index[g[1]] = glyph_counter
-            glyph_counter += 1
 
     def extreme_points(self, glyph_name):
         """ Helper for setting up an initial cvt.
@@ -989,13 +985,10 @@ class ygGlyph(QObject):
 
         """
         pt_list = []
-        point_index = 0
         gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font['glyf'])
-        pointIndex = 0
-        for p in zip(gl[0], gl[2]):
+        for point_index, p in enumerate(zip(gl[0], gl[2])):
             is_on_curve = p[1] & 0x01 == 0x01
             pt = ygPoint(None, point_index, p[0][0], p[0][1], self.xoffset(), self.yoffset(), is_on_curve)
-            point_index += 1
             pt_list.append(pt)
         return(pt_list)
 
