@@ -85,7 +85,7 @@ class ygYAMLEditor(QPlainTextEdit):
             else:
                 if not error_message():
                     set_error_message("error")
-                self.sig_status.emit(error_message())
+        self.sig_status.emit(valid)
 
     def setup_editor(self):
         tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round)\:'

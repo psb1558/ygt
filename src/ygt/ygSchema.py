@@ -29,7 +29,7 @@ def is_point_valid_1(pt):
     if type(pt) is int:
         return True
     if type(pt) is str:
-        if re.match("^[a-zA-Z][\w-_]*", pt):
+        if re.match("^[a-zA-Z][0-9A-Za-z-_]*", pt):
             return True
         if re.search("\{[\d\-][\d]{0,3};[\d\-][\d]{0,3}\}", pt):
             return True
@@ -47,6 +47,7 @@ def is_point_valid_1(pt):
                 err = True
         if not err:
             return True
+    print("Invalid in is_point_valid_1")
     set_error_message("point " + str(pt) + " is not valid")
     return False
 
@@ -57,7 +58,7 @@ def is_point_valid_2(pt):
     if type(pt) is int:
         return True
     if type(pt) is str:
-        if re.match("^[a-zA-Z][\w-_]*", pt):
+        if re.match("^[a-zA-Z][0-9A-Za-z-_]*", pt):
             return True
         if re.search("\{[\d\-][\d]{0,3};[\d\-][\d]{0,3}\}", pt):
             return True
@@ -68,6 +69,7 @@ def is_point_valid_2(pt):
                 err = True
         if not err:
             return True
+    print("Invalid in is_point_valid_2")
     set_error_message("point " + str(pt) + " is not valid")
     return False
 
@@ -80,6 +82,8 @@ def validate_points(pt):
             nested_point_schema.validate(p)
         return True
     except Exception as e:
+        print("Invalid in validate_points:")
+        print(e)
         set_error_message("point " + str(pt) + " is not valid.")
     return False
 
@@ -132,6 +136,8 @@ def is_valid(t):
         # print("is_valid = True")
         return True
     except SchemaError as s:
+        print("Invalid in is_valid:")
+        print(s)
         set_error_message(standard_error)
     #print("is_valid = False")
     return False
