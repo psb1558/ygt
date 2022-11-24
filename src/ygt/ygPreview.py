@@ -1,6 +1,5 @@
 import numpy
 import os
-import sys
 import freetype
 from PyQt6.QtWidgets import (
     QWidget,
