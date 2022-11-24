@@ -34,7 +34,10 @@ hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
 # ygSet: A set of points, for SLOOP instructions like shift and interpolate.
 # ygGlyph(QObject): Keeps data for the current glyph.
 # ygGlyphs: Collection of this font's glyphs.
+# Comparable: superclass for ygHintSource: for ordering hints.
+# ygHintSource(Comparable): Wrapper for hint source: use when sorting.
 # ygHint(QObject): One hint (including a function or macro)
+# ygHintSorter: Sorts hints into their proper order.
 # ygPointSorter: Utility for sorting points on the x or y axis.
 
 class SourceFile:
@@ -120,6 +123,9 @@ class ygFont:
         you only have to open the yaml file.
     """
     def __init__(self, source_file, yaml_filename=None):
+        #
+        # Open the font
+        #
         self.source_file = SourceFile(source_file, yaml_filename=yaml_filename)
         d = None
         if isinstance(source_file, str) and source_file:
@@ -135,6 +141,21 @@ class ygFont:
             self.ft_font = ttLib.TTFont(fontfile)
         except FileNotFoundError:
             raise Exception("Can't find font file " + str(fontfile))
+        #
+        # If it's a variable font, get a list of instances
+        #
+        try:
+            self.instances = {}
+            for inst in self.ft_font['fvar'].instances:
+                nm = self.ft_font['name'].getName(inst.subfamilyNameID,3,1,0x409).toUnicode()
+                self.instances[nm] = inst.coordinates
+            self.is_variable_font = True
+        except Exception as e:
+            self.is_variable_font = False
+        #
+        # Set up access to YAML font data (if there is no cvt table yet, get some
+        # values from the font).
+        #
         self.glyphs      = ygGlyphs(self.source).data
         self.defaults    = ygDefaults(self, self.source)
         if len(self.source["cvt"]) == 0:
@@ -183,6 +204,9 @@ class ygFont:
         else:
             self.macros = {}
         self.macros_func = ygMacros(self, self.macros)
+        #
+        # Set up lists, indexes, and other data
+        #
         self.glyph_list  = []
         self._clean       = True
         glyph_names = self.ft_font.getGlyphNames()
@@ -221,6 +245,9 @@ class ygFont:
             glyph_counter += 1
 
     def extreme_points(self, glyph_name):
+        """ Helper for setting up an initial cvt.
+
+        """
         g = ygGlyph(None, self, glyph_name)
         highest = -10000
         lowest = 10000
@@ -638,13 +665,12 @@ class ygGlyph(QObject):
     sig_glyph_source_ready = pyqtSignal(object)
 
     def __init__(self, preferences, yg_font, gname):
-        """ Requires a ygFont object and the name of the glyph. This will also
-            parse the glyph's x and y hints into a tree structure.
+        """ Requires a ygFont object and the name of the glyph. Also access to preferences
+            as a convenience.
         """
         super().__init__()
         self.preferences = preferences
         self.yaml_editor = None
-        # ygHintNode.hint_index = {}
         self.yg_font = yg_font
         self.gsource = yg_font.get_glyph(gname)
         self.gname = gname
@@ -668,7 +694,7 @@ class ygGlyph(QObject):
         try:
             self.ft_glyph = yg_font.ft_font['glyf'][gname]
         except KeyError:
-            # This shouldn't happen, since we intercept bad gnames before we
+            # This shouldn't happen: we should intercept bad gnames before we
             # get here.
             raise Exception("Tried to load nonexistent glyph " + gname)
 
@@ -736,7 +762,8 @@ class ygGlyph(QObject):
             # There are two ways this loop breaks: 1) when nothing has been
             # done on this iteration (the length of "placed" has not changed)
             # and 2) the length of "unplaced" is zero
-            if last_placed_len == placed_len:
+            # if last_placed_len == placed_len:
+            if last_placed_len == len(placed):
                 break
             if len(unplaced) == 0:
                 break
@@ -977,7 +1004,6 @@ class ygGlyph(QObject):
     #
 
     def switch_to_vector(self, new_vector):
-        # Navigation
         if self._current_vector == new_vector:
             return
         self.save_source()
@@ -1033,7 +1059,6 @@ class ygGlyph(QObject):
     #
 
     def combine_point_blocks(self, block):
-        # Editing
         if len(block) > 0:
             new_block = []
             k = block.keys()
@@ -1428,15 +1453,6 @@ class ygHint(QObject):
         """ tgt can be a point identifier or a set of them. no ygPoint objects.
         """
         self._source["ptid"] = tgt
-
-    # def set_ref(self, pt):
-    #    changed = False
-    #    if type(pt) is ygPoint:
-    #        p = pt.preferred_label()
-    #    else:
-    #        p = pt
-    #    if changed:
-    #        self.hint_changed_signal.emit(self)
 
     def hint_type(self):
         if "macro" in self._source:

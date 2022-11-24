@@ -3,23 +3,16 @@ import os
 import sys
 import freetype
 from PyQt6.QtWidgets import (
-    QApplication,
-    QMainWindow,
     QWidget,
     QLabel
 )
 from PyQt6.QtGui import (
     QPainter,
-    QFont,
-    QRawFont,
-    QGlyphRun,
     QBrush,
-    QPen,
     QColor
 )
 from PyQt6.QtCore import (
     Qt,
-    QPointF,
     QRect
 )
 
@@ -41,6 +34,8 @@ class ygPreview(QWidget):
         self.max_pixel_size = 10
         self.pixel_size = 10
         self.Z = []
+        self.instance_dict = None
+        self.instance = None
 
     def fetch_glyph(self, filename, glyph_index):
         self.glyph_index = glyph_index
@@ -56,6 +51,8 @@ class ygPreview(QWidget):
         #else:
         #    flags=freetype.FT_LOAD_NO_HINTING
         self.face.set_char_size(self.char_size * 64)
+        if self.instance != None:
+            self.face.set_var_named_instance(self.instance)
         self.face.load_glyph(self.glyph_index)
         ft_slot = self.face.glyph
         ft_bitmap = self.face.glyph.bitmap
@@ -94,16 +91,34 @@ class ygPreview(QWidget):
                     self.char_size = 10
             except Exception as e:
                 return
-            self.label.setText(str(self.char_size) + "ppem")
+            # self.label.setText(str(self.char_size) + "ppem")
+            self.set_label_text()
             self._build_glyph()
             self.update()
 
     def resize_by(self, n):
         if self.face != None and self.glyph_index != 0:
-            self.label.setText(str(self.char_size) + "ppem")
+            # self.label.setText(str(self.char_size) + "ppem")
             self.char_size += n
+            self.set_label_text()
             self._build_glyph()
             self.update()
+
+    def set_label_text(self):
+        t = str(self.char_size) + "ppem"
+        if self.instance != None:
+            t += " — " + self.instance
+        self.label.setText(t)
+        self.label.adjustSize()
+
+    def add_instances(self, instances):
+        self.instance_dict = instances
+
+    def set_instance(self):
+        self.instance = self.sender().text()
+        self.set_label_text()
+        self._build_glyph()
+        self.update()        
 
     def bigger_one(self):
         self.resize_by(1)

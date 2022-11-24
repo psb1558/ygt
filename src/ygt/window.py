@@ -2,7 +2,6 @@ import sys
 import os
 import copy
 import platform
-import freetype
 from .ygSchema import error_message
 from .ygModel import ygFont, ygGlyph
 from .fontViewDialog import fontViewDialog
@@ -22,16 +21,12 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QLineEdit,
     QFileDialog,
-    QDialogButtonBox,
-    QComboBox,
-    QDialog,
     QScrollArea,
     QSizePolicy,
     QGraphicsView,
     QLabel
 )
 from PyQt6.QtGui import (
-    QPainter,
     QAction,
     QKeySequence,
     QIcon,
@@ -50,9 +45,8 @@ class MainWindow(QMainWindow):
         self.font_viewer = None
         self.statusbar = self.statusBar()
         self.statusbar_label = QLabel()
-        # self.statusbar_validity_label = QLabel()
+        self.statusbar_label.setStyleSheet("QLabel {font-family: Source Code Pro, monospace; margin-left: 10px; }")
         self.statusbar.addWidget(self.statusbar_label)
-        # self.statusbar.addWidget(self.statusbar_validity_label)
 
         self.prog_path = os.path.split(__file__)[0]
         self.icon_path = self.prog_path + "/icons/"
@@ -73,6 +67,7 @@ class MainWindow(QMainWindow):
         self.preferences = ygPreferences()
         self.recents_display = []
         self.recents_actions = []
+        self.instance_actions = []
 
         self.menu = self.menuBar()
 
@@ -135,6 +130,8 @@ class MainWindow(QMainWindow):
 
         self.pv_smaller_ten_action = self.preview_menu.addAction("Shrink by Ten")
         self.pv_smaller_ten_action.setShortcut(QKeySequence.StandardKey.MoveToEndOfBlock)
+
+        self.instance_menu = None
 
         self.preview_menu.addSeparator()
 
@@ -402,6 +399,11 @@ class MainWindow(QMainWindow):
         self.pv_smaller_ten_action.triggered.connect(self.yg_preview.smaller_ten)
         self.pv_set_size_action.triggered.connect(self.show_ppem_dialog)
 
+    def setup_preview_instance_connections(self):
+        if self.yg_font.is_variable_font and self.instance_actions != None:
+            for i in self.instance_actions:
+                i.triggered.connect(self.yg_preview.set_instance)
+
     def setup_zoom_connections(self):
         self.zoom_in_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
         self.zoom_out_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
@@ -520,10 +522,21 @@ class MainWindow(QMainWindow):
             i = self.recents_display.index(f)
             ff = self.preferences["recents"][i]
         except Exception as e:
-            print("Attempting to open recent file:")
+            print("Failure while trying to open recent file:")
             print(e)
         if ff:
             self._open(ff)
+
+    def set_up_instance_list(self):
+        if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
+            self.preview_menu.addSeparator()
+            self.instance_menu = self.preview_menu.addMenu("&Instances")
+            self.instance_actions = []
+            instance_names = []
+            for k in self.yg_font.instances.keys():
+                self.instance_actions.append(self.instance_menu.addAction(k))
+                instance_names.append(k)
+            self.yg_preview.add_instances(self.yg_font.instances)
 
     def open_file(self):
         f = QFileDialog.getOpenFileName(self, "Open TrueType font or YAML file",
@@ -609,7 +622,9 @@ class MainWindow(QMainWindow):
             view.centerOn(view.viewer.center_x, view.sceneRect().center().y())
             # self.set_background()
             self.set_window_title()
+            self.set_up_instance_list()
             self.setup_editor_connections()
+            self.setup_preview_instance_connections()
         # self.show()
 
     # def set_background(self):
@@ -622,14 +637,22 @@ class MainWindow(QMainWindow):
         if self.yg_font:
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
         self.setWindowTitle(base)
+        self.set_statusbar_text(None)
+
+    def set_statusbar_text(self, valid):
         status_text =  self.glyph_pane.viewer.yg_glyph.gname
         status_text += " (" + self.glyph_pane.viewer.yg_glyph.current_vector() + ")"
+        if valid != None:
+            status_text += " ("
+            if valid:
+                status_text += "Valid)"
+            else:
+                status_text += "Invalid)"
         self.statusbar_label.setText(status_text)
 
     def set_status_validity_msg(self, t):
-        m = error_message()
-        if m:
-            self.statusbar.showMessage(m, 3000)
+
+        self.set_statusbar_text(bool(t))
 
     def show_error_message(self, msg_list):
         msg = QMessageBox(self)
