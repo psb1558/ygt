@@ -91,6 +91,8 @@ class FontFiles:
             return self.data["out"]
         return None
 
+
+
 class ygSourceable:
     def __init__(self, font, source):
         self.data = source
@@ -111,6 +113,7 @@ class ygSourceable:
     def save(self, c):
         self.data = c
         self.set_clean(True)
+
 
 
 class ygFont:
@@ -393,6 +396,7 @@ class ygcvt(ygSourceable):
         return None
 
 
+
 class ygFunctions(ygSourceable):
     def __init__(self, font, source):
         super().__init__(font, source)
@@ -594,7 +598,6 @@ class ygParams:
         for kk in k:
             result.append(self.point_dict[kk])
         return result
-
 
 
 
@@ -881,7 +884,6 @@ class ygGlyph(QObject):
             else:
                 return random_point
         return 0
-
 
     #
     # Accessing glyph data
@@ -1608,6 +1610,7 @@ class ygHint(QObject):
             return self.id == other.id
         except:
             return False
+
 
 
 class ygHintSorter:

@@ -1,7 +1,6 @@
 import sys
 import uuid
 import copy
-# import ygPreferences
 from .macfuncDialog import macfuncDialog
 from .ygModel import (ygSet,
                       ygParams,
@@ -16,11 +15,8 @@ from .ygModel import (ygSet,
 
 from PyQt6.QtCore import (
     Qt,
-    QPoint,
     QPointF,
-    QSize,
     QSizeF,
-    QRect,
     QRectF,
     pyqtSignal,
     QLine,
@@ -28,7 +24,6 @@ from PyQt6.QtCore import (
     pyqtSlot
 )
 from PyQt6.QtGui import (
-    QPainter,
     QPainterPath,
     QPen,
     QBrush,
@@ -38,8 +33,6 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QApplication,
-    QMainWindow,
-    QWidget,
     QGraphicsScene,
     QGraphicsView,
     QGraphicsItem,
@@ -50,16 +43,13 @@ from PyQt6.QtWidgets import (
     QGraphicsPolygonItem,
     QMenu,
     QLabel,
-    QSizePolicy,
     QDialog
 )
 from fontTools import ttLib
 from fontTools.pens.basePen import BasePen
-import inspect
 
 
 HINT_ARROW_WIDTH =               3
-# HINT_ARROWHEAD_WIDTH =           1
 HINT_ANCHOR_WIDTH =              3
 HINT_LINK_WIDTH =                1
 HINT_ARROWHEAD_WIDTH =                      2
@@ -202,12 +192,7 @@ class QtPen(BasePen):
     def _closePath(self):
         self.path.closeSubpath()
 
-# "View" classes are for making visual representations of data from the model.
-# We keep lists and indexes of "View" classes for easy lookup, but otherwise
-# data should never be stored as "View" objects--only as "Model" objects.
-# Likewise, data shouldn't be manipulated here, but only in the model. This
-# file can send requests to the Model to perform certain editing tasks. Then
-# the model will send a signal that the display should be refreshed.
+
 
 class ygSelectable:
 
