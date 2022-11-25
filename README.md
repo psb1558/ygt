@@ -16,6 +16,7 @@ Ygt is in an alpha state, with features yet to be added and some (mostly minor) 
 That said, I have used ygt to hint over 1600 glyphs in a large font, sometimes hinting nearly 100 glyphs in an hour. The code it produces is compact: the hints for those 1600 glyphs add about 60k to the size of a 2.2MB font.
 
 The screenshot below illustrates the use of functions or macros (green boxes), primary moves of single points (red arrows), subsidiary moves or shifts (blue arrows), and interpolations (paired yellow arrows). In addition to the large editing pane, it shows the editable YAML source (in the center) and the preview pane (on the left).
+
 ![Ygt editing window](images/OE_sample.png)
 
 You will generally want to keep the font view window open alongside the main window:
