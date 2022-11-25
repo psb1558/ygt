@@ -11,7 +11,7 @@ from .ygHintEditor import ygGlyphViewer, MyView
 # import ygHintEditor
 from .ygPreferences import ygPreferences, open_config
 from xgridfit import compile_one, compile_all
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, pyqtSlot
 from PyQt6.QtWidgets import (
     QWidget,
     QApplication,
@@ -271,28 +271,19 @@ class MainWindow(QMainWindow):
 
         self.setup_edit_connections()
 
-    def set_vector_buttons(self):
-        """ To be run right after preferences are loaded and before a file is
-            loaded.
-
-        """
-        if self.preferences["current_vector"] == "y":
-            self.vertical_action.setChecked(True)
-        else:
-            self.horizontal_action.setChecked(True)
-        self.vertical_action.setEnabled(False)
-        self.horizontal_action.setEnabled(False)
-
+    @pyqtSlot(bool)
     def set_mouse_panning(self, panning_on):
         if self.glyph_pane:
             if panning_on:
                 self.glyph_pane.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
+    @pyqtSlot(bool)
     def set_mouse_editing(self, editing_on):
         if self.glyph_pane:
             if editing_on:
                 self.glyph_pane.setDragMode(QGraphicsView.DragMode.NoDrag)
 
+    @pyqtSlot()
     def preview_current_glyph(self):
         self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
@@ -314,6 +305,7 @@ class MainWindow(QMainWindow):
         self.yg_preview.fetch_glyph(tmp_font, glyph_index)
         self.yg_preview.update()
 
+    @pyqtSlot()
     def show_font_view(self):
         """ Display the modeless dialog in fontViewDialog.py.
         """
@@ -324,6 +316,7 @@ class MainWindow(QMainWindow):
         self.font_viewer.show()
         self.font_viewer.activateWindow()
 
+    @pyqtSlot()
     def file_menu_about_to_show(self):
         self.recents_display = []
         self.disconnect_recents_connections()
@@ -352,6 +345,10 @@ class MainWindow(QMainWindow):
             self.setup_recents_connections()
         else:
             self.recent_menu.setEnabled(False)
+
+    #
+    # Connection setup
+    #
 
     def setup_editor_connections(self):
         self.compile_action.triggered.connect(self.source_editor.yaml_source)
@@ -452,7 +449,6 @@ class MainWindow(QMainWindow):
         self.hand_action.toggled.connect(self.set_mouse_panning)
         self.cursor_action.toggled.connect(self.set_mouse_editing)
 
-
     def setup_glyph_pane_connections(self):
         # These get destroyed whenever we move from one glyph to another, and so the connections
         # have to be reestablished every time. Check carefully to make sure we can't ever have
@@ -471,6 +467,10 @@ class MainWindow(QMainWindow):
         self.source_editor.disconnect_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
         self.disconnect_cursor()
 
+    #
+    # GUI setup
+    #
+
     def add_preview(self, previewer):
         self.yg_preview = previewer
         self.preview_scroller = QScrollArea()
@@ -488,12 +488,44 @@ class MainWindow(QMainWindow):
         self.qs.addWidget(self.glyph_pane)
         self.setup_glyph_pane_connections()
 
+    def set_vector_buttons(self):
+        """ To be run right after preferences are loaded and before a file is
+            loaded.
+
+        """
+        if self.preferences["current_vector"] == "y":
+            self.vertical_action.setChecked(True)
+        else:
+            self.horizontal_action.setChecked(True)
+        self.vertical_action.setEnabled(False)
+        self.horizontal_action.setEnabled(False)
+
+    def set_up_instance_list(self):
+        if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
+            self.preview_menu.addSeparator()
+            self.instance_menu = self.preview_menu.addMenu("&Instances")
+            self.instance_actions = []
+            instance_names = []
+            for k in self.yg_font.instances.keys():
+                self.instance_actions.append(self.instance_menu.addAction(k))
+                instance_names.append(k)
+            self.yg_preview.add_instances(self.yg_font.instances)
+
+    #
+    # File operations
+    #
+
+    @pyqtSlot()
     def save_yaml_file(self):
+        self._save_yaml_file()
+
+    def _save_yaml_file(self):
         if self.yg_font and (not self.yg_font.clean()):
             self.glyph_pane.viewer.yg_glyph.save_source()
             self.yg_font.source_file.save_source()
             self.yg_font.set_clean()
 
+    @pyqtSlot()
     def export_font(self):
         self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
@@ -515,6 +547,7 @@ class MainWindow(QMainWindow):
                 emsg += (f + " ")
             self.show_error_message(["Error", "Error", emsg])
 
+    @pyqtSlot()
     def open_recent(self):
         f = self.sender().text()
         ff = None
@@ -527,17 +560,7 @@ class MainWindow(QMainWindow):
         if ff:
             self._open(ff)
 
-    def set_up_instance_list(self):
-        if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
-            self.preview_menu.addSeparator()
-            self.instance_menu = self.preview_menu.addMenu("&Instances")
-            self.instance_actions = []
-            instance_names = []
-            for k in self.yg_font.instances.keys():
-                self.instance_actions.append(self.instance_menu.addAction(k))
-                instance_names.append(k)
-            self.yg_preview.add_instances(self.yg_font.instances)
-
+    @pyqtSlot()
     def open_file(self):
         f = QFileDialog.getOpenFileName(self, "Open TrueType font or YAML file",
                                                "",
@@ -625,10 +648,10 @@ class MainWindow(QMainWindow):
             self.set_up_instance_list()
             self.setup_editor_connections()
             self.setup_preview_instance_connections()
-        # self.show()
 
-    # def set_background(self):
-    #    self.glyph_pane.set_background()
+    #
+    # GUI management
+    #
 
     def set_window_title(self):
         """ And also the status bar
@@ -664,6 +687,11 @@ class MainWindow(QMainWindow):
         msg.setText(msg_list[2])
         msg.exec()
 
+    #
+    # Editors in dialogs
+    #
+
+    @pyqtSlot()
     def edit_cvt(self):
         self.cvt_editor = editorDialog(self.preferences,
                                                 self.yg_font.cvt)
@@ -671,6 +699,7 @@ class MainWindow(QMainWindow):
         # self.cvt_editor.raise()
         self.cvt_editor.activateWindow()
 
+    @pyqtSlot()
     def edit_prep(self):
         self.cvt_editor = editorDialog(self.preferences,
                                                 self.yg_font.prep)
@@ -678,6 +707,7 @@ class MainWindow(QMainWindow):
         # self.cvt_editor.raise()
         self.cvt_editor.activateWindow()
 
+    @pyqtSlot()
     def edit_cvar(self):
         self.cvar_editor = editorDialog(self.preferences,
                                                  self.yg_font.cvar,
@@ -686,6 +716,7 @@ class MainWindow(QMainWindow):
         # self.cvar_editor.raise()
         self.cvar_editor.activateWindow()
 
+    @pyqtSlot()
     def edit_functions(self):
         self.function_editor = editorDialog(self.preferences,
                                                      self.yg_font.functions_func)
@@ -693,6 +724,7 @@ class MainWindow(QMainWindow):
         # self.function_editor.raise()
         self.function_editor.activateWindow()
 
+    @pyqtSlot()
     def edit_macros(self):
         self.macro_editor = editorDialog(self.preferences,
                                                   self.yg_font.macros_func)
@@ -700,6 +732,7 @@ class MainWindow(QMainWindow):
         # self.macro_editor.raise()
         self.macro_editor.activateWindow()
 
+    @pyqtSlot()
     def edit_defaults(self):
         self.default_editor = editorDialog(self.preferences,
                                                     self.yg_font.defaults)
@@ -707,17 +740,27 @@ class MainWindow(QMainWindow):
         # self.default_editor.raise()
         self.default_editor.activateWindow()
 
+    #
+    # Miscellaneous dialogs
+    #
+
+    @pyqtSlot()
     def show_goto_dialog(self):
         text, ok = QInputDialog().getText(self, "Go to glyph", "Glyph name:",
                                           QLineEdit.EchoMode.Normal)
         if ok and text:
             self.glyph_pane.go_to_glyph(text)
 
+    @pyqtSlot()
     def show_ppem_dialog(self):
         text, ok = QInputDialog().getText(self, "Set Points per Em", "Points per em:",
                                           QLineEdit.EchoMode.Normal)
         if ok and text:
             self.yg_preview.set_size(text)
+
+    #
+    # Program exit
+    #
 
     def quit(self):
         if self.yg_font == None:
@@ -737,7 +780,7 @@ class MainWindow(QMainWindow):
             if ret == QMessageBox.StandardButton.Cancel:
                 return
             if ret == QMessageBox.StandardButton.Save:
-                self.save_yaml_file()
+                self._save_yaml_file()
             self.preferences.save_config()
             self.app.quit()
 
@@ -745,7 +788,7 @@ class MainWindow(QMainWindow):
 # if __name__ == "__main__":
 def main():
 
-    # print(os.path.split(__file__)[0])
+    # print(dir(QtCore))
 
     app = QApplication([])
     top_window = MainWindow(app)

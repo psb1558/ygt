@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from fontTools import ttLib
 import yaml
 import os
@@ -1004,7 +1004,8 @@ class ygGlyph(QObject):
         self.preferences["current_vector"] = new_vector
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
-        self.sig_hints_changed.emit(self.hints())
+        # self.sig_hints_changed.emit(self.hints())
+        self._hints_changed(self.hints(), dirty=False)
         self.send_yaml_to_editor()
 
     #
@@ -1254,7 +1255,11 @@ class ygGlyph(QObject):
     def refresh_hints(self):
         self.sig_hints_changed.emit(self.hints())
 
-    def hints_changed(self, hint_list, dirty=True):
+    @pyqtSlot(object)
+    def hints_changed(self, hint_list):
+        self._hints_changed(hint_list)
+
+    def _hints_changed(self, hint_list, dirty=True):
         """ Called by signal. *** Is this the best way to do this? Calling
             ygGlyphView directly? Figure out something else (compare
             sig_glyph_source_ready, for which we didn't have to import

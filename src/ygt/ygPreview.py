@@ -35,6 +35,13 @@ class ygPreview(QWidget):
         self.Z = []
         self.instance_dict = None
         self.instance = None
+        self.colors = self.mk_color_list()
+
+    def mk_color_list(self):
+        l = [0] * 256
+        for count, c in enumerate(l):
+            l[count] = QColor(101,53,15,count)
+        return l
 
     def fetch_glyph(self, filename, glyph_index):
         self.glyph_index = glyph_index
@@ -148,10 +155,8 @@ class ygPreview(QWidget):
         for row in self.Z:
             for col in row:
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
-                color = QColor(101,53,15,col)
-                # color = QColor(53,30,16,col)
-                qb = QBrush(color)
-                painter.fillRect(qr,qb)
+                # qb = QBrush(QColor(101,53,15,col))
+                painter.fillRect(qr, self.colors[col])
                 xposition += self.pixel_size
             yposition += self.pixel_size
             xposition = self.horizontal_margin

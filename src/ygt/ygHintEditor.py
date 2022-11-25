@@ -24,7 +24,8 @@ from PyQt6.QtCore import (
     QRectF,
     pyqtSignal,
     QLine,
-    QLineF
+    QLineF,
+    pyqtSlot
 )
 from PyQt6.QtGui import (
     QPainter,
@@ -1507,12 +1508,14 @@ class ygGlyphViewer(QGraphicsScene):
     # Editing slots
     #
 
+    @pyqtSlot(object)
     def edit_macfunc_params(self, hint):
         ed_dialog = macfuncDialog(hint)
         r = ed_dialog.exec()
         if r == QDialog.DialogCode.Accepted:
             hint.yg_hint.hint_has_changed(hint.yg_hint)
 
+    @pyqtSlot()
     def toggle_off_curve_visibility(self):
         self.off_curve_points_showing = not self.off_curve_points_showing
         self.preferences.set_show_off_curve_points(self.off_curve_points_showing)
@@ -1561,12 +1564,15 @@ class ygGlyphViewer(QGraphicsScene):
         hint._update_touches()
         self.yg_glyph.hint_changed(hint_model)
 
+    @pyqtSlot(object)
     def change_hint_color(self, _params):
         _params["hint"].yg_hint.change_hint_color(_params["color"])
 
+    @pyqtSlot(object)
     def toggle_hint_rounding(self, hint):
         self._model_hint(hint).toggle_rounding()
 
+    @pyqtSlot()
     def toggle_point_numbers(self):
         self.point_numbers_showing = not self.point_numbers_showing
         self.preferences.set_show_point_numbers(self.point_numbers_showing)
@@ -1577,12 +1583,14 @@ class ygGlyphViewer(QGraphicsScene):
             else:
                 p.del_label()
 
+    @pyqtSlot(object)
     def swap_macfunc_points(self, data):
         hint = data["hint"].yg_hint
         new_pt_name = data["new_pt"]
         old_pt_name = data["old_pt"]
         hint.swap_macfunc_points(new_pt_name, old_pt_name)
 
+    @pyqtSlot(object)
     def reverse_hint(self, h):
         """ Recipient of a signal for reversing a hint. Communicates to the
             model that a hint must be added to the hint tree.
@@ -1593,6 +1601,7 @@ class ygGlyphViewer(QGraphicsScene):
         """
         h.reverse_hint(h)
 
+    @pyqtSlot(dict)
     def change_cv(self, param_dict):
         """ Recipient of a signal for adding or changeing a control value.
 
@@ -1604,6 +1613,7 @@ class ygGlyphViewer(QGraphicsScene):
         if type(param_dict["hint"]) is ygHintView:
             param_dict["hint"].yg_hint.set_cv(param_dict["cv"])
 
+    @pyqtSlot(object)
     def add_hint(self, h):
         """ Recipient of a signal for adding a hint. Communicates to the model
             that a hint must be added to the hint tree.
@@ -1891,6 +1901,7 @@ class ygGlyphViewer(QGraphicsScene):
         self.yg_hint_view_list.append(yg_hint_view)
         return yg_hint_view
 
+    @pyqtSlot(dict)
     def make_macfunc(self, _params):
         hint_type = _params["hint_type"]
         name = _params["name"]
@@ -2420,7 +2431,7 @@ class MyView(QGraphicsView):
         return self.yg_font.glyph_index[self.viewer.yg_glyph.gname]
 
     def go_to_glyph(self, g):
-        self.sender().disconnect()
+        # self.sender().disconnect()
         self.parent().parent().disconnect_glyph_pane()
         try:
             self.yg_font.glyph_index[g]

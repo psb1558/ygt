@@ -1,4 +1,4 @@
-from PyQt6.QtCore import (pyqtSignal, Qt)
+from PyQt6.QtCore import (pyqtSignal, Qt, pyqtSlot)
 from PyQt6.QtWidgets import (QWidget,
                              QDialog,
                              QGridLayout,
@@ -40,6 +40,7 @@ class ygYAMLEditor(QPlainTextEdit):
         self._highlighter = ygGlyphHighlighter()
         self.setup_editor()
 
+    @pyqtSlot(object)
     def install_source(self, text):
         self.setPlainText(text)
 
@@ -68,6 +69,7 @@ class ygYAMLEditor(QPlainTextEdit):
     def disconnect_editor_signals(self, f):
         self.sig_source_from_editor.disconnect(f)
 
+    @pyqtSlot()
     def text_changed(self):
         valid = True
         y = self.toPlainText()
