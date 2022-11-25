@@ -8,13 +8,12 @@ Other hinting programs dump a large number of functions into your font. Ygt dump
 Ygt is in an alpha state, with features yet to be added and some (mostly minor) issues. Deficits and items on the to-do list:
 
 - There is no auto-hinting (but when did you ever see an auto-hinted glyph that didn't require extra attention?).
-- YAML source is not yet validated.
 - The arrows are ugly (it will take more math than I’ve got to fix them), as are some other elements of the GUI.
 - The editing pane lacks a grid, as does the separate preview pane.
 - The preview pane cannot yet display a pixmap as hinted in Microsoft Windows. Instead it uses FreeType, and it is inefficient (which is not, I should add, FreeType’s fault).
 - Several routines are inefficient, or just poorly written. I am not a professional programmer.
 
-That said, I have used ygt to hint over 1100 glyphs in a large font, sometimes hinting nearly 100 glyphs in an hour. The code it produces is compact: the hints for those 1100 glyphs add about 35k to the size of a 2.2MB font.
+That said, I have used ygt to hint over 1600 glyphs in a large font, sometimes hinting nearly 100 glyphs in an hour. The code it produces is compact: the hints for those 1600 glyphs add about 60k to the size of a 2.2MB font.
 
 The screenshot below illustrates the use of functions or macros (green boxes), primary moves of single points (red arrows), subsidiary moves or shifts (blue arrows), and interpolations (paired yellow arrows). In addition to the large editing pane, it shows the editable YAML source (in the center) and the preview pane (on the left).
 ![Ygt editing window](images/OE_sample.png)
@@ -27,4 +26,4 @@ In this window, glyphs that are already hinted are highlighted in blue, and you 
 
 This is the cvt table. Graphical methods for editing it and some or most of the others will be added in due course.
 
-This project may be too big for one person. I invite anyone with an interest in TrueType hinting and some knowledge of one or more of ygt’s major dependencies (PyQt6, fontTools, and FreeType) to contribute by adding features, fixing bugs, or cleaning up my amateurish Python code. All contributors will be credited.
+This project may be too big for one person. I invite anyone with an interest in TrueType hinting and some knowledge of one or more of ygt’s major dependencies (PyQt6, fontTools, and FreeType) to contribute by adding features, fixing bugs, or cleaning up my amateurish Python code. All contributors will be gratefully credited.
