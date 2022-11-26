@@ -718,6 +718,7 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
                 path.quadTo(handle2, rightPoint)
                 # path.cubicTo(handle1, handle2, rightPoint)
         else:
+            # This has never happened.
             print("What's going on?")
         self.setPath(path)
         self._prepare_graphics(is_selected=False, hint_type=self.hint_type)
@@ -885,8 +886,8 @@ class ygPointable:
 
 
 class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable):
-    """ A graphical representation of the points that are among the params for
-        a macro or function, and also the clickable bounding rectangle.
+    """ A graphical representation of a collection of points. Select by clicking
+        one of the points, or by clicking the border.
 
         Parameters:
         viewer (ygGlyphViewer): The scene for this editing pane
@@ -1204,7 +1205,7 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
             self.del_label()
         self.point_number_label = QLabel()
         self.point_number_label.setStyleSheet("QLabel {background-color: transparent; color: red; font-size: 90%}")
-        self.point_number_label.setText(str(self.yg_point.preferred_label()))
+        self.point_number_label.setText(str(self.yg_point.preferred_label(normalized=True)))
         self.point_number_label_proxy = self.viewer.addWidget(self.point_number_label)
         label_x = self.glocation.x() + self.diameter
         label_y = self.glocation.y() - self.point_number_label.height()
@@ -1568,6 +1569,14 @@ class ygGlyphViewer(QGraphicsScene):
             else:
                 p.del_label()
 
+    def set_point_display(self, pv): # ***
+        for p in self.yg_point_view_list:
+            p.yg_point.label_pref = pv
+            if self.point_numbers_showing:
+                if p.isVisible():
+                    p.add_label()
+        # self.update()
+
     @pyqtSlot(object)
     def swap_macfunc_points(self, data):
         hint = data["hint"].yg_hint
@@ -1588,7 +1597,7 @@ class ygGlyphViewer(QGraphicsScene):
 
     @pyqtSlot(dict)
     def change_cv(self, param_dict):
-        """ Recipient of a signal for adding or changeing a control value.
+        """ Recipient of a signal for adding or changing a control value.
 
             Parameters:
             param_dict (dict): A dictionary containing "hint" (the affected

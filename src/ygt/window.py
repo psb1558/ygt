@@ -151,6 +151,11 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addSeparator()
 
+        self.index_label_action = self.view_menu.addAction("Point indices")
+        self.coord_label_action = self.view_menu.addAction("Point coordinates")
+
+        self.view_menu.addSeparator()
+
         self.next_glyph_action = self.view_menu.addAction("Next Glyph")
         self.next_glyph_action.setShortcut(QKeySequence.StandardKey.MoveToNextChar)
 
@@ -160,6 +165,8 @@ class MainWindow(QMainWindow):
         self.view_menu.addSeparator()
 
         self.font_view_action = self.view_menu.addAction("Show Font Viewer")
+
+        self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
 
         vector_action_group = QActionGroup(self.toolbar)
         vector_action_group.setExclusive(True)
@@ -250,6 +257,10 @@ class MainWindow(QMainWindow):
 
         self.cleanup_action = self.code_menu.addAction("Clean up")
 
+        self.to_coords_action = self.code_menu.addAction("Indices to Coords")
+
+        self.to_indices_action = self.code_menu.addAction("Coords to Indices")
+
         self.edit_cvt_action = self.code_menu.addAction("Edit cvt...")
 
         self.edit_prep_action = self.code_menu.addAction("Edit prep...")
@@ -315,6 +326,23 @@ class MainWindow(QMainWindow):
             self.font_viewer = fontViewDialog(font_name, self.yg_font, glyph_list, self)
         self.font_viewer.show()
         self.font_viewer.activateWindow()
+
+    def index_labels(self):
+        self.preferences["points_as_coords"] = False
+        self.glyph_pane.viewer.set_point_display("index")
+
+    def coord_labels(self):
+        self.preferences["points_as_coords"] = True
+        self.glyph_pane.viewer.set_point_display("coord")
+
+    @pyqtSlot()
+    def view_menu_about_to_show(self):
+        if self.preferences["points_as_coords"]:
+            self.index_label_action.setEnabled(True)
+            self.coord_label_action.setEnabled(False)
+        else:
+            self.index_label_action.setEnabled(False)
+            self.coord_label_action.setEnabled(True)
 
     @pyqtSlot()
     def file_menu_about_to_show(self):
@@ -387,6 +415,8 @@ class MainWindow(QMainWindow):
         self.edit_functions_action.triggered.connect(self.edit_functions)
         self.edit_macros_action.triggered.connect(self.edit_macros)
         self.edit_defaults_action.triggered.connect(self.edit_defaults)
+        self.to_coords_action.triggered.connect(self.indices_to_coords)
+        self.to_indices_action.triggered.connect(self.coords_to_indices)
 
     def setup_preview_connections(self):
         self.save_current_glyph_action.triggered.connect(self.preview_current_glyph)
@@ -419,6 +449,10 @@ class MainWindow(QMainWindow):
             self.goto_action.triggered.disconnect(self.show_goto_dialog)
         except Exception:
             pass
+
+    def setup_point_label_connections(self):
+        self.index_label_action.triggered.connect(self.index_labels)
+        self.coord_label_action.triggered.connect(self.coord_labels)
 
     def setup_nav_connections(self):
         self.next_glyph_action.triggered.connect(self.glyph_pane.next_glyph, type=Qt.ConnectionType.SingleShotConnection)
@@ -459,6 +493,7 @@ class MainWindow(QMainWindow):
         self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
         self.source_editor.setup_status_indicator(self.set_status_validity_msg)
         self.setup_cursor_connections()
+        self.setup_point_label_connections()
 
     def disconnect_glyph_pane(self):
         self.disconnect_nav()
@@ -690,6 +725,20 @@ class MainWindow(QMainWindow):
     #
     # Editors in dialogs
     #
+
+    @pyqtSlot()
+    def indices_to_coords(self):
+        try:
+            self.glyph_pane.viewer.yg_glyph.indices_to_coords()
+        except Exception as e:
+            print(e)
+
+    @pyqtSlot()
+    def coords_to_indices(self):
+        try:
+            self.glyph_pane.viewer.yg_glyph.coords_to_indices()
+        except Exception as e:
+            print(e)
 
     @pyqtSlot()
     def edit_cvt(self):

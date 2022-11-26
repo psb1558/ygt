@@ -561,9 +561,15 @@ class ygPoint:
         self.on_curve = on_curve
         self.label_pref = label_pref
 
-    def preferred_label(self):
+    def preferred_label(self, normalized=False):
         if self.label_pref == "coord":
-            return self.coord
+            if normalized:
+                t = self.coord.replace("{","")
+                t = t.replace("}","")
+                t = t.replace(";", ",")
+                return t
+            else:
+                return self.coord
         elif self.label_pref == "name" and self.name != None:
             return self.name
         elif self.label_pref == "index":
@@ -605,6 +611,9 @@ class ygSet:
     """ Xgridfit has a structure called a 'set'--just a simple list of points.
         This can be the target for a shift, align or interpolate instruction,
         and a two-member set can be reference for interpolate.
+
+        Parameters:
+        point_list (list): a list of ygPoint objects
 
     """
     def __init__(self, point_list):
@@ -774,7 +783,6 @@ class ygGlyph(QObject):
         return block
 
     def rebuild_current_block(self):
-        print("running rebuild_current_block")
         flattened_tree = self._flatten_yaml_tree(copy.deepcopy(self.current_block()))
         for f in flattened_tree:
             if "points" in f:
@@ -908,6 +916,50 @@ class ygGlyph(QObject):
     def points(self):
         return self.point_list
 
+    def indices_to_coords(self):
+        self.sub_coords(self.current_block())
+        self._hints_changed(self.hints(), dirty=True)
+        self.send_yaml_to_editor()
+
+    def coords_to_indices(self):
+        self.sub_coords(self.current_block(), to_coords=False)
+        self._hints_changed(self.hints(), dirty=True)
+        self.send_yaml_to_editor()
+
+    def sub_coords(self, block, to_coords=True):
+        for ppt in block:
+            ppt["ptid"] = self._sub_coords(ppt["ptid"], to_coords)
+            if "ref" in ppt:
+                ppt["ref"] = self._sub_coords(ppt["ref"], to_coords)
+            if "points" in ppt:
+                self.sub_coords(ppt["points"], to_coords=to_coords)
+
+    def _sub_coords(self, block, to_coords):
+        if type(block) is dict:
+            new_dict = {}
+            for kk, v in block.items():
+                if type(v) is list:
+                    new_dict[kk] = self._sub_coords(v, to_coords)
+                else:
+                    if to_coords:
+                        new_dict[kk] = self.resolve_point_identifier(v).coord
+                    else:
+                        new_dict[kk] = self.resolve_point_identifier(v).index
+            return new_dict
+        elif type(block) is list:
+            new_list = []
+            for pp in block:
+                if to_coords:
+                    new_list.append(self.resolve_point_identifier(pp).coord)
+                else:
+                    new_list.append(self.resolve_point_identifier(pp).index)
+            return new_list
+        else:
+            if to_coords:
+                return self.resolve_point_identifier(block).coord
+            else:
+                return self.resolve_point_identifier(block).index
+
     def search_source(self, block, pt, ptype):
         """ Search the yaml source for a point.
 
@@ -922,12 +974,15 @@ class ygGlyph(QObject):
         """
 
         def pt_to_index(ppp):
-            if type(ppp) is ygPoint:
-                return ppp.index
+            #if type(ppp) is ygPoint:
+            #    return ppp.index
+            p = self.resolve_point_identifier(ppp)
+            if type(p) is ygPoint:
+                return p.index
             return ppp
 
         result = []
-        yaml_tree = self.current_block()
+        # yaml_tree = self.current_block()
         yg_pt = self.resolve_point_identifier(pt)
         if type(yg_pt) is ygSet:
             yg_pt = yg_pt.point_list()
@@ -943,7 +998,7 @@ class ygGlyph(QObject):
                     if type(ppt["ref"]) is not list:
                         pppt = [ppt["ref"]]
                 else:
-                    pppt = ygHint(self, ppt).target_list()
+                    pppt = ygHint(self, ppt).target_list(index_only=True)
                 if any(elem in pppt for elem in yg_pt):
                     result.append(ppt)
             if "points" in ppt and len(ppt["points"]) > 0:
@@ -990,7 +1045,17 @@ class ygGlyph(QObject):
         gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font['glyf'])
         for point_index, p in enumerate(zip(gl[0], gl[2])):
             is_on_curve = p[1] & 0x01 == 0x01
-            pt = ygPoint(None, point_index, p[0][0], p[0][1], self.xoffset(), self.yoffset(), is_on_curve)
+            lpref = "index"
+            if self.preferences["points_as_coords"]:
+                lpref = "coord"
+            pt = ygPoint(None,
+                         point_index,
+                         p[0][0],
+                         p[0][1],
+                         self.xoffset(),
+                         self.yoffset(),
+                         is_on_curve,
+                         label_pref=lpref)
             pt_list.append(pt)
         return(pt_list)
 
@@ -1289,10 +1354,14 @@ class ygGlyphs:
         else:
             return {}
 
+    def glyph_list(self):
+        return list(self.data.keys())
+
 
 
 class Comparable(object):
-    """ For ordering hints.
+    """ For ordering hints such that a reference point never points to an
+        untouched point.
     """
     def _compare(self, other, method):
         try:
@@ -1425,7 +1494,7 @@ class ygHint(QObject):
         """
         return self._source["ptid"]
 
-    def target_list(self):
+    def target_list(self, index_only=False):
         """ Always returns a list. Does not recurse.
 
         """
@@ -1440,9 +1509,12 @@ class ygHint(QObject):
                     result.extend(vv)
                 else:
                     result.append(vv)
+            if index_only:
+                for i, r in enumerate(result):
+                    result[i] = self.yg_glyph.resolve_point_identifier(r).index
             return result
         else:
-            return [t]
+            return [self.yg_glyph.resolve_point_identifier(t).index]
 
     def ref(self):
         if "ref" in self._source:
@@ -1616,8 +1688,7 @@ class ygHint(QObject):
 class ygHintSorter:
     """ Will sort a (flat) list of hints into an order where hints with touched
         points occur earlier in the list than hints with refs pointing to those
-        touched points. This sometimes fails, and I'm not sure why. See classes
-        ygModel.Comparable and ygModel.ygHintSource, helpers for this class.
+        touched points.
 
     """
     def __init__(self, list):

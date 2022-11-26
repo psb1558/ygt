@@ -12,11 +12,13 @@ class ygPreferences(dict):
         self["show_point_numbers"] = False
         self["current_glyph"] = {}
         self["current_vector"] = "y"
-        self["save_points_as"] = "indices"
+        self["save_points_as"] = "coord" # "coord" or "name" or "index"
+        # self["view_points_as"] = "coord" # "coord" or "name" or "index"
         self["current_font"] = None
         self["show_metrics"] = True
         self["recents"] = []
         self["zoom_factor"] = 1.0
+        self["points_as_coords"] = False
 
     def zoom_factor(self):
         return self["zoom_factor"]
