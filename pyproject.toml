@@ -23,6 +23,7 @@ dependencies = [
     "xgridfit >= 3.2.2",
     "setuptools >= 65.3.0",
     "PyYAML >= 6.0",
+    "schema >= 0.7.5",
     "numpy",
 ]
 
