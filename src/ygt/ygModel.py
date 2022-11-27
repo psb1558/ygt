@@ -752,6 +752,8 @@ class ygGlyph(QObject):
         return flat
 
     def place_all(self, hl):
+        """ Helper for rebuild_current_block
+        """
         block = []
         unplaced = copy.copy(hl)
         placed = []
@@ -783,6 +785,11 @@ class ygGlyph(QObject):
         return block
 
     def rebuild_current_block(self):
+        """ Tears down the current source block and rebuilds it with proper
+            regard for dependency and order. When this is reliable enough, it
+            will be called every time the source if updated.
+
+        """
         flattened_tree = self._flatten_yaml_tree(copy.deepcopy(self.current_block()))
         for f in flattened_tree:
             if "points" in f:
@@ -917,16 +924,24 @@ class ygGlyph(QObject):
         return self.point_list
 
     def indices_to_coords(self):
+        """ Change coordinates in current block to point indices.
+
+        """
         self.sub_coords(self.current_block())
         self._hints_changed(self.hints(), dirty=True)
         self.send_yaml_to_editor()
 
     def coords_to_indices(self):
+        """ Change point indices in current block to coordinates.
+
+        """
         self.sub_coords(self.current_block(), to_coords=False)
         self._hints_changed(self.hints(), dirty=True)
         self.send_yaml_to_editor()
 
     def sub_coords(self, block, to_coords=True):
+        """ Helper for indices_to_coords and coords_to_indices
+        """
         for ppt in block:
             ppt["ptid"] = self._sub_coords(ppt["ptid"], to_coords)
             if "ref" in ppt:
@@ -935,6 +950,8 @@ class ygGlyph(QObject):
                 self.sub_coords(ppt["points"], to_coords=to_coords)
 
     def _sub_coords(self, block, to_coords):
+        """ Helper for indices_to_coords and coords_to_indices
+        """
         if type(block) is dict:
             new_dict = {}
             for kk, v in block.items():
@@ -974,8 +991,6 @@ class ygGlyph(QObject):
         """
 
         def pt_to_index(ppp):
-            #if type(ppp) is ygPoint:
-            #    return ppp.index
             p = self.resolve_point_identifier(ppp)
             if type(p) is ygPoint:
                 return p.index
@@ -1019,6 +1034,8 @@ class ygGlyph(QObject):
         return 0
 
     def _yaml_hint_type(self, n):
+        """ Helper for _yaml_supply_refs
+        """
         if "function" in n:
             return "function"
         if "macro" in n:
@@ -1284,10 +1301,15 @@ class ygGlyph(QObject):
             result = self.names[ptid]
             if self._is_pt_obj(result):
                 return result
-        if result == None:
-            raise Exception("obj " + str(ptid) + " resolved to None")
-        if depth > 20:
-            raise Exception("Failed to resolve point identifier " + str(ptid) + " (" + str(result) + ")")
+        if result == None or depth > 20:
+            # raise Exception("Failed to resolve point identifier " + str(ptid) + " (" + str(result) + ")")
+            m =  "Failed to resolve point identifier "
+            m += str(ptid)
+            m += " in glyph "
+            m += self.gname
+            m += ". Substituting zero."
+            self.preferences.top_window().show_error_message(["Error", "Error", m])
+            return 0
         result = self.resolve_point_identifier(result, depth=depth+1)
         if self._is_pt_obj(result):
             return result
