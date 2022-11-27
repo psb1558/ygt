@@ -1942,7 +1942,7 @@ class ygGlyphViewer(QGraphicsScene):
                 if pplen > 3:
                     del pp[3:]
                 # If two of the three selected points are touched, they are the
-                # reference points, and the unselected point is the target.
+                # reference points, and the untouched point is the target.
                 # Otherwise, sort the points by x or y position: the middle one
                 # is the target, and the ones on the ends are reference points.
                 # If the program makes the wrong choice, user can rearrange

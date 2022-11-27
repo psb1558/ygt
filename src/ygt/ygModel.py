@@ -1334,7 +1334,7 @@ class ygGlyph(QObject):
         self.sig_glyph_source_ready.emit(yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper))
 
     def hint_changed(self, h):
-        """ Called by signal from ygHint. Rebuilds the hint tree in response.
+        """ Called by signal from ygHint. Sends a list of hints in response.
 
         """
         self.set_dirty()
@@ -1349,12 +1349,6 @@ class ygGlyph(QObject):
         self._hints_changed(hint_list)
 
     def _hints_changed(self, hint_list, dirty=True):
-        """ Called by signal. *** Is this the best way to do this? Calling
-            ygGlyphView directly? Figure out something else (compare
-            sig_glyph_source_ready, for which we didn't have to import
-            anything).***
-
-        """
         if dirty:
             self.set_dirty()
         from .ygHintEditor import ygGlyphViewer
@@ -1463,6 +1457,9 @@ class Comparable(object):
 
 
 class ygHintSource(Comparable):
+    """ Before sorting a list of hints, wrap the source (._source) for each
+        one in this. Class ygHintSorter does the actual sorting.
+    """
     def __init__(self, s):
         self._source = s
 
@@ -1503,7 +1500,6 @@ class ygHint(QObject):
     def parent(self):
         if "parent" in self.source:
             return self._source["parent"]
-        return None
 
     def children(self):
         if "points" in self._source:
@@ -1602,13 +1598,6 @@ class ygHint(QObject):
 
     def round_is_default(self):
         return hint_type_nums[self.hint_type()] in [0, 3]
-
-    def ref_is_implicit(self):
-        """ Whether it's okay to delete the ref for this hint. If the yaml
-            point structure has a parent, the ref here can be deleted.
-
-        """
-        return "parent" in self._source
 
     def cv(self):
         if "pos" in self._source:
