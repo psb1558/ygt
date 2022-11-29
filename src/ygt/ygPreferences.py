@@ -1,8 +1,6 @@
 import yaml
 import os
-import platform
 from yaml import Loader, Dumper
-import sys
 
 class ygPreferences(dict):
     def __init__(self, *args, **kwargs):

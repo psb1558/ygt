@@ -4,9 +4,7 @@ import yaml
 import os
 from yaml import Dumper
 import uuid
-import sys
 import copy
-from functools import cmp_to_key
 from .ygPreferences import ygPreferences
 
 hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
@@ -36,7 +34,7 @@ hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
 # ygGlyphs: Collection of this font's glyphs.
 # Comparable: superclass for ygHintSource: for ordering hints.
 # ygHintSource(Comparable): Wrapper for hint source: use when sorting.
-# ygHint(QObject): One hint (including a function or macro)
+# ygHint(QObject): One hint (including a function or macro call)
 # ygHintSorter: Sorts hints into their proper order.
 # ygPointSorter: Utility for sorting points on the x or y axis.
 
@@ -125,7 +123,8 @@ class ygFont:
         Call this directly to open a font for the first time. After that,
         you only have to open the yaml file.
     """
-    def __init__(self, source_file, yaml_filename=None):
+    def __init__(self, main_window, source_file, yaml_filename=None):
+        self.main_window = main_window
         #
         # Open the font
         #
@@ -267,9 +266,11 @@ class ygFont:
 
     def set_dirty(self):
         self._clean = False
+        self.main_window.set_window_title()
 
     def set_clean(self):
         self._clean = True
+        self.main_window.set_window_title()
 
     def clean(self):
         return self._clean
@@ -605,6 +606,19 @@ class ygParams:
             result.append(self.point_dict[kk])
         return result
 
+    def __contains__(self, v):
+        vv = self.point_dict.values()
+        if type(v) is not ygPoint:
+            return False
+        for val in vv:
+            if type(val) is ygPoint and val.id == v.id:
+                return True
+            if type(val) is ygSet and v in val:
+                return True
+            if type(val) is list and v in ygSet(val):
+                return True
+        return False
+
 
 
 class ygSet:
@@ -651,6 +665,24 @@ class ygSet:
             return self.point_list[index]
         except Exception:
             return self.point_list[-1]
+
+    def __contains__(self, v):
+        if type(v) is ygPoint:
+            for p in self._point_list:
+                if type(p) is ygPoint:
+                    if p.id == v.id:
+                        return True
+        return False
+
+    def overlaps(self, tester):
+        result = []
+        if type(tester) is not ygSet:
+            return result
+        pts = tester.point_list()
+        for pt in pts:
+            if pt in self:
+                result.append(pt)
+        return result
 
 
 
@@ -757,9 +789,9 @@ class ygGlyph(QObject):
         block = []
         unplaced = copy.copy(hl)
         placed = []
-        placed_len = 0
+        # placed_len = 0
         while True:
-            last_placed_len = placed_len
+            last_placed_len = len(placed)
             for h in hl:
                 if not h in placed:
                     r = self._add_hint(h, block, conditional=True)
@@ -767,8 +799,6 @@ class ygGlyph(QObject):
                         placed.append(h)
                         if h in unplaced:
                             unplaced.remove(h)
-                    else:
-                        unplaced.append(h)
             # There are two ways this loop breaks: 1) when nothing has been
             # done on this iteration (the length of "placed" has not changed)
             # and 2) the length of "unplaced" is zero
@@ -990,34 +1020,45 @@ class ygGlyph(QObject):
 
         """
 
-        def pt_to_index(ppp):
-            p = self.resolve_point_identifier(ppp)
-            if type(p) is ygPoint:
-                return p.index
-            return ppp
+        # Convert everything to a ygSet and test for overlap between two
+        # ygSets.
+
+        def _to_ygSet(o):
+            """ 
+            """
+            if type(o) is ygSet:
+                return o
+            if type(o) is ygPoint:
+                return ygSet([o])
+            if type(o) is list:
+                return ygSet([self.resolve_point_identifier(i) for i in o])
+            if type(o) is ygParams:
+                tmp_list = o.point_dict.values()
+                new_list = []
+                for t in tmp_list:
+                    if type(t) is list:
+                        new_list.extend(t)
+                    else:
+                        new_list.append(t)
+                return ygSet([self.resolve_point_identifier(i) for i in new_list])
+            t = self.resolve_point_identifier(o)
+            return ygSet([t])
 
         result = []
-        # yaml_tree = self.current_block()
-        yg_pt = self.resolve_point_identifier(pt)
-        if type(yg_pt) is ygSet:
-            yg_pt = yg_pt.point_list()
-        elif type(yg_pt) is ygPoint:
-            yg_pt = [yg_pt.index]
-        else:
-            yg_pt = []
-        yg_pt = list(map(pt_to_index, yg_pt))
+        # pt is either the point we're searching for or a ygSet, for which we
+        # count the search as positive if we get a match for just one element.
+        # If we're starting with a ygPoint, wrap it in a ygSet.
+        search_set = _to_ygSet(pt)
         for ppt in block:
-            pppt = []
+            # ppt is what we want to return if we've made a find.
+            tester = None
             if ptype in ppt:
-                if ptype == "ref":
-                    if type(ppt["ref"]) is not list:
-                        pppt = [ppt["ref"]]
-                else:
-                    pppt = ygHint(self, ppt).target_list(index_only=True)
-                if any(elem in pppt for elem in yg_pt):
-                    result.append(ppt)
+                tester = _to_ygSet(ppt[ptype])
+                if tester:
+                    if len(tester.overlaps(search_set)) > 0:
+                        result.append(ppt)
             if "points" in ppt and len(ppt["points"]) > 0:
-                result.extend(self.search_source(ppt["points"], yg_pt, ptype))
+                result.extend(self.search_source(ppt["points"], search_set, ptype))
         return result
 
     def glyph_name(self):
@@ -1169,7 +1210,8 @@ class ygGlyph(QObject):
                 if conditional:
                     return False
                 else:
-                    block.append(h)
+                    if not h in block:
+                        block.append(h)
         return True
 
     def add_hint(self, h):

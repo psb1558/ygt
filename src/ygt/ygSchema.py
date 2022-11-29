@@ -1,6 +1,5 @@
 from schema import Or, Optional, Schema, SchemaError
 import re
-import yaml
 
 standard_error = "YAML source is not valid"
 

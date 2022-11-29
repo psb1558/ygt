@@ -1,7 +1,5 @@
 from PyQt6.QtCore import (pyqtSignal, Qt, pyqtSlot)
-from PyQt6.QtWidgets import (QWidget,
-                             QDialog,
-                             QGridLayout,
+from PyQt6.QtWidgets import (QDialog,
                              QVBoxLayout,
                              QPlainTextEdit,
                              QDialogButtonBox)

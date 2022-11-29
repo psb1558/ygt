@@ -1,14 +1,11 @@
 import sys
 import os
 import copy
-import platform
-from .ygSchema import error_message
 from .ygModel import ygFont, ygGlyph
 from .fontViewDialog import fontViewDialog
 from .ygPreview import ygPreview
 from .ygYAMLEditor import ygYAMLEditor, editorDialog
 from .ygHintEditor import ygGlyphViewer, MyView
-# import ygHintEditor
 from .ygPreferences import ygPreferences, open_config
 from xgridfit import compile_one, compile_all
 from PyQt6.QtCore import Qt, QSize, pyqtSlot
@@ -27,7 +24,6 @@ from PyQt6.QtWidgets import (
     QLabel
 )
 from PyQt6.QtGui import (
-    QAction,
     QKeySequence,
     QIcon,
     QPixmap,
@@ -664,9 +660,9 @@ class MainWindow(QMainWindow):
             self.source_editor = ygYAMLEditor(self.preferences)
             self.add_editor(self.source_editor)
             if yaml_source != None:
-                self.yg_font = ygFont(yaml_source, yaml_filename=filename)
+                self.yg_font = ygFont(self, yaml_source, yaml_filename=filename)
             else:
-                self.yg_font = ygFont(filename)
+                self.yg_font = ygFont(self, filename)
             if ("current_glyph" in self.preferences and
                 self.yg_font.full_name() in self.preferences["current_glyph"]):
                 initGlyph = self.preferences["current_glyph"][self.yg_font.full_name()]
@@ -694,6 +690,8 @@ class MainWindow(QMainWindow):
         base = "YGT"
         if self.yg_font:
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
+            if not self.yg_font.clean():
+                base += "*"
         self.setWindowTitle(base)
         self.set_statusbar_text(None)
 

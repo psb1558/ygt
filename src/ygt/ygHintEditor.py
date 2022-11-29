@@ -1,4 +1,3 @@
-import sys
 import uuid
 import copy
 from .macfuncDialog import macfuncDialog
@@ -45,7 +44,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QDialog
 )
-from fontTools import ttLib
 from fontTools.pens.basePen import BasePen
 
 
