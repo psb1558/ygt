@@ -12,7 +12,8 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtCore import (
     Qt,
-    QRect
+    QRect,
+    pyqtSlot
 )
 
 class ygPreview(QWidget):
@@ -120,22 +121,27 @@ class ygPreview(QWidget):
     def add_instances(self, instances):
         self.instance_dict = instances
 
+    @pyqtSlot()
     def set_instance(self):
         self.instance = self.sender().text()
         self.set_label_text()
         self._build_glyph()
         self.update()        
 
+    @pyqtSlot()
     def bigger_one(self):
         self.resize_by(1)
 
+    @pyqtSlot()
     def bigger_ten(self):
         self.resize_by(10)
 
+    @pyqtSlot()
     def smaller_one(self):
         if self.char_size > 10:
             self.resize_by(-1)
 
+    @pyqtSlot()
     def smaller_ten(self):
         if self.char_size > 20:
             self.resize_by(-10)

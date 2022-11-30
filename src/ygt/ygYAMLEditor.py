@@ -42,6 +42,7 @@ class ygYAMLEditor(QPlainTextEdit):
     def install_source(self, text):
         self.setPlainText(text)
 
+    @pyqtSlot()
     def yaml_source(self):
         err = False
         try:

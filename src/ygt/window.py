@@ -484,10 +484,6 @@ class MainWindow(QMainWindow):
         self.cursor_action.toggled.connect(self.set_mouse_editing)
 
     def setup_glyph_pane_connections(self):
-        # These get destroyed whenever we move from one glyph to another, and so the connections
-        # have to be reestablished every time. Check carefully to make sure we can't ever have
-        # duplicate connections!
-        # self.setup_hint_connections()
         self.setup_nav_connections()
         self.setup_zoom_connections()
         self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)

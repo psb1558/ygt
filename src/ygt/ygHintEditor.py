@@ -2425,6 +2425,8 @@ class MyView(QGraphicsView):
             self.preferences.top_window().show_error_message(["Warning", "Warning", "Can't load requested glyph."])
         self.parent().parent().setup_glyph_pane_connections()
 
+    # sender returns None when we use the decorator. Rethink these signals?
+    # @pyqtSlot()
     def next_glyph(self, a):
         self.sender().disconnect()
         self.parent().parent().disconnect_glyph_pane()
@@ -2434,6 +2436,7 @@ class MyView(QGraphicsView):
         self.switch_to(gname)
         self.parent().parent().setup_glyph_pane_connections()
 
+    # @pyqtSlot()
     def previous_glyph(self, a):
         self.parent().parent().disconnect_glyph_pane()
         self.sender().disconnect()
@@ -2459,18 +2462,21 @@ class MyView(QGraphicsView):
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
 
+    @pyqtSlot()
     def switch_to_x(self):
         if self.viewer:
             self.viewer.vector = "x"
             self.viewer.yg_glyph.switch_to_vector("x")
             self.parent().parent().set_window_title()
 
+    @pyqtSlot()
     def switch_to_y(self):
         if self.viewer:
             self.viewer.vector = "x"
             self.viewer.yg_glyph.switch_to_vector("y")
             self.parent().parent().set_window_title()
 
+    @pyqtSlot()
     def cleanup_yaml_code(self):
         self.viewer.yg_glyph.rebuild_current_block()
 
@@ -2489,9 +2495,10 @@ class MyView(QGraphicsView):
     def make_set(self):
         self.viewer.make_set()
 
-    def zoom(self, a):
-        """ Called by signal. ***
-        """
+    # Why does sender return None when we use the decorator? What's best in this
+    # situation?
+    # @pyqtSlot(object)
+    def zoom(self, sender_text):
         self.sender().disconnect()
         sender_text = self.sender().text()
         if sender_text == "Original Size":
