@@ -1900,21 +1900,13 @@ class ygGlyphViewer(QGraphicsScene):
         self.make_macfunc_from_selection(hint_type, name=name)
         # Called function will send the signal to the model.
 
-    def make_hint_from_selection(self, a):
+    def make_hint_from_selection(self, hint_type):
         """ Make a hint based on selection in the editing panel.
 
             Should we be making ygModel.ygHint instances here? Since
             we're making valid yaml source, wouldn't it be better to
             pass that with the signal?
         """
-        menu_to_hint_type = {"Anchor (A)": "anchor",
-                             "Align (L)": "align",
-                             "Shift (S)": "shift",
-                             "Interpolate (I)": "interpolate",
-                             "White Distance (W)": "whitespace",
-                             "Black Distance (B)": "blackspace",
-                             "Gray Distance (G)": "grayspace"}
-        hint_type = menu_to_hint_type[self.sender().text()]
         hint_type_num = self.get_hint_type_num(hint_type)
         pp = self.selected_objects(True)
         pplen = len(pp)
@@ -2481,6 +2473,21 @@ class MyView(QGraphicsView):
 
     def cleanup_yaml_code(self):
         self.viewer.yg_glyph.rebuild_current_block()
+
+    @pyqtSlot()
+    def make_hint_from_selection(self):
+        menu_to_hint_type = {"Anchor (A)": "anchor",
+                             "Align (L)": "align",
+                             "Shift (S)": "shift",
+                             "Interpolate (I)": "interpolate",
+                             "White Distance (W)": "whitespace",
+                             "Black Distance (B)": "blackspace",
+                             "Gray Distance (G)": "grayspace"}
+        self.viewer.make_hint_from_selection(menu_to_hint_type[self.sender().text()])
+
+    @pyqtSlot()
+    def make_set(self):
+        self.viewer.make_set()
 
     def zoom(self, a):
         """ Called by signal. ***

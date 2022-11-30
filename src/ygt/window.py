@@ -392,17 +392,20 @@ class MainWindow(QMainWindow):
             a.triggered.disconnect(self.open_recent)
 
     def setup_hint_connections(self):
-        self.black_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.white_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.gray_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.anchor_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.interpolate_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.shift_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.align_action.triggered.connect(self.glyph_pane.viewer.make_hint_from_selection)
-        self.make_set_action.triggered.connect(self.glyph_pane.viewer.make_set)
+        # The "viewer" connections get destroyed whenever we switch glyphs. Wouldn't it be
+        # better to move the slots to glyph_pane (QGraphicsView)?
+        self.black_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.white_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.gray_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.anchor_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.interpolate_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.shift_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.make_set_action.triggered.connect(self.glyph_pane.make_set)
+        # These two connections don't get destroyed when we switch glyphs.
+        # Make sure they're not created over and over.
         self.vertical_action.triggered.connect(self.glyph_pane.switch_to_y)
         self.horizontal_action.triggered.connect(self.glyph_pane.switch_to_x)
-        self.cleanup_action.triggered.connect(self.glyph_pane.cleanup_yaml_code)
 
     def setup_edit_connections(self):
         self.edit_cvt_action.triggered.connect(self.edit_cvt)
@@ -428,6 +431,7 @@ class MainWindow(QMainWindow):
                 i.triggered.connect(self.yg_preview.set_instance)
 
     def setup_zoom_connections(self):
+        # These connections don't get destroyed when the glyph is switched. Why the singleshot connection?
         self.zoom_in_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
         self.zoom_out_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
         self.original_size_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
@@ -483,7 +487,7 @@ class MainWindow(QMainWindow):
         # These get destroyed whenever we move from one glyph to another, and so the connections
         # have to be reestablished every time. Check carefully to make sure we can't ever have
         # duplicate connections!
-        self.setup_hint_connections()
+        # self.setup_hint_connections()
         self.setup_nav_connections()
         self.setup_zoom_connections()
         self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
@@ -494,7 +498,6 @@ class MainWindow(QMainWindow):
     def disconnect_glyph_pane(self):
         self.disconnect_nav()
         self.disconnect_zoom()
-        # self.disconnect_hint()
         self.source_editor.disconnect_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
         self.disconnect_cursor()
 
@@ -518,6 +521,8 @@ class MainWindow(QMainWindow):
         self.glyph_pane = g
         self.qs.addWidget(self.glyph_pane)
         self.setup_glyph_pane_connections()
+        self.setup_hint_connections()
+        self.cleanup_action.triggered.connect(self.glyph_pane.cleanup_yaml_code)
 
     def set_vector_buttons(self):
         """ To be run right after preferences are loaded and before a file is

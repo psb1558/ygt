@@ -787,31 +787,35 @@ class ygGlyph(QObject):
         """ Helper for rebuild_current_block
         """
         block = []
-        unplaced = copy.copy(hl)
-        placed = []
-        # placed_len = 0
+        total_to_place = len(hl)
+        placed = {}
+        for h in hl:
+            h["uuid"] = uuid.uuid1()
         while True:
             last_placed_len = len(placed)
             for h in hl:
-                if not h in placed:
+                if not h["uuid"] in placed:
                     r = self._add_hint(h, block, conditional=True)
                     if r:
-                        placed.append(h)
-                        if h in unplaced:
-                            unplaced.remove(h)
-            # There are two ways this loop breaks: 1) when nothing has been
-            # done on this iteration (the length of "placed" has not changed)
-            # and 2) the length of "unplaced" is zero
-            # if last_placed_len == placed_len:
-            if last_placed_len == len(placed):
-                break
-            if len(unplaced) == 0:
+                        placed[h["uuid"]] = h
+                        # placed.append(h)
+                        #try:
+            # print("Tests at bottom of loop:")
+            # print("last_placed_len: " + str(last_placed_len))
+            # print("len(placed): " + str(len(placed)) + "(total_to_place = " + str(total_to_place) + ")")
+            # print(h)
+            # i.e. if all hints placed in the tree or nothing happened this iteration
+            if len(placed) >= total_to_place or last_placed_len == len(placed):
                 break
         # If there are still unplaced hints after the while loop, append them
         # to the top level of the tree.
-        if len(unplaced) > 0:
-            for u in unplaced:
-                block.append(u)
+        if len(placed) < total_to_place:
+            for h in hl:
+                if not h["uuid"] in placed:
+                    placed[h["uuid"]] = h
+                    block.append(h)
+        for h in hl:
+            del h["uuid"]
         return block
 
     def rebuild_current_block(self):
@@ -1013,10 +1017,16 @@ class ygGlyph(QObject):
             Parameters:
             block (list): At the top level, should be self.current_block().
 
-            pt (ygPoint, int, or str): The point we're searching for
+            pt (ygPoint, ygSet, ygParams, int, or str): The point(s) we're
+            searching for. If more than one point (ygSet, ygParams), any
+            match at all is a positive result.
 
             ptype (str): "ptid" to search for target points, "ref" to search
             for ref points.
+
+            Returns:
+            A list of matching hint/point blocks from the source. These can
+            be wrapped in ygHint objects for easy manipulation.
 
         """
 
@@ -1532,6 +1542,7 @@ class ygHint(QObject):
         self.id = uuid.uuid1()
         self._source = point
         self.yg_glyph = glyph
+        self.placed = False
 
         if self.yg_glyph != None:
             self.hint_changed_signal.connect(self.yg_glyph.hint_changed)
