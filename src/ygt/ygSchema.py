@@ -46,7 +46,6 @@ def is_point_valid_1(pt):
                 err = True
         if not err:
             return True
-    print("Invalid in is_point_valid_1")
     set_error_message("point " + str(pt) + " is not valid")
     return False
 
@@ -68,7 +67,6 @@ def is_point_valid_2(pt):
                 err = True
         if not err:
             return True
-    print("Invalid in is_point_valid_2")
     set_error_message("point " + str(pt) + " is not valid")
     return False
 
@@ -81,8 +79,6 @@ def validate_points(pt):
             nested_point_schema.validate(p)
         return True
     except Exception as e:
-        print("Invalid in validate_points:")
-        print(e)
         set_error_message("point " + str(pt) + " is not valid.")
     return False
 
@@ -124,6 +120,19 @@ point_struct = {
     ]
 }
 
+cvt_entry_struct = {
+    "val": int,
+    "type": Or("pos", "dist"),
+    "vector": Or("y", "x"),
+    Optional("col"): Or("black", "white", "gray"),
+    Optional("suffix"): str,
+    Optional("unic"): Or("Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
+                         "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
+                         "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
+                         "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
+                         "Cn", "C")
+}
+
 point_schema = Schema(point_struct)
 nested_point_schema = Schema(nested_point_struct)
 
@@ -132,11 +141,7 @@ def is_valid(t):
     try:
         point_schema.validate(t)
         set_error_message(standard_okay)
-        # print("is_valid = True")
         return True
     except SchemaError as s:
-        print("Invalid in is_valid:")
-        print(s)
         set_error_message(standard_error)
-    #print("is_valid = False")
     return False
