@@ -23,6 +23,7 @@ You will generally want to keep the font view window open alongside the main win
 ![Font view window](images/font_view.png)
 
 In this window, glyphs that are already hinted are highlighted in blue, and you can navigate to any glyph by clicking on its image. YAML source for functions, macros, the cvt table, and the cvar table (for variable fonts) can be edited in other windows:
+
 ![cvt editing window](images/cvt.png)
 
 This is the cvt table. As you type, ygt will validate the code and display the current status ("Valid" or "Invalid") in the title bar (more detailed validation info is not yet available—I'm working on this). Graphical methods for editing the cvt and cvar tables will be added in due course.
