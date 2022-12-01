@@ -7,6 +7,7 @@ from .ygPreview import ygPreview
 from .ygYAMLEditor import ygYAMLEditor, editorDialog
 from .ygHintEditor import ygGlyphViewer, MyView
 from .ygPreferences import ygPreferences, open_config
+from .ygSchema import is_cvt_valid, is_cvar_valid, is_prep_valid, are_macros_valid, are_functions_valid, always_valid
 from xgridfit import compile_one, compile_all
 from PyQt6.QtCore import Qt, QSize, pyqtSlot
 from PyQt6.QtWidgets import (
@@ -78,6 +79,7 @@ class MainWindow(QMainWindow):
 
         self.save_action = self.file_menu.addAction("Save")
         self.save_action.setShortcut(QKeySequence.StandardKey.Save)
+        self.save_action.setEnabled(False)
 
         self.save_as_action = self.file_menu.addAction("Save As...")
         self.save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs)
@@ -87,6 +89,7 @@ class MainWindow(QMainWindow):
 
         self.save_font_action = self.file_menu.addAction("Export Font...")
         self.save_font_action.setShortcut(QKeySequence("Ctrl+e"))
+        self.save_font_action.setEnabled(False)
 
         self.quit_action = self.file_menu.addAction("Quit")
         self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)
@@ -109,23 +112,29 @@ class MainWindow(QMainWindow):
 
         self.goto_action = self.edit_menu.addAction("Go to...")
         self.goto_action.setShortcut(QKeySequence("Ctrl+G"))
+        self.goto_action.setEnabled(False)
 
         self.preview_menu = self.menu.addMenu("&Preview")
 
         self.save_current_glyph_action = self.preview_menu.addAction("Update Preview")
         self.save_current_glyph_action.setShortcut(QKeySequence("Ctrl+u"))
+        self.save_current_glyph_action.setEnabled(False)
 
         self.pv_bigger_one_action = self.preview_menu.addAction("Grow by One")
         self.pv_bigger_one_action.setShortcut(QKeySequence.StandardKey.MoveToPreviousLine)
+        self.pv_bigger_one_action.setEnabled(False)
 
         self.pv_bigger_ten_action = self.preview_menu.addAction("Grow by Ten")
         self.pv_bigger_ten_action.setShortcut(QKeySequence.StandardKey.MoveToStartOfBlock)
+        self.pv_bigger_ten_action.setEnabled(False)
 
         self.pv_smaller_one_action = self.preview_menu.addAction("Shrink by One")
         self.pv_smaller_one_action.setShortcut(QKeySequence.StandardKey.MoveToNextLine)
+        self.pv_smaller_one_action.setEnabled(False)
 
         self.pv_smaller_ten_action = self.preview_menu.addAction("Shrink by Ten")
         self.pv_smaller_ten_action.setShortcut(QKeySequence.StandardKey.MoveToEndOfBlock)
+        self.pv_smaller_ten_action.setEnabled(False)
 
         self.instance_menu = None
 
@@ -133,6 +142,7 @@ class MainWindow(QMainWindow):
 
         self.pv_set_size_action = self.preview_menu.addAction("Pixels per Em...")
         self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+p"))
+        self.pv_set_size_action.setEnabled(False)
 
         self.view_menu = self.menu.addMenu("&View")
 
@@ -166,6 +176,8 @@ class MainWindow(QMainWindow):
 
         vector_action_group = QActionGroup(self.toolbar)
         vector_action_group.setExclusive(True)
+
+        self.view_menu.setEnabled(False)
 
         self.vertical_action = self.toolbar.addAction("Vertical hinting")
         self.vertical_action.setIcon(QIcon(QPixmap(self.icon_path + "vertical.png")))
@@ -271,6 +283,8 @@ class MainWindow(QMainWindow):
 
         # self.code_menu.aboutToShow.connect(self.code_menu_about_to_show)
 
+        self.code_menu.setEnabled(False)
+
         self.central_widget = self.qs
         self.setCentralWidget(self.central_widget)
 
@@ -308,9 +322,16 @@ class MainWindow(QMainWindow):
             return
         if len(failed_glyph_list) > 0:
             self.show_error_message(["Error", "Error", emsg])
-            pass
+            return
         self.yg_preview.fetch_glyph(tmp_font, glyph_index)
         self.yg_preview.update()
+        self.pv_bigger_one_action.setEnabled(True)
+        self.pv_bigger_ten_action.setEnabled(True)
+        self.pv_smaller_one_action.setEnabled(True)
+        self.pv_smaller_ten_action.setEnabled(True)
+        self.pv_set_size_action.setEnabled(True)
+        if self.instance_menu != None:
+            self.instance_menu.setEnabled(True)
 
     @pyqtSlot()
     def show_font_view(self):
@@ -323,11 +344,15 @@ class MainWindow(QMainWindow):
         self.font_viewer.show()
         self.font_viewer.activateWindow()
 
+    @pyqtSlot()
     def index_labels(self):
+        print("Running index_labels")
         self.preferences["points_as_coords"] = False
         self.glyph_pane.viewer.set_point_display("index")
 
+    @pyqtSlot()
     def coord_labels(self):
+        print("Running coord_labels")
         self.preferences["points_as_coords"] = True
         self.glyph_pane.viewer.set_point_display("coord")
 
@@ -489,7 +514,6 @@ class MainWindow(QMainWindow):
         self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
         self.source_editor.setup_status_indicator(self.set_status_validity_msg)
         self.setup_cursor_connections()
-        self.setup_point_label_connections()
 
     def disconnect_glyph_pane(self):
         self.disconnect_nav()
@@ -542,6 +566,7 @@ class MainWindow(QMainWindow):
                 self.instance_actions.append(self.instance_menu.addAction(k))
                 instance_names.append(k)
             self.yg_preview.add_instances(self.yg_font.instances)
+            self.instance_menu.setEnabled(False)
 
     #
     # File operations
@@ -615,6 +640,9 @@ class MainWindow(QMainWindow):
             filename = f
         else:
             filename = f[0]
+        self.save_action.setEnabled(True)
+        self.save_font_action.setEnabled(True)
+        self.goto_action.setEnabled(True)
         self.black_action.setEnabled(True)
         self.white_action.setEnabled(True)
         self.gray_action.setEnabled(True)
@@ -627,6 +655,9 @@ class MainWindow(QMainWindow):
         self.horizontal_action.setEnabled(True)
         self.cursor_action.setEnabled(True)
         self.hand_action.setEnabled(True)
+        self.save_current_glyph_action.setEnabled(True)
+        self.code_menu.setEnabled(True)
+        self.view_menu.setEnabled(True)
 
         if filename and len(filename) > 0:
             self.preferences.add_recent(filename)
@@ -680,6 +711,7 @@ class MainWindow(QMainWindow):
             self.set_up_instance_list()
             self.setup_editor_connections()
             self.setup_preview_instance_connections()
+            self.setup_point_label_connections()
 
     #
     # GUI management
@@ -727,6 +759,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def indices_to_coords(self):
+        print("Running indices_to_coords")
         try:
             self.glyph_pane.viewer.yg_glyph.indices_to_coords()
         except Exception as e:
@@ -734,6 +767,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def coords_to_indices(self):
+        print("Running coord_to_indices")
         try:
             self.glyph_pane.viewer.yg_glyph.coords_to_indices()
         except Exception as e:
@@ -742,7 +776,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def edit_cvt(self):
         self.cvt_editor = editorDialog(self.preferences,
-                                                self.yg_font.cvt)
+                                        self.yg_font.cvt,
+                                        "cvt",
+                                        is_cvt_valid)
         self.cvt_editor.show()
         # self.cvt_editor.raise()
         self.cvt_editor.activateWindow()
@@ -750,7 +786,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def edit_prep(self):
         self.cvt_editor = editorDialog(self.preferences,
-                                                self.yg_font.prep)
+                                                self.yg_font.prep,
+                                                "prep",
+                                                is_prep_valid)
         self.cvt_editor.show()
         # self.cvt_editor.raise()
         self.cvt_editor.activateWindow()
@@ -759,6 +797,8 @@ class MainWindow(QMainWindow):
     def edit_cvar(self):
         self.cvar_editor = editorDialog(self.preferences,
                                                  self.yg_font.cvar,
+                                                 "cvar",
+                                                 is_cvar_valid,
                                                  top_structure="list")
         self.cvar_editor.show()
         # self.cvar_editor.raise()
@@ -767,7 +807,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def edit_functions(self):
         self.function_editor = editorDialog(self.preferences,
-                                                     self.yg_font.functions_func)
+                                                     self.yg_font.functions_func,
+                                                     "functions",
+                                                     are_functions_valid)
         self.function_editor.show()
         # self.function_editor.raise()
         self.function_editor.activateWindow()
@@ -775,7 +817,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def edit_macros(self):
         self.macro_editor = editorDialog(self.preferences,
-                                                  self.yg_font.macros_func)
+                                                  self.yg_font.macros_func,
+                                                  "macros",
+                                                  are_macros_valid)
         self.macro_editor.show()
         # self.macro_editor.raise()
         self.macro_editor.activateWindow()
@@ -783,7 +827,9 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def edit_defaults(self):
         self.default_editor = editorDialog(self.preferences,
-                                                    self.yg_font.defaults)
+                                                    self.yg_font.defaults,
+                                                    "defaults",
+                                                    always_valid)
         self.default_editor.show()
         # self.default_editor.raise()
         self.default_editor.activateWindow()
