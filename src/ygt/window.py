@@ -346,13 +346,11 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def index_labels(self):
-        print("Running index_labels")
         self.preferences["points_as_coords"] = False
         self.glyph_pane.viewer.set_point_display("index")
 
     @pyqtSlot()
     def coord_labels(self):
-        print("Running coord_labels")
         self.preferences["points_as_coords"] = True
         self.glyph_pane.viewer.set_point_display("coord")
 
@@ -759,7 +757,6 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def indices_to_coords(self):
-        print("Running indices_to_coords")
         try:
             self.glyph_pane.viewer.yg_glyph.indices_to_coords()
         except Exception as e:
@@ -767,7 +764,6 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def coords_to_indices(self):
-        print("Running coord_to_indices")
         try:
             self.glyph_pane.viewer.yg_glyph.coords_to_indices()
         except Exception as e:
