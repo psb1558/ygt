@@ -1,17 +1,20 @@
 import uuid
 import copy
 from .macfuncDialog import macfuncDialog
-from .ygModel import (ygSet,
-                      ygParams,
-                      ygPoint,
-                      ygPointSorter,
-                      ygHint,
-                      hint_type_nums,
-                      ygCaller,
-                      ygFunction,
-                      ygMacro,
-                      ygGlyph)
-
+from .makeCVDialog import makeCVDialog
+from .ygModel import (
+    ygSet,
+    ygParams,
+    ygPoint,
+    ygPointSorter,
+    ygHint,
+    hint_type_nums,
+    ygCaller,
+    ygFunction,
+    ygMacro,
+    ygGlyph,
+    unicode_cat_names
+)
 from PyQt6.QtCore import (
     Qt,
     QPointF,
@@ -1277,6 +1280,7 @@ class ygGlyphViewer(QGraphicsScene):
     # sig_macfunc_target = pyqtSignal(object)
     # sig_macfunc_ref = pyqtSignal(object)
     sig_toggle_point_numbers = pyqtSignal()
+    sig_set_category = pyqtSignal(object)
 
     def __init__(self, preferences, yg_glyph):
         """ yg_glyph is a ygGlyph object from ygModel.
@@ -1349,6 +1353,7 @@ class ygGlyphViewer(QGraphicsScene):
         # self.sig_macfunc_target.connect(self.macfunc_target)
         # self.sig_macfunc_ref.connect(self.macfunc_ref)
         self.sig_toggle_point_numbers.connect(self.toggle_point_numbers)
+        self.sig_set_category.connect(self.set_category)
         self.sig_round_hint.connect(self.toggle_hint_rounding)
 
         # Get and display the hints.
@@ -1548,6 +1553,20 @@ class ygGlyphViewer(QGraphicsScene):
         hint._update_touches()
         self.yg_glyph.hint_changed(hint_model)
 
+    def make_control_value(self):
+        sel = self.selected_objects(True)
+        if len(sel) == 0:
+            return
+        if len(sel) >= 1:
+            p1 = self._model_point(sel[0])
+        p2 = None
+        if len(sel) >= 2:
+            p2 = self._model_point(sel[1])
+        cv_dialog = makeCVDialog(p1, p2, self.yg_glyph.yg_font.cvt, self.preferences)
+        r = cv_dialog.exec()
+        if r == QDialog.DialogCode.Accepted:
+            self.yg_glyph.yg_font.cvt.set_clean(False)
+
     @pyqtSlot(object)
     def change_hint_color(self, _params):
         _params["hint"].yg_hint.change_hint_color(_params["color"])
@@ -1567,7 +1586,17 @@ class ygGlyphViewer(QGraphicsScene):
             else:
                 p.del_label()
 
-    def set_point_display(self, pv): # ***
+    @pyqtSlot(object)
+    def set_category(self, c):
+        if c == "Default":
+            try:
+                self.yg_glyph.props.del_property("category")
+            except Exception:
+                pass
+        else:
+            self.yg_glyph.set_category(c)
+
+    def set_point_display(self, pv):
         for p in self.yg_point_view_list:
             p.yg_point.label_pref = pv
             if self.point_numbers_showing:
@@ -2084,6 +2113,13 @@ class ygGlyphViewer(QGraphicsScene):
         else:
             toggle_point_number_visibility = cmenu.addAction("Show point numbers")
 
+        # Set an override for Unicode category detection
+
+        set_category_menu = cmenu.addMenu("Set category")
+        category_actions = [set_category_menu.addAction("Default")]
+        for v in unicode_cat_names.values():
+            category_actions.append(set_category_menu.addAction(v))
+
         # "hint" will be None if the mouse pointer is not over a hint
 
         hint = self._mouse_over_hint(QPointF(event.scenePos()))
@@ -2113,7 +2149,11 @@ class ygGlyphViewer(QGraphicsScene):
         # Set control value for anchor hint (ntype == 0)
 
         set_anchor_cv = cmenu.addMenu("Set control value...")
-        cv_list = self.yg_glyph.yg_font.cvt.get_list("pos", self.current_vector())
+        cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
+                                                     type="pos",
+                                                     vector=self.current_vector(),
+                                                     unic=self.yg_glyph.get_category(),
+                                                     suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
         cv_list = ["None"] + cv_list
         if len(cv_list) > 0:
@@ -2143,7 +2183,12 @@ class ygGlyphViewer(QGraphicsScene):
         # Set control value for stem hint (ntype == 3)
 
         set_stem_cv = cmenu.addMenu("Set control value...")
-        cv_list = self.yg_glyph.yg_font.cvt.get_list("dist", self.current_vector())
+        # cv_list = self.yg_glyph.yg_font.cvt.get_list("dist", self.current_vector())
+        cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
+                                                     type="dist",
+                                                     vector=self.current_vector(),
+                                                     unic=self.yg_glyph.get_category(),
+                                                     suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
         cv_list = ["None"] + cv_list
         if len(cv_list) > 0:
@@ -2353,6 +2398,8 @@ class ygGlyphViewer(QGraphicsScene):
             self.sig_off_curve_visibility.emit()
         if action == toggle_point_number_visibility:
             self.sig_toggle_point_numbers.emit()
+        if action in category_actions:
+            self.sig_set_category.emit(action.text())
         if hint and (action == reverse_hint):
             self.sig_reverse_hint.emit(hint.yg_hint)
         if hint and action in cv_anchor_action_list:
@@ -2408,17 +2455,21 @@ class MyView(QGraphicsView):
         self.yg_font = font
         self.preferences = preferences
 
+    @pyqtSlot()
+    def make_control_value(self):
+        self.viewer.make_control_value()
+
     def setup_goto_signal(self, o):
         self.sig_goto.connect(o)
 
     def _current_index(self):
-        return self.yg_font.glyph_index[self.viewer.yg_glyph.gname]
+        return self.yg_font.get_glyph_index(self.viewer.yg_glyph.gname, short_index=True)
 
     def go_to_glyph(self, g):
         # self.sender().disconnect()
         self.parent().parent().disconnect_glyph_pane()
         try:
-            self.yg_font.glyph_index[g]
+            self.yg_font.get_glyph_index(g, short_index=True)
             self.switch_to(g)
         except Exception as e:
             print(e)

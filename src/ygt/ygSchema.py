@@ -153,6 +153,13 @@ macro_entry_struct = {
     "code": str
 }
 
+defaults_struct = {
+    Optional("use-truetype-defaults"): bool,
+    Optional("init-graphics"): bool,
+    Optional("assume-always-y"): bool,
+    Optional("cleartype"): bool
+}
+
 def tag_checker(s):
     return bool(re.match("^[A-Za-z]{4}$", s))
 
@@ -180,6 +187,7 @@ cvar_entry_struct = [
 
 point_schema = Schema(point_struct)
 nested_point_schema = Schema(nested_point_struct)
+defaults_schema = Schema(defaults_struct)
 
 def is_valid(t):
     try:
@@ -212,7 +220,6 @@ def is_cvt_valid(t):
 def is_cvar_valid(t):
     try:
         cvar_schema.validate(t)
-        print("returning from is_cvar_valid")
         return True
     except SchemaError as s:
         print("Error in is_cvar_valid:")
@@ -222,7 +229,6 @@ def is_cvar_valid(t):
 def is_prep_valid(t):
     try:
         prep_schema.validate(t)
-        print("returning from is_prep_valid")
         return True
     except SchemaError as s:
         print("Error in is_prep_valid:")
@@ -249,6 +255,15 @@ def are_macros_valid(t):
         print(s)
     return False
 
+def are_defaults_valid(t):
+    try:
+        defaults_schema.validate(t)
+        print("returning from are_defaults_valid")
+        return True
+    except SchemaError as s:
+        print("Error in are_defaults_valid:")
+        print(s)
+    return False
 
 def always_valid(t):
     return True

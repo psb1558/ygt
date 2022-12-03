@@ -45,6 +45,9 @@ class ygPreview(QWidget):
         return l
 
     def fetch_glyph(self, filename, glyph_index):
+        """ For use only with temporary fonts! This removes the file from which
+            the glyph has been fetched.
+        """
         self.glyph_index = glyph_index
         self.face = freetype.Face(filename)
         os.remove(filename)

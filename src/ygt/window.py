@@ -1,13 +1,19 @@
 import sys
 import os
 import copy
-from .ygModel import ygFont, ygGlyph
+from .ygModel import ygFont, ygGlyph, unicode_cat_names
 from .fontViewDialog import fontViewDialog
 from .ygPreview import ygPreview
 from .ygYAMLEditor import ygYAMLEditor, editorDialog
 from .ygHintEditor import ygGlyphViewer, MyView
 from .ygPreferences import ygPreferences, open_config
-from .ygSchema import is_cvt_valid, is_cvar_valid, is_prep_valid, are_macros_valid, are_functions_valid, always_valid
+from .ygSchema import (
+    is_cvt_valid,
+    is_cvar_valid,
+    is_prep_valid,
+    are_macros_valid,
+    are_functions_valid,
+    are_defaults_valid)
 from xgridfit import compile_one, compile_all
 from PyQt6.QtCore import Qt, QSize, pyqtSlot
 from PyQt6.QtWidgets import (
@@ -65,6 +71,7 @@ class MainWindow(QMainWindow):
         self.recents_display = []
         self.recents_actions = []
         self.instance_actions = []
+        self.window_list = []
 
         self.menu = self.menuBar()
 
@@ -258,6 +265,11 @@ class MainWindow(QMainWindow):
         self.make_set_action.setShortcut(QKeySequence(Qt.Key.Key_K))
         self.make_set_action.setEnabled(False)
 
+        self.make_cv_action = self.toolbar.addAction("Make Control Value (C)")
+        self.make_cv_action.setIcon(QIcon(QPixmap(self.icon_path + "cv.png")))
+        self.make_cv_action.setShortcut(QKeySequence(Qt.Key.Key_C))
+        self.make_cv_action.setEnabled(False)
+
         self.code_menu = self.menu.addMenu("&Code")
 
         self.compile_action = self.code_menu.addAction("Compile")
@@ -310,7 +322,8 @@ class MainWindow(QMainWindow):
         source = self.yg_font.source
         font = self.yg_font.font_files.in_font()
         glyph = self.glyph_pane.viewer.yg_glyph.gname
-        glyph_index = self.yg_font.name_to_index[glyph]
+        # glyph_index = self.yg_font.name_to_index[glyph]
+        glyph_index = self.yg_font.get_glyph_index(glyph)
         # tmp_font = compile_one(self.yg_font.ft_font, source, glyph)
         emsg =  "Error compiling YAML or Xgridfit code. "
         emsg += "Check the correctness of your code (including any "
@@ -425,6 +438,7 @@ class MainWindow(QMainWindow):
         self.shift_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.make_set_action.triggered.connect(self.glyph_pane.make_set)
+        self.make_cv_action.triggered.connect(self.glyph_pane.make_control_value)
         # These two connections don't get destroyed when we switch glyphs.
         # Make sure they're not created over and over.
         self.vertical_action.triggered.connect(self.glyph_pane.switch_to_y)
@@ -638,6 +652,8 @@ class MainWindow(QMainWindow):
             filename = f
         else:
             filename = f[0]
+        self.open_action.setEnabled(False)
+        self.recent_menu.setEnabled(False)
         self.save_action.setEnabled(True)
         self.save_font_action.setEnabled(True)
         self.goto_action.setEnabled(True)
@@ -648,6 +664,7 @@ class MainWindow(QMainWindow):
         self.align_action.setEnabled(True)
         self.interpolate_action.setEnabled(True)
         self.anchor_action.setEnabled(True)
+        self.make_cv_action.setEnabled(True)
         self.make_set_action.setEnabled(True)
         self.vertical_action.setEnabled(True)
         self.horizontal_action.setEnabled(True)
@@ -673,9 +690,17 @@ class MainWindow(QMainWindow):
                 yaml_source["cvt"] = {}
                 yaml_source["prep"] = {}
                 prep_code = """<code xmlns=\"http://xgridfit.sourceforge.net/Xgridfit2\">
+                    <if test="pixels-per-em &gt; 300">
+                        <disable-instructions/>
+                    </if>
                     <push>4 511</push>
                     <command name="SCANCTRL"/>
                     <command name="SCANTYPE"/>
+                    <!-- Demonstration of how to change control values at certain resolutions. -->
+                    <if test="pixels-per-em &lt; 40">
+                        <setcv name="xheight-overshoot" unit="pixel" value="control-value(xheight)"/>
+                        <setcv name="lc-baseline-undershoot" unit="pixel" value="control-value(baseline)"/>
+                    </if>
                   </code>"""
                 yaml_source["prep"] = {"code": prep_code}
                 yaml_source["functions"] = {}
@@ -728,6 +753,7 @@ class MainWindow(QMainWindow):
 
     def set_statusbar_text(self, valid):
         status_text =  self.glyph_pane.viewer.yg_glyph.gname
+        status_text += " - " + unicode_cat_names[self.glyph_pane.viewer.yg_glyph.get_category()]
         status_text += " (" + self.glyph_pane.viewer.yg_glyph.current_vector() + ")"
         if valid != None:
             status_text += " ("
@@ -825,7 +851,7 @@ class MainWindow(QMainWindow):
         self.default_editor = editorDialog(self.preferences,
                                                     self.yg_font.defaults,
                                                     "defaults",
-                                                    always_valid)
+                                                    are_defaults_valid)
         self.default_editor.show()
         # self.default_editor.raise()
         self.default_editor.activateWindow()

@@ -1,15 +1,61 @@
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from fontTools import ttLib
 import yaml
-import os
 from yaml import Dumper
+import os
 import uuid
 import copy
+import unicodedata
 from .ygPreferences import ygPreferences
 
 hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
                    "stem": 3, "whitespace": 3, "blackspace": 3, "grayspace": 3,
                    "move": 3, "macro": 4, "function": 4}
+
+unicode_categories = ["Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
+                      "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
+                      "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
+                      "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
+                      "Cn", "C"]
+
+unicode_cat_names = {"Lu":   "Letter, uppercase",
+                     "Ll":   "Letter, lowercase",
+                     "Lt":   "Letter, titlecase",
+                     "LC":   "Letter, cased",
+                     "Lm":   "Letter, modifier",
+                     "Lo":   "Letter, other",
+                     "L":    "Letter",
+                     "Mn":   "Mark, nonspacing",
+                     "Mc":   "Mark, spacing",
+                     "Me":   "Mark, enclosing",
+                     "M":    "Mark",
+                     "Nd":   "Number, decimal",
+                     "Nl":   "Number, letter",
+                     "No":   "Number, other",
+                     "N":    "Number",
+                     "Pc":   "Punctuation, connector",
+                     "Pd":   "Punctuation, dash",
+                     "Ps":   "Punctuation, open",
+                     "Pe":   "Punctuation, close",
+                     "Pi":   "Punctuation, initial quote",
+                     "Pf":   "Punctuation, final quote",
+                     "Po":   "Punctuation, other",
+                     "P":    "Punctuation",
+                     "Sm":   "Symbol, math",
+                     "Sc":   "Symbol, currency",
+                     "Sk":   "Symbol, modifier",
+                     "So":   "Symbol, other",
+                     "S":    "Symbol",
+                     "Zs":   "Separator, space",
+                     "Zl":   "Separator, line",
+                     "Zp":   "Separator, paragraph",
+                     "Z":    "Separator",
+                     "Cc":   "Other, control",
+                     "Cf":   "Other, format",
+                     "Cs":   "Other, surrogate",
+                     "Co":   "Other, private use",
+                     "Cn":   "Other, not assigned",
+                     "C":    "Other"}
 
 # Classes in this file:
 
@@ -30,11 +76,12 @@ hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
 # ygPoint: One point.
 # ygParams: For functions and macros, holds their parameters.
 # ygSet: A set of points, for SLOOP instructions like shift and interpolate.
+# ygGlyphProperties: Keeps miscellaneous properties for a glyph.
 # ygGlyph(QObject): Keeps data for the current glyph.
 # ygGlyphs: Collection of this font's glyphs.
 # Comparable: superclass for ygHintSource: for ordering hints.
 # ygHintSource(Comparable): Wrapper for hint source: use when sorting.
-# ygHint(QObject): One hint (including a function or macro call)
+# ygHint(QObject): One hint (including a function or macro call).
 # ygHintSorter: Sorts hints into their proper order.
 # ygPointSorter: Utility for sorting points on the x or y axis.
 
@@ -212,7 +259,10 @@ class ygFont:
         self.glyph_list  = []
         self._clean       = True
         glyph_names = self.ft_font.getGlyphNames()
-        cmap = self.ft_font['cmap'].buildReversed()
+
+        # dict of {glyph_name: unicode}.
+        self.cmap = self.ft_font['cmap'].buildReversed()
+
         # This dict is for using a glyph name to look up a glyph's index.
         # Composites are left out, since this program doesn't deal with them
         # (may decide, though, to display previews of them)
@@ -222,25 +272,50 @@ class ygFont:
             g = self.ft_font['glyf'][gn]
             if not g.isComposite():
                 self.name_to_index[gn] = order_index
-        # Get a list of tuples containing unicodes and glyph names. Still
-        # omitting composites.
+
+        # Get a list of tuples containing unicodes and glyph names (still
+        # omitting composites). Sort first by unicode, then by name. This
+        # is our order for the font.
         for gn in glyph_names:
             g = self.ft_font['glyf'][gn]
             if not g.isComposite():
                 cc = g.getCoordinates(self.ft_font['glyf'])
                 if len(cc) > 0:
-                    try:
-                        u = cmap[gn]
-                    except Exception:
-                        u = 65535
-                    if type(u) is set:
-                        u = next(iter(u))
-                    self.glyph_list.append((u, gn))
+                    # u = self.get_unicode(gn)
+                    self.glyph_list.append((self.get_unicode(gn), gn))
         self.glyph_list.sort(key = lambda x : x[1])
         self.glyph_list.sort(key = lambda x : x[0])
+
+        # Like name_to_index, but this one looks up the index in a slimmed-down,
+        # non-composite-only list. This is for navigating in this program.
         self.glyph_index = {}
         for glyph_counter, g in enumerate(self.glyph_list):
             self.glyph_index[g[1]] = glyph_counter
+
+    def get_unicode(self, glyph_name, extended=False):
+        u = 65535
+        try:
+            u = self.cmap[glyph_name]
+        except Exception:
+            if extended and ("." in glyph_name):
+                gn = glyph_name.split(".")[0]
+                try:
+                    u = self.cmap[gn]
+                except Exception:
+                    pass
+        if type(u) is set:
+            u = next(iter(u))
+        return u
+
+    def get_unicode_category(self, glyph_name):
+        u = self.get_unicode(glyph_name, extended=True)
+        c = "C"
+        if u != 65535:
+            try:
+                c = unicodedata.category(chr(u))
+            except Exception:
+                pass
+        return c
 
     def extreme_points(self, glyph_name):
         """ Helper for setting up an initial cvt.
@@ -301,8 +376,11 @@ class ygFont:
         except KeyError:
             return {"y": {"points": []}}
 
-    def get_glyph_index(self, gname):
-        return self.name_to_index[gname]
+    def get_glyph_index(self, gname, short_index=False):
+        if short_index:
+            return self.glyph_index[gname]
+        else:
+            return self.name_to_index[gname]
 
     def save_glyph_source(self, source, vector, gname):
         """ Save a y or x block to the in-memory source.
@@ -365,24 +443,49 @@ class ygcvt(ygSourceable):
         self.font.source["cvt"] = c
         self.set_clean(True)
 
-    def get_cvs(self, cvtype, vector):
-        """ Get a list of control values filtered by type and vector.
+    #def get_cvs(self, cvtype, vector, unic, suffix):
+    def get_cvs(self, glyph, filters):
+        """ Get a list of control values filtered to match a particular
+            environment.
+
+            Parameters:
+            glyph (ygGlyph): the target glyph
+
+            filters: a dict with any of these key/value pairs: type, vector,
+            unic, suffix (others would be ignored)
+
+            Returns:
+            a list of ygcvt objects.
+
         """
         result = {}
+        # Get the complete list of control values
         keys = self.data.keys()
         for key in keys:
             entry = self.data[key]
+            include_this = True
             if type(entry) is dict:
-                if "type" in entry and "vector" in entry:
-                    if entry["type"] == cvtype and entry["vector"] == vector:
-                        result[key] = entry["val"]
+                if "type" in entry:
+                    if entry["type"] != filters["type"]:
+                        include_this = False
+                if include_this and ("vector" in entry):
+                    if entry["vector"] != filters["vector"]:
+                        include_this = False
+                if include_this and ("unic" in entry):
+                    if not glyph.match_category(entry["unic"], filters["unic"]):
+                        include_this = False
+                if include_this and ("suffix" in entry):
+                    if not entry["suffix"] in filters["suffix"]:
+                        include_this = False
+            if include_this:
+                result[key] = entry["val"]
         return result
 
-    def get_list(self, type, vector):
+    def get_list(self, glyph, **filters):
         """ Run get_cvs, then format for presentation in a menu
         """
         result = []
-        cvt_matches = self.get_cvs(type, vector)
+        cvt_matches = self.get_cvs(glyph, filters)
         for key in cvt_matches:
             result.append(key)
         return result
@@ -395,6 +498,9 @@ class ygcvt(ygSourceable):
         if name in self.data:
             return self.data[name]
         return None
+
+    def add_cv(self, name, props):
+        self.data[name] = props
 
 
 
@@ -685,6 +791,55 @@ class ygSet:
         return result
 
 
+class ygGlyphProperties:
+    def __init__(self, glyph):
+        self._clean = True
+        self.yg_glyph = glyph
+        try:
+            self.data = copy.deepcopy(self.yg_glyph.gsource["props"])
+        except KeyError:
+            self.data = {}
+
+    def add_property(self, k, v):
+        self.data[k] = v
+        self.set_clean(False)
+
+    def set_property(self, k, v):
+        self.add_property(k, v)
+
+    def get_property(self, k):
+        try:
+            return self.data[k]
+        except KeyError:
+            return None
+
+    def set_clean(self, c):
+        self._clean = c
+        if not self._clean:
+            self.yg_glyph.set_dirty()
+            self.yg_glyph.yg_font.set_dirty()
+
+    def clean(self):
+        return self._clean
+
+    def del_property(self, k):
+        try:
+            del self.data[k]
+            self.set_clean(False)
+        except KeyError:
+            pass
+
+    def save(self):
+        if self._clean:
+            return
+        if len(self.data) > 0:
+            self.yg_glyph.gsource["props"] = self.data
+        else:
+            if "props" in self.yg_glyph.gsource:
+                del self.yg_glyph.gsource["props"]
+        self.set_clean(True)
+
+
 
 class ygGlyph(QObject):
     """ Keeps all the data for one glyph and provides an interface for
@@ -718,10 +873,7 @@ class ygGlyph(QObject):
             self.names = copy.deepcopy(self.gsource["names"])
         else:
             self.names = {}
-        if "props" in self.gsource:
-            self.props = copy.deepcopy(self.gsource["props"])
-        else:
-            self.props = {}
+        self.props = ygGlyphProperties(self)
         if "y" in self.gsource:
             self.y_block = self.combine_point_blocks(copy.deepcopy(self.gsource["y"]))
         else:
@@ -938,6 +1090,14 @@ class ygGlyph(QObject):
     # Accessing glyph data
     #
 
+    def get_category(self, long_name=False):
+        cat = self.props.get_property("category")
+        if cat == None:
+            cat = self.yg_font.get_unicode_category(self.gname)
+        if long_name:
+            return unicode_cat_names[cat]
+        return cat
+
     def current_vector(self):
         return self._current_vector
 
@@ -1011,6 +1171,24 @@ class ygGlyph(QObject):
             else:
                 return self.resolve_point_identifier(block).index
 
+    def match_category(self, cat1, cat2):
+        cat_a = cat1
+        if cat2 == None:
+            cat_b = self.get_category()
+        else:
+            cat_b = cat2
+        if len(cat_a) == 1:
+            cat_b = cat_b[:1]
+        elif len(cat_b) == 1:
+            cat_a = cat_a[:1]
+        return cat_a == cat_b
+
+    def get_suffixes(self):
+        """ Will return an empty list if no suffixes
+        """
+        s = self.gname.split(".")
+        return s[1:]
+
     def search_source(self, block, pt, ptype):
         """ Search the yaml source for a point.
 
@@ -1075,13 +1253,15 @@ class ygGlyph(QObject):
         return self.gname
 
     def xoffset(self):
-        if "xoffset" in self.props:
-            return self.props["xoffset"]
+        xo = self.props.get_property("xoffset")
+        if xo != None:
+            return xo
         return 0
 
     def yoffset(self):
-        if "yoffset" in self.props:
-            return self.props["yoffset"]
+        yo = self.props.get_property("yoffset")
+        if yo != None:
+            return yo
         return 0
 
     def _yaml_hint_type(self, n):
@@ -1180,12 +1360,17 @@ class ygGlyph(QObject):
             self.yg_font.save_glyph_source({"points": tcopy},
                                            self.current_vector(),
                                            self.gname)
+            self.props.save()
             self.set_clean()
         # Also save the other things (cvt, etc.) if dirty.
 
     #
     # Editing
     #
+
+    def set_category(self, c):
+        rev_cat = {v: k for k, v in unicode_cat_names.items()}
+        self.props.add_property("category", rev_cat[c])
 
     def combine_point_blocks(self, block):
         if len(block) > 0:
