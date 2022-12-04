@@ -139,6 +139,9 @@ class FontFiles:
 
 
 class ygSourceable:
+    """ Superclass for a number of ygt classes that represent chunks
+        of source code.
+    """
     def __init__(self, font, source):
         self.data = source
         self.font = font

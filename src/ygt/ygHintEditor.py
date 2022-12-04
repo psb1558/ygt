@@ -1429,12 +1429,9 @@ class ygGlyphViewer(QGraphicsScene):
 
 
     def _calc_canvas_size(self):
-        """ This calculates a canvas that will do for the entire font. But maybe
-            a better approach would be to calculate it for each glyph. See the
-            absurd situation in Junicode, which has an extremely wide canvas
-            because of one glyph, threeemdash (U+2E3B). (The commented lines
-            would do this, but they sometimes produce a canvas too narrow for
-            our window.)
+        """ This calculates a canvas that will do for the entire font. The result
+            can be awkward (see the absurd situation in Junicode, which has an
+            extremely wide canvas because of one glyph, threeemdash (U+2E3B)).
         """
         f = self.yg_glyph.yg_font.ft_font
         x_size = abs(f['head'].xMin) + abs(f['head'].xMax) + (GLYPH_WIDGET_MARGIN * 2)
@@ -1652,8 +1649,8 @@ class ygGlyphViewer(QGraphicsScene):
         """ Installs a collection of hints sent from the model.
 
             Parameters:
-            hint_tree (ygModel.ygHintNode): All the hints for either the y
-            or the x axis for this glyph, in a tree structure.
+            hint_list: All the hints for either the y or the x axis
+            for this glyph, in a list.
 
         """
         # Remove the old hints (destroying the ygHintView wrappers) and empty
@@ -1755,7 +1752,7 @@ class ygGlyphViewer(QGraphicsScene):
         """ Get a list of objects (points and hints) selected by the user.
 
             Parameters:
-            point_only (bool): if true, return only selected points (not hints)
+            points_only (bool): if true, return only selected points (not hints)
 
             Returns:
             A list of all selected objects
