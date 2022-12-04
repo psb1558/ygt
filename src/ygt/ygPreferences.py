@@ -9,7 +9,7 @@ class ygPreferences(dict):
         self["show_off_curve_points"] = True
         self["show_point_numbers"] = False
         self["current_glyph"] = {}
-        self["current_vector"] = "y"
+        self["current_axis"] = "y"
         self["save_points_as"] = "coord" # "coord" or "name" or "index"
         # self["view_points_as"] = "coord" # "coord" or "name" or "index"
         self["current_font"] = None
@@ -101,7 +101,7 @@ def open_config(top_window):
         for kk in k:
             p[kk] = pref_dict[kk]
         p["top_window"] = top_window
-        top_window.set_vector_buttons()
+        top_window.set_axis_buttons()
         return p
     except Exception as e:
         print("Exception in open_config:")

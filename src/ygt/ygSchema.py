@@ -123,14 +123,14 @@ point_struct = {
 cvt_entry_struct = {
     "val": int,
     "type": Or("pos", "dist"),
-    "vector": Or("y", "x"),
+    "axis": Or("y", "x"),
     Optional("col"): Or("black", "white", "gray"),
     Optional("suffix"): str,
-    Optional("unic"): Or("Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
-                         "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
-                         "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
-                         "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
-                         "Cn", "C")
+    Optional("cat"): Or("Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
+                        "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
+                        "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
+                        "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
+                        "Cn", "C")
 }
 
 function_entry_struct = {

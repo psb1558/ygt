@@ -1,6 +1,7 @@
 import numpy
 import os
 import freetype
+from freetype import FT_LOAD_RENDER, FT_LOAD_TARGET_LCD 
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel
@@ -54,18 +55,14 @@ class ygPreview(QWidget):
         self._build_glyph()
 
     def _build_glyph(self):
-        # if self.face == None or self.glyph_index == 0:
-        #    return
-        #if self.hinting == "on":
-        #    flags=freetype.FT_LOAD_DEFAULT
-        #else:
-        #    flags=freetype.FT_LOAD_NO_HINTING
+        # flags = FT_LOAD_RENDER | FT_LOAD_TARGET_LCD 
         self.face.set_char_size(self.char_size * 64)
         if self.instance != None:
             self.face.set_var_named_instance(self.instance)
+        # self.face.load_glyph(self.glyph_index, flags=flags)
         self.face.load_glyph(self.glyph_index)
-        ft_slot = self.face.glyph
         ft_bitmap = self.face.glyph.bitmap
+        print(ft_bitmap.buffer)
         ft_width  = self.face.glyph.bitmap.width
         ft_rows   = self.face.glyph.bitmap.rows
         ft_pitch  = self.face.glyph.bitmap.pitch

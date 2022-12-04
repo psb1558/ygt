@@ -11,7 +11,7 @@ class makeCVDialog(QDialog):
     def __init__(self, p1, p2, cvt, preferences):
         self.top_window = preferences["top_window"]
         self.cvt = cvt
-        self.vector = preferences["current_vector"]
+        self.axis = preferences["current_axis"]
         super(makeCVDialog,self).__init__(self.top_window)
         self.setWindowTitle("Make Control Value")
         self.layout = QVBoxLayout()
@@ -24,7 +24,7 @@ class makeCVDialog(QDialog):
         else:
             init_type = "pos"
         val = 0
-        if self.vector == "y":
+        if self.axis == "y":
             if init_type == "pos":
                 val = p1.font_y
             else:
@@ -37,7 +37,7 @@ class makeCVDialog(QDialog):
         color = "None"
         cv_type = cvTypeWidget(init_type)
         cv_color = cvColorWidget(color)
-        cv_vector = cvVectorWidget(self.vector)
+        cv_axis = cvAxisWidget(self.axis)
         cv_val = cvValueWidget(val)
         cv_name = cvNameWidget()
         cv_cat = cvUCatWidget()
@@ -58,11 +58,11 @@ class makeCVDialog(QDialog):
         self.widgets[-1].addWidget(cv_type)
 
         self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("vector"))
-        self.widgets[-1].addWidget(cv_vector)
+        self.widgets[-1].addWidget(QLabel("axis"))
+        self.widgets[-1].addWidget(cv_axis)
 
         self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("unic"))
+        self.widgets[-1].addWidget(QLabel("cat"))
         self.widgets[-1].addWidget(cv_cat)
 
         self.widgets.append(QHBoxLayout())
@@ -90,7 +90,7 @@ class makeCVDialog(QDialog):
                         val = int(val)
                     except Exception as e:
                         val = 0
-                if val_name == "unic" and val != None:
+                if val_name == "cat" and val != None:
                     rev_unic_dict = {v: k for k, v in unicode_cat_names.items()}
                     try:
                         val = rev_unic_dict[val]
@@ -143,12 +143,12 @@ class cvColorWidget(QComboBox):
 
 
 
-class cvVectorWidget(QComboBox):
-    def __init__(self, init_vector):
+class cvAxisWidget(QComboBox):
+    def __init__(self, init_axis):
         super().__init__()
         self.addItem("y")
         self.addItem("x")
-        self.setCurrentText(init_vector)
+        self.setCurrentText(init_axis)
 
     def _text(self):
         return self.currentText()

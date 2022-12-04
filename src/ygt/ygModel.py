@@ -209,33 +209,33 @@ class ygFont:
         self.defaults    = ygDefaults(self, self.source)
         if len(self.source["cvt"]) == 0:
             cvt = self.source["cvt"]
-            cvt["baseline"] = {"val": 0, "type": "pos", "vector": "y"}
+            cvt["baseline"] = {"val": 0, "type": "pos", "axis": "y"}
             try:
                 os2 = self.ft_font['OS/2']
                 cvt["cap-height"] = {"val": os2.sCapHeight,
                                      "type": "pos",
-                                     "vector": "y"}
+                                     "axis": "y"}
                 cvt["cap-height-overshoot"] = {"val": self.extreme_points("O")[0],
                                                "type": "pos",
-                                               "vector": "y"}
+                                               "axis": "y"}
                 cvt["cap-baseline-undershoot"] = {"val": self.extreme_points("O")[1],
                                                 "type": "pos",
-                                                "vector": "y"}
+                                                "axis": "y"}
                 cvt["xheight"] = {"val": os2.sxHeight,
                                   "type": "pos",
-                                  "vector": "y"}
+                                  "axis": "y"}
                 cvt["xheight-overshoot"] = {"val": self.extreme_points("o")[0],
                                             "type": "pos",
-                                            "vector": "y"}
+                                            "axis": "y"}
                 cvt["lc-baseline-undershoot"] = {"val": self.extreme_points("o")[1],
                                             "type": "pos",
-                                            "vector": "y"}
+                                            "axis": "y"}
                 cvt["lc-ascender"] = {"val": self.extreme_points("b")[0],
                                       "type": "pos",
-                                      "vector": "y"}
+                                      "axis": "y"}
                 cvt["lc-descender"] = {"val": self.extreme_points("p")[1],
                                        "type": "pos",
-                                       "vector": "y"}
+                                       "axis": "y"}
             except Exception as e:
                 print("Error while building cvt:")
                 print(e)
@@ -382,12 +382,12 @@ class ygFont:
         else:
             return self.name_to_index[gname]
 
-    def save_glyph_source(self, source, vector, gname):
+    def save_glyph_source(self, source, axis, gname):
         """ Save a y or x block to the in-memory source.
         """
         if not gname in self.glyphs:
             self.glyphs[gname] = {}
-        self.glyphs[gname][vector] = source
+        self.glyphs[gname][axis] = source
 
 
 
@@ -443,7 +443,6 @@ class ygcvt(ygSourceable):
         self.font.source["cvt"] = c
         self.set_clean(True)
 
-    #def get_cvs(self, cvtype, vector, unic, suffix):
     def get_cvs(self, glyph, filters):
         """ Get a list of control values filtered to match a particular
             environment.
@@ -451,8 +450,8 @@ class ygcvt(ygSourceable):
             Parameters:
             glyph (ygGlyph): the target glyph
 
-            filters: a dict with any of these key/value pairs: type, vector,
-            unic, suffix (others would be ignored)
+            filters: a dict with any of these key/value pairs: type, axis,
+            cat, suffix (others would be ignored)
 
             Returns:
             a list of ygcvt objects.
@@ -468,11 +467,11 @@ class ygcvt(ygSourceable):
                 if "type" in entry:
                     if entry["type"] != filters["type"]:
                         include_this = False
-                if include_this and ("vector" in entry):
-                    if entry["vector"] != filters["vector"]:
+                if include_this and ("axis" in entry):
+                    if entry["axis"] != filters["axis"]:
                         include_this = False
-                if include_this and ("unic" in entry):
-                    if not glyph.match_category(entry["unic"], filters["unic"]):
+                if include_this and ("cat" in entry):
+                    if not glyph.match_category(entry["cat"], filters["cat"]):
                         include_this = False
                 if include_this and ("suffix" in entry):
                     if not entry["suffix"] in filters["suffix"]:
@@ -905,9 +904,9 @@ class ygGlyph(QObject):
         for p in self.point_list:
             self.point_coord_dict[p.coord] = p
         if self.preferences:
-            self._current_vector = self.preferences["current_vector"]
+            self._current_axis = self.preferences["current_axis"]
         else:
-            self._current_vector = "y"
+            self._current_axis = "y"
         # Fix up the source and build a tree of ygHhint objects.
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
@@ -981,7 +980,7 @@ class ygGlyph(QObject):
             if "points" in f:
                 del f["points"]
         new_tree = ygHintSorter(self.place_all(flattened_tree)).sort()
-        if self.current_vector() == "y":
+        if self.current_axis() == "y":
             self.y_block = new_tree
         else:
             self.x_block = new_tree
@@ -1013,7 +1012,7 @@ class ygGlyph(QObject):
                 for ppt in pt["points"]:
                     ppt["parent"] = pt
                 self._yaml_add_parents(pt['points'])
-        if self._current_vector == "y":
+        if self._current_axis == "y":
             self.y_block = node
         else:
             self.x_block = node
@@ -1042,7 +1041,7 @@ class ygGlyph(QObject):
                         n["ref"] = reflist
                 if "points" in n:
                     self._yaml_supply_refs(n['points'])
-            if self._current_vector == "y":
+            if self._current_axis == "y":
                 self.y_block = node
             else:
                 self.x_block = node
@@ -1098,17 +1097,17 @@ class ygGlyph(QObject):
             return unicode_cat_names[cat]
         return cat
 
-    def current_vector(self):
-        return self._current_vector
+    def current_axis(self):
+        return self._current_axis
 
     def current_block(self):
-        if self._current_vector == "y":
+        if self._current_axis == "y":
             return self.y_block
         else:
             return self.x_block
 
     def hints(self):
-        """ Get a list of hints for the current vector, wrapped in ygHint
+        """ Get a list of hints for the current axis, wrapped in ygHint
             objects.
 
         """
@@ -1311,12 +1310,12 @@ class ygGlyph(QObject):
     # Navigation
     #
 
-    def switch_to_vector(self, new_vector):
-        if self._current_vector == new_vector:
+    def switch_to_axis(self, new_axis):
+        if self._current_axis == new_axis:
             return
         self.save_source()
-        self._current_vector = new_vector
-        self.preferences["current_vector"] = new_vector
+        self._current_axis = new_axis
+        self.preferences["current_axis"] = new_axis
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
         # self.sig_hints_changed.emit(self.hints())
@@ -1337,7 +1336,7 @@ class ygGlyph(QObject):
             render and sends reconstituted source back to the editor.
         """
         try:
-            if self.current_vector() == "y":
+            if self.current_axis() == "y":
                 self.y_block = s
             else:
                 self.x_block = s
@@ -1358,7 +1357,7 @@ class ygGlyph(QObject):
             tcopy = copy.deepcopy(self.current_block())
             self.yaml_strip_extraneous_nodes(tcopy)
             self.yg_font.save_glyph_source({"points": tcopy},
-                                           self.current_vector(),
+                                           self.current_axis(),
                                            self.gname)
             self.props.save()
             self.set_clean()
@@ -1957,14 +1956,14 @@ class ygHintSorter:
 
 class ygPointSorter:
     """ Will sort a list of points into left-to-right or up-to-down order,
-        depending on the current vector.
+        depending on the current axis.
 
     """
-    def __init__(self, vector):
-        self.vector = vector
+    def __init__(self, axis):
+        self.axis = axis
 
     def _ptcoords(self, p):
-        if self.vector == "y":
+        if self.axis == "y":
             return p.font_x
         else:
             return p.font_y

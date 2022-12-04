@@ -580,8 +580,8 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
     which will be represented by different colors.
     (A (linked) set will be indicated by thinner lines without arrows.)
     """
-    def __init__(self, p1, p2, vector, hint_type, id=None, parent=None):
-        # "vector" param not used. Get rid of it.
+    def __init__(self, p1, p2, axis, hint_type, id=None, parent=None):
+        # "axis" param not used. Get rid of it.
         super().__init__()
         #
         # This class looks very messy. Clean it up!
@@ -589,10 +589,10 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         # p1 and p2 must be ygPointable objects (ygPointView, ygPointCollectionView).
         #
         # p1 is the beginning of the line; p2 is the end (where we will put
-        # the arrowhead). vector is 0 for y, 1 for x
+        # the arrowhead). axis is 0 for y, 1 for x
         # start by figuring out the rectangle that will contain this line.
         #
-        self.vector = vector
+        self.axis = axis
         # id setup not needed:
         if id:
             self.id = id
@@ -620,33 +620,33 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         # Generate a keyword to describe the shape of the box.
         if xdistance == 0 and ydistance == 0:
             self.shape = "invisible"
-            self.arrow_vector = None
+            self.arrow_axis = None
         elif xdistance == 0:
             self.shape = "y only"
-            self.arrow_vector = "y"
+            self.arrow_axis = "y"
         elif ydistance == 0:
             self.shape = "x only"
-            self.arrow_vector = "x"
+            self.arrow_axis = "x"
         elif box_ratio < 0.3333:
             self.shape = "tall"
-            self.arrow_vector = "y"
+            self.arrow_axis = "y"
         elif box_ratio > 3:
             self.shape = "flat"
-            self.arrow_vector = "x"
+            self.arrow_axis = "x"
         elif ydistance > xdistance:
             self.shape = "tallish"
-            self.arrow_vector = "y"
+            self.arrow_axis = "y"
         else:
             self.shape = "flattish"
-            self.arrow_vector = "x"
+            self.arrow_axis = "x"
         self.arrowhead_direction = None
         # Should these direction words be "positive" and "negative"?
-        if self.arrow_vector == "x":
+        if self.arrow_axis == "x":
             if begin_x < end_x:
                 self.arrowhead_direction = "right"
             if begin_x > end_x:
                 self.arrowhead_direction = "left"
-        if self.arrow_vector == "y":
+        if self.arrow_axis == "y":
             if begin_y < end_y:
                 self.arrowhead_direction = "down"
             if begin_y > end_y:
@@ -658,7 +658,7 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         self.rightadjust = [-4, 4]
         self.topadjust = [4, 12]
         self.bottomadjust = [4, -4]
-        if self.arrow_vector == "x":
+        if self.arrow_axis == "x":
             if min(begin_x, end_x) == begin_x:
                 self.lineBegin = self._adjustPoint(self.leftadjust, begin_x, begin_y)
                 self.lineEnd = self._adjustPoint(self.rightadjust, end_x, end_y)
@@ -1302,7 +1302,7 @@ class ygGlyphViewer(QGraphicsScene):
         # Set up glyph info
 
         self.yg_glyph = yg_glyph
-        # self.vector = self.yg_glyph.current_vector()
+        # self.axis = self.yg_glyph.current_axis()
         # Try to get rid of ref to this scene in the model's ygGlyph class.
         self.yg_glyph.glyph_viewer = self
 
@@ -1545,7 +1545,7 @@ class ygGlyphViewer(QGraphicsScene):
         new_list = []
         for p in selected_points:
             new_list.append(self._model_point(p))
-        sorter = ygPointSorter(self.current_vector())
+        sorter = ygPointSorter(self.current_axis())
         sorter.sort(new_list)
         set = ygSet(new_list)
         set._main_point = touched_point.yg_point
@@ -1653,7 +1653,7 @@ class ygGlyphViewer(QGraphicsScene):
 
             Parameters:
             hint_tree (ygModel.ygHintNode): All the hints for either the y
-            or the x vector for this glyph, in a tree structure.
+            or the x axis for this glyph, in a tree structure.
 
         """
         # Remove the old hints (destroying the ygHintView wrappers) and empty
@@ -1809,8 +1809,8 @@ class ygGlyphViewer(QGraphicsScene):
             return p.yg_point
         return p
 
-    def current_vector(self):
-        return self.yg_glyph.current_vector()
+    def current_axis(self):
+        return self.yg_glyph.current_axis()
 
     #
     # Factories
@@ -1984,7 +1984,7 @@ class ygGlyphViewer(QGraphicsScene):
                     newlist = []
                     for p in pp:
                         newlist.append(self._model_point(p))
-                    sorter = ygPointSorter(self.yg_glyph.current_vector())
+                    sorter = ygPointSorter(self.yg_glyph.current_axis())
                     sorter.sort(newlist)
                     target = newlist.pop(1)
                     ref_names = [newlist[0].preferred_label(),
@@ -2151,8 +2151,8 @@ class ygGlyphViewer(QGraphicsScene):
         set_anchor_cv = cmenu.addMenu("Set control value...")
         cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
                                                      type="pos",
-                                                     vector=self.current_vector(),
-                                                     unic=self.yg_glyph.get_category(),
+                                                     axis=self.current_axis(),
+                                                     cat=self.yg_glyph.get_category(),
                                                      suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
         cv_list = ["None"] + cv_list
@@ -2183,11 +2183,11 @@ class ygGlyphViewer(QGraphicsScene):
         # Set control value for stem hint (ntype == 3)
 
         set_stem_cv = cmenu.addMenu("Set control value...")
-        # cv_list = self.yg_glyph.yg_font.cvt.get_list("dist", self.current_vector())
+        # cv_list = self.yg_glyph.yg_font.cvt.get_list("dist", self.current_axis())
         cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
                                                      type="dist",
-                                                     vector=self.current_vector(),
-                                                     unic=self.yg_glyph.get_category(),
+                                                     axis=self.current_axis(),
+                                                     cat=self.yg_glyph.get_category(),
                                                      suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
         cv_list = ["None"] + cv_list
@@ -2516,15 +2516,15 @@ class MyView(QGraphicsView):
     @pyqtSlot()
     def switch_to_x(self):
         if self.viewer:
-            self.viewer.vector = "x"
-            self.viewer.yg_glyph.switch_to_vector("x")
+            self.viewer.axis = "x"
+            self.viewer.yg_glyph.switch_to_axis("x")
             self.parent().parent().set_window_title()
 
     @pyqtSlot()
     def switch_to_y(self):
         if self.viewer:
-            self.viewer.vector = "x"
-            self.viewer.yg_glyph.switch_to_vector("y")
+            self.viewer.axis = "x"
+            self.viewer.yg_glyph.switch_to_axis("y")
             self.parent().parent().set_window_title()
 
     @pyqtSlot()

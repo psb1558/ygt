@@ -36,6 +36,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QActionGroup
 )
+import freetype
 
 class MainWindow(QMainWindow):
     def __init__(self, app, parent=None):
@@ -181,8 +182,8 @@ class MainWindow(QMainWindow):
 
         self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
 
-        vector_action_group = QActionGroup(self.toolbar)
-        vector_action_group.setExclusive(True)
+        axis_action_group = QActionGroup(self.toolbar)
+        axis_action_group.setExclusive(True)
 
         self.view_menu.setEnabled(False)
 
@@ -194,8 +195,8 @@ class MainWindow(QMainWindow):
         self.horizontal_action.setIcon(QIcon(QPixmap(self.icon_path + "horizontal.png")))
         self.horizontal_action.setCheckable(True)
 
-        vector_action_group.addAction(self.vertical_action)
-        vector_action_group.addAction(self.horizontal_action)
+        axis_action_group.addAction(self.vertical_action)
+        axis_action_group.addAction(self.horizontal_action)
         # self.vertical_action.setChecked(True)
 
         cursor_action_group = QActionGroup(self.toolbar)
@@ -556,12 +557,12 @@ class MainWindow(QMainWindow):
         self.setup_hint_connections()
         self.cleanup_action.triggered.connect(self.glyph_pane.cleanup_yaml_code)
 
-    def set_vector_buttons(self):
+    def set_axis_buttons(self):
         """ To be run right after preferences are loaded and before a file is
             loaded.
 
         """
-        if self.preferences["current_vector"] == "y":
+        if self.preferences["current_axis"] == "y":
             self.vertical_action.setChecked(True)
         else:
             self.horizontal_action.setChecked(True)
@@ -754,7 +755,7 @@ class MainWindow(QMainWindow):
     def set_statusbar_text(self, valid):
         status_text =  self.glyph_pane.viewer.yg_glyph.gname
         status_text += " - " + unicode_cat_names[self.glyph_pane.viewer.yg_glyph.get_category()]
-        status_text += " (" + self.glyph_pane.viewer.yg_glyph.current_vector() + ")"
+        status_text += " (" + self.glyph_pane.viewer.yg_glyph.current_axis() + ")"
         if valid != None:
             status_text += " ("
             if valid:
@@ -904,7 +905,7 @@ class MainWindow(QMainWindow):
 # if __name__ == "__main__":
 def main():
 
-    # print(dir(QtCore))
+    print(dir(freetype))
 
     app = QApplication([])
     top_window = MainWindow(app)

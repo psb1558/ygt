@@ -99,7 +99,12 @@ class ygCVTWidget(QComboBox):
         super().__init__()
         self.addItem("None")
         # self.setInsertPolicy(QComboBox.InsertPolicy.InsertAlphabetically)
-        cv_list = hint.yg_glyph.yg_font.cvt.get_list(_type, hint.yg_glyph.current_vector())
+        # cv_list = hint.yg_glyph.yg_font.cvt.get_list(_type, hint.yg_glyph.current_axis())
+        cv_list = hint.yg_glyph.yg_font.cvt.get_list(hint.yg_glyph,
+                                                     type=_type,
+                                                     axis=hint.yg_glyph.current_axis(),
+                                                     cat=hint.yg_glyph.get_category(),
+                                                     suffix=hint.yg_glyph.get_suffixes())
         cv_list.sort()
         for c in cv_list:
             self.addItem(c)
