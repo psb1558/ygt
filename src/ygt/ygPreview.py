@@ -62,7 +62,7 @@ class ygPreview(QWidget):
         # self.face.load_glyph(self.glyph_index, flags=flags)
         self.face.load_glyph(self.glyph_index)
         ft_bitmap = self.face.glyph.bitmap
-        print(ft_bitmap.buffer)
+        # print(ft_bitmap.buffer)
         ft_width  = self.face.glyph.bitmap.width
         ft_rows   = self.face.glyph.bitmap.rows
         ft_pitch  = self.face.glyph.bitmap.pitch

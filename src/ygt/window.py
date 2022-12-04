@@ -36,7 +36,7 @@ from PyQt6.QtGui import (
     QPixmap,
     QActionGroup
 )
-import freetype
+# import freetype
 
 class MainWindow(QMainWindow):
     def __init__(self, app, parent=None):
@@ -905,7 +905,7 @@ class MainWindow(QMainWindow):
 # if __name__ == "__main__":
 def main():
 
-    print(dir(freetype))
+    # print(dir(freetype))
 
     app = QApplication([])
     top_window = MainWindow(app)
