@@ -28,4 +28,7 @@ In this window, glyphs that are already hinted are highlighted in blue, and you 
 
 This is the cvt table. As you type, ygt will validate the code and display the current status ("Valid" or "Invalid") in the title bar (more detailed validation info is not yet available—I'm working on this). Graphical methods for editing the cvt and cvar tables will be added in due course.
 
-This project may be too big for one person. I invite anyone with an interest in TrueType hinting and some knowledge of one or more of ygt’s major dependencies (PyQt6, fontTools, and FreeType) to contribute by adding features, fixing bugs, or cleaning up my amateurish Python code. All contributors will be gratefully credited.
+To install, download the zip file (the project is not yet on PyPi), unzip, make sure you're in an environment where Python 3.7 or higher is available, navigate to the directory with the file `pyproject.toml`, and type:
+```
+pip install .
+```
