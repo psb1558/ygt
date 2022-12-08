@@ -45,7 +45,9 @@ from PyQt6.QtWidgets import (
     QGraphicsPolygonItem,
     QMenu,
     QLabel,
-    QDialog
+    QDialog,
+    QInputDialog,
+    QLineEdit
 )
 from fontTools.pens.basePen import BasePen
 
@@ -953,9 +955,10 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
         kk = self.point_dict.keys()
         marker_list = []
         for k in kk:
-            p = self.point_dict[k]
+            p = self.yg_viewer.resolve_point_identifier(self.point_dict[k])
             if type(p) is ygSet:
                 p = p.main_point()
+            # print(p)
             ptv = self.yg_viewer.yg_point_view_index[p.id]
             h = ygPointMarker(self.yg_viewer, ptv, self.hint_type, name=k)
             marker_list.append(h)
@@ -1281,6 +1284,7 @@ class ygGlyphViewer(QGraphicsScene):
     # sig_macfunc_ref = pyqtSignal(object)
     sig_toggle_point_numbers = pyqtSignal()
     sig_set_category = pyqtSignal(object)
+    sig_name_points = pyqtSignal(object)
 
     def __init__(self, preferences, yg_glyph):
         """ yg_glyph is a ygGlyph object from ygModel.
@@ -1355,6 +1359,7 @@ class ygGlyphViewer(QGraphicsScene):
         self.sig_toggle_point_numbers.connect(self.toggle_point_numbers)
         self.sig_set_category.connect(self.set_category)
         self.sig_round_hint.connect(self.toggle_hint_rounding)
+        self.sig_name_points.connect(self.name_points)
 
         # Get and display the hints.
 
@@ -1563,6 +1568,19 @@ class ygGlyphViewer(QGraphicsScene):
         r = cv_dialog.exec()
         if r == QDialog.DialogCode.Accepted:
             self.yg_glyph.yg_font.cvt.set_clean(False)
+
+    def name_points(self, pts):
+        msg = "Name the point"
+        if len(pts) > 1:
+            msg += "s"
+        msg += ":"
+        text, ok = QInputDialog().getText(self.preferences.top_window(), "Name points", msg,
+                                          QLineEdit.EchoMode.Normal)
+        if ok and text:
+            mpts = []
+            for p in pts:
+                mpts.append(self._model_point(p))
+            self.yg_glyph.names.add_name(mpts, text)
 
     @pyqtSlot(object)
     def change_hint_color(self, _params):
@@ -2389,6 +2407,16 @@ class ygGlyphViewer(QGraphicsScene):
             a.setEnabled(False)
             a.setVisible(False)
 
+        msg = None
+        if len(selected_points) > 0:
+            msg = "Name selected point"
+        if len(selected_points) > 1:
+            msg += "s"
+        name_action = cmenu.addAction(msg)
+        if msg == None:
+            name_action.setEnabled(False)
+            name_action.setVisible(False)
+
         action = cmenu.exec(event.screenPos())
 
         if action == toggle_off_curve_visibility:
@@ -2423,6 +2451,8 @@ class ygGlyphViewer(QGraphicsScene):
         #    self.sig_macfunc_ref.emit({"hint": hint, "pt": new_target})
         if hint != None and action == round_hint:
             self.sig_round_hint.emit(hint)
+        if len(selected_points) > 0 and action == name_action:
+            self.sig_name_points.emit(selected_points)
 
 
 

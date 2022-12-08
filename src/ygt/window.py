@@ -152,6 +152,22 @@ class MainWindow(QMainWindow):
         self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+p"))
         self.pv_set_size_action.setEnabled(False)
 
+        self.pv_render_mode_menu = self.preview_menu.addMenu("Render mode")
+        self.pv_mode_1_action = self.pv_render_mode_menu.addAction("Grayscale")
+        self.pv_mode_2_action = self.pv_render_mode_menu.addAction("Subpixel (1)")
+        self.pv_mode_3_action = self.pv_render_mode_menu.addAction("Subpixel (2)")
+        self.render_action_group = QActionGroup(self.pv_render_mode_menu)
+        self.render_action_group.addAction(self.pv_mode_1_action)
+        self.render_action_group.addAction(self.pv_mode_2_action)
+        self.render_action_group.addAction(self.pv_mode_3_action)
+        self.pv_mode_1_action.setCheckable(True)
+        self.pv_mode_2_action.setCheckable(True)
+        self.pv_mode_2_action.setChecked(True)
+        self.pv_mode_3_action.setCheckable(True)
+        self.pv_render_mode_menu.setEnabled(False)
+
+        self.preview_menu.aboutToShow.connect(self.preview_menu_about_to_show)
+
         self.view_menu = self.menu.addMenu("&View")
 
         self.zoom_in_action = self.view_menu.addAction("Zoom In")
@@ -407,6 +423,11 @@ class MainWindow(QMainWindow):
         else:
             self.recent_menu.setEnabled(False)
 
+    @pyqtSlot()
+    def preview_menu_about_to_show(self):
+        if self.yg_preview != None and self.yg_preview.face != None:
+            self.pv_render_mode_menu.setEnabled(True)
+
     #
     # Connection setup
     #
@@ -462,6 +483,9 @@ class MainWindow(QMainWindow):
         self.pv_smaller_one_action.triggered.connect(self.yg_preview.smaller_one)
         self.pv_smaller_ten_action.triggered.connect(self.yg_preview.smaller_ten)
         self.pv_set_size_action.triggered.connect(self.show_ppem_dialog)
+        self.pv_mode_1_action.triggered.connect(self.yg_preview.render1)
+        self.pv_mode_2_action.triggered.connect(self.yg_preview.render2)
+        self.pv_mode_3_action.triggered.connect(self.yg_preview.render3)
 
     def setup_preview_instance_connections(self):
         if self.yg_font.is_variable_font and self.instance_actions != None:

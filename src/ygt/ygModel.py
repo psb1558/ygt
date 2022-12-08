@@ -843,6 +843,47 @@ class ygGlyphProperties:
 
 
 
+class ygGlyphNames:
+    def __init__(self, glyph):
+        self._clean = True
+        self.yg_glyph = glyph
+        try:
+            self.data = copy.deepcopy(self.yg_glyph.gsource["names"])
+        except KeyError:
+            self.data = {}
+
+    def add_name(self, pt, name):
+        if type(pt) is not list:
+            self.data[name] = self.yg_glyph.resolve_point_identifier(pt).preferred_label()
+        else:
+            if len(pt) == 1:
+                self.data[name] = pt[0].preferred_label()
+            elif len(pt) > 1:
+                pt_list = []
+                for p in pt:
+                    pt_list.append(p.preferred_label())
+                self.data[name] = pt_list
+        self.set_clean(False)
+
+    def set_clean(self, b):
+        self._clean = b
+        if not self._clean:
+            self.yg_glyph.set_dirty()
+
+    def has_name(self, n):
+        return n in self.data
+
+    def get(self, n):
+        if self.has_name(n):
+            return self.data[n]
+
+    def save(self):
+        if not self._clean:
+            self.yg_glyph.gsource["names"] = self.data
+        self.set_clean(True)
+
+
+
 class ygGlyph(QObject):
     """ Keeps all the data for one glyph and provides an interface for
         changing it.
@@ -871,10 +912,11 @@ class ygGlyph(QObject):
         self.yg_font = yg_font
         self.gsource = yg_font.get_glyph(gname)
         self.gname = gname
-        if "names" in self.gsource:
-            self.names = copy.deepcopy(self.gsource["names"])
-        else:
-            self.names = {}
+        self.names = ygGlyphNames(self)
+        # if "names" in self.gsource:
+        #    self.names = copy.deepcopy(self.gsource["names"])
+        # else:
+        #    self.names = {}
         self.props = ygGlyphProperties(self)
         if "y" in self.gsource:
             self.y_block = self.combine_point_blocks(copy.deepcopy(self.gsource["y"]))
@@ -1363,6 +1405,7 @@ class ygGlyph(QObject):
                                            self.current_axis(),
                                            self.gname)
             self.props.save()
+            self.names.save()
             self.set_clean()
         # Also save the other things (cvt, etc.) if dirty.
 
@@ -1451,6 +1494,10 @@ class ygGlyph(QObject):
     def clean(self):
         return self._clean
 
+    def make_named_points(self, pts, name):
+        self.names.add_names(pts, name)
+
+
     def points_to_labels(self, pts):
         """ Accepts a ygPoint, ygSet or ygParams object and converts it to a
             thing digestible by the yaml processor.
@@ -1536,10 +1583,14 @@ class ygGlyph(QObject):
             result = self.point_coord_dict[ptid]
             if self._is_pt_obj(result):
                 return result
-        elif self.names != None and ptid in self.names:
-            result = self.names[ptid]
+        elif self.names.has_name(ptid):
+            result = self.names.get(ptid)
             if self._is_pt_obj(result):
                 return result
+        # elif self.names != None and ptid in self.names:
+        #    result = self.names[ptid]
+        #    if self._is_pt_obj(result):
+        #        return result
         if result == None or depth > 20:
             # raise Exception("Failed to resolve point identifier " + str(ptid) + " (" + str(result) + ")")
             m =  "Failed to resolve point identifier "
