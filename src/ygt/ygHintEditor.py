@@ -1580,7 +1580,7 @@ class ygGlyphViewer(QGraphicsScene):
             mpts = []
             for p in pts:
                 mpts.append(self._model_point(p))
-            self.yg_glyph.names.add_name(mpts, text)
+            self.yg_glyph.names.add(mpts, text)
 
     @pyqtSlot(object)
     def change_hint_color(self, _params):

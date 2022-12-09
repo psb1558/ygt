@@ -339,22 +339,34 @@ class MainWindow(QMainWindow):
         source = self.yg_font.source
         font = self.yg_font.font_files.in_font()
         glyph = self.glyph_pane.viewer.yg_glyph.gname
-        # glyph_index = self.yg_font.name_to_index[glyph]
-        glyph_index = self.yg_font.get_glyph_index(glyph)
-        # tmp_font = compile_one(self.yg_font.ft_font, source, glyph)
+        # glyph_index = self.yg_font.get_glyph_index(glyph)
         emsg =  "Error compiling YAML or Xgridfit code. "
         emsg += "Check the correctness of your code (including any "
         emsg += "functions or macros and the prep program) and try again."
+        # From here until the glyph is displayed takes about 0.66 seconds on
+        # a MacBook Pro with a 10-core M1 chip. Of this, about 1/3 is Xgridfit
+        # compiling and installing instructions, and 2/3 is fontTools
+        # subsetting the font and writing it to a spooled temp file (the file
+        # operation itself is very fast).
+        if __name__ == "__main__":
+            print("Yes, it is main!")
+        else:
+            print("It is " + str(__name__))
+        import time
+        start_time = time.time()
         try:
-            tmp_font, failed_glyph_list = compile_one(font, source, glyph)
-        except Exception:
+            font = copy.deepcopy(self.yg_font.preview_font)
+            tmp_font, glyph_index, failed_glyph_list = compile_one(font, source, glyph)
+        except Exception as e:
+            print(e)
             self.show_error_message(["Error", "Error", emsg])
-            return
+            return m
         if len(failed_glyph_list) > 0:
             self.show_error_message(["Error", "Error", emsg])
             return
         self.yg_preview.fetch_glyph(tmp_font, glyph_index)
         self.yg_preview.update()
+        print("Elapsed: " + str(time.time() - start_time))
         self.pv_bigger_one_action.setEnabled(True)
         self.pv_bigger_ten_action.setEnabled(True)
         self.pv_smaller_one_action.setEnabled(True)
@@ -930,6 +942,8 @@ class MainWindow(QMainWindow):
 def main():
 
     # print(dir(freetype))
+
+    print("My name is " + str(__name__))
 
     app = QApplication([])
     top_window = MainWindow(app)

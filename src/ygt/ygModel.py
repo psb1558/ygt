@@ -77,6 +77,7 @@ unicode_cat_names = {"Lu":   "Letter, uppercase",
 # ygParams: For functions and macros, holds their parameters.
 # ygSet: A set of points, for SLOOP instructions like shift and interpolate.
 # ygGlyphProperties: Keeps miscellaneous properties for a glyph.
+# ygGlyphNames: Keeps named points and sets.
 # ygGlyph(QObject): Keeps data for the current glyph.
 # ygGlyphs: Collection of this font's glyphs.
 # Comparable: superclass for ygHintSource: for ordering hints.
@@ -193,6 +194,8 @@ class ygFont:
             self.ft_font = ttLib.TTFont(fontfile)
         except FileNotFoundError:
             raise Exception("Can't find font file " + str(fontfile))
+        self.preview_font = copy.deepcopy(self.ft_font)
+        print(self.preview_font)
         #
         # If it's a variable font, get a list of instances
         #
@@ -852,7 +855,7 @@ class ygGlyphNames:
         except KeyError:
             self.data = {}
 
-    def add_name(self, pt, name):
+    def add(self, pt, name):
         if type(pt) is not list:
             self.data[name] = self.yg_glyph.resolve_point_identifier(pt).preferred_label()
         else:
@@ -1335,11 +1338,11 @@ class ygGlyph(QObject):
         """
         pt_list = []
         gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font['glyf'])
+        lpref = "index"
+        if self.preferences["points_as_coords"]:
+            lpref = "coord"
         for point_index, p in enumerate(zip(gl[0], gl[2])):
             is_on_curve = p[1] & 0x01 == 0x01
-            lpref = "index"
-            if self.preferences["points_as_coords"]:
-                lpref = "coord"
             pt = ygPoint(None,
                          point_index,
                          p[0][0],
@@ -1495,7 +1498,7 @@ class ygGlyph(QObject):
         return self._clean
 
     def make_named_points(self, pts, name):
-        self.names.add_names(pts, name)
+        self.names.add(pts, name)
 
 
     def points_to_labels(self, pts):

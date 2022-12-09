@@ -52,8 +52,11 @@ class ygPreview(QWidget):
             the glyph has been fetched.
         """
         self.glyph_index = glyph_index
+        print(filename)
+        filename.seek(0)
         self.face = freetype.Face(filename)
-        os.remove(filename)
+        # os.remove(filename)
+        filename.close()
         self._build_glyph()
 
     def _build_glyph(self):
@@ -66,6 +69,7 @@ class ygPreview(QWidget):
             self.face.set_var_named_instance(self.instance)
         # Experiment with default flags = 4
         self.face.load_glyph(self.glyph_index, flags=flags)
+        print(self.face.charmap.index)
         # self.face.load_glyph(self.glyph_index)
         ft_bitmap = self.face.glyph.bitmap
         # print(ft_bitmap.buffer)
