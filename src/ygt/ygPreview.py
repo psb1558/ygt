@@ -47,16 +47,14 @@ class ygPreview(QWidget):
             l[count] = QColor(101,53,15,count)
         return l
 
-    def fetch_glyph(self, filename, glyph_index):
-        """ For use only with temporary fonts! This removes the file from which
-            the glyph has been fetched.
+    def fetch_glyph(self, font, glyph_index):
+        """ The font has to be a handle to an open temporary file. Once
+            we've gotten the glyph from it, we close it and it disappears.
         """
         self.glyph_index = glyph_index
-        print(filename)
-        filename.seek(0)
-        self.face = freetype.Face(filename)
-        # os.remove(filename)
-        filename.close()
+        font.seek(0)
+        self.face = freetype.Face(font)
+        font.close()
         self._build_glyph()
 
     def _build_glyph(self):
@@ -69,10 +67,7 @@ class ygPreview(QWidget):
             self.face.set_var_named_instance(self.instance)
         # Experiment with default flags = 4
         self.face.load_glyph(self.glyph_index, flags=flags)
-        print(self.face.charmap.index)
-        # self.face.load_glyph(self.glyph_index)
         ft_bitmap = self.face.glyph.bitmap
-        # print(ft_bitmap.buffer)
         ft_width  = self.face.glyph.bitmap.width
         ft_rows   = self.face.glyph.bitmap.rows
         ft_pitch  = self.face.glyph.bitmap.pitch
@@ -205,7 +200,6 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin
-        print("pixel-size: " + str(self.pixel_size))
         for row in self.Z:
             for col in row:
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
@@ -228,7 +222,6 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin
-        print("pixel-size: " + str(self.pixel_size))
         for row in self.Z:
             for col in row:
                 rgb = []
@@ -236,9 +229,6 @@ class ygPreview(QWidget):
                     rgb.append(elem)
                 qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
-                #qb = QBrush(qc)
-                #painter.setBrush(qb)
-                # painter.fillRect(qr, self.colors[col])
                 painter.fillRect(qr, qc)
                 xposition += self.pixel_size
             yposition += self.pixel_size
@@ -257,7 +247,6 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin
-        print("pixel-size: " + str(self.pixel_size))
         for row in self.Z:
             for col in row:
                 for n, elem in enumerate(col):

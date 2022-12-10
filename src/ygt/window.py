@@ -15,7 +15,7 @@ from .ygSchema import (
     are_functions_valid,
     are_defaults_valid)
 from xgridfit import compile_one, compile_all
-from PyQt6.QtCore import Qt, QSize, pyqtSlot
+from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject
 from PyQt6.QtWidgets import (
     QWidget,
     QApplication,
@@ -36,7 +36,42 @@ from PyQt6.QtGui import (
     QPixmap,
     QActionGroup
 )
-# import freetype
+
+class ygPreviewFontMaker(QThread):
+    """ To be run from a QThread. This is because it can take the better
+        part of a second to generate a preview, even on a pretty fast
+        machine, and we want to be able to run this on a signal without
+        making the GUI balky.
+
+        Parameters:
+
+        font: a fontTools representation of the font
+
+        source: the source for this font's hints
+
+        glyph_name: the name of the glyph for which we want to make the preview.
+    """
+
+    sig_preview_ready = pyqtSignal(object)
+    sig_preview_error = pyqtSignal()
+
+    def __init__(self, font, source, glyph_name):
+        super().__init__()
+        self.ft_font = font
+        self.source = source
+        self.glyph_name = glyph_name
+        self.error = False
+
+    def run(self):
+        try:
+            font = copy.deepcopy(self.ft_font)
+            tmp_font, glyph_index, failed_glyph_list = compile_one(font, self.source, self.glyph_name)
+            self.sig_preview_ready.emit({"font": tmp_font, "gindex": glyph_index, "failed": failed_glyph_list})
+        except Exception as e:
+            print(e.args)
+            self.sig_preview_error.emit()
+
+
 
 class MainWindow(QMainWindow):
     def __init__(self, app, parent=None):
@@ -73,6 +108,8 @@ class MainWindow(QMainWindow):
         self.recents_actions = []
         self.instance_actions = []
         self.window_list = []
+        self.thread = None
+        self.preview_maker = None
 
         self.menu = self.menuBar()
 
@@ -334,39 +371,37 @@ class MainWindow(QMainWindow):
                 self.glyph_pane.setDragMode(QGraphicsView.DragMode.NoDrag)
 
     @pyqtSlot()
-    def preview_current_glyph(self):
-        self.glyph_pane.viewer.yg_glyph.save_source()
-        source = self.yg_font.source
-        font = self.yg_font.font_files.in_font()
-        glyph = self.glyph_pane.viewer.yg_glyph.gname
-        # glyph_index = self.yg_font.get_glyph_index(glyph)
+    def preview_error(self):
         emsg =  "Error compiling YAML or Xgridfit code. "
         emsg += "Check the correctness of your code (including any "
         emsg += "functions or macros and the prep program) and try again."
-        # From here until the glyph is displayed takes about 0.66 seconds on
-        # a MacBook Pro with a 10-core M1 chip. Of this, about 1/3 is Xgridfit
-        # compiling and installing instructions, and 2/3 is fontTools
-        # subsetting the font and writing it to a spooled temp file (the file
-        # operation itself is very fast).
-        if __name__ == "__main__":
-            print("Yes, it is main!")
-        else:
-            print("It is " + str(__name__))
-        import time
-        start_time = time.time()
-        try:
-            font = copy.deepcopy(self.yg_font.preview_font)
-            tmp_font, glyph_index, failed_glyph_list = compile_one(font, source, glyph)
-        except Exception as e:
-            print(e)
-            self.show_error_message(["Error", "Error", emsg])
-            return m
-        if len(failed_glyph_list) > 0:
-            self.show_error_message(["Error", "Error", emsg])
-            return
-        self.yg_preview.fetch_glyph(tmp_font, glyph_index)
+        self.show_error_message(["Error", "Error", emsg])
+
+    @pyqtSlot(object)
+    def preview_ready(self, args):
+        self.yg_preview.fetch_glyph(args["font"], args["gindex"])
         self.yg_preview.update()
-        print("Elapsed: " + str(time.time() - start_time))
+
+    @pyqtSlot()
+    def preview_current_glyph(self):
+        #try:
+        #    if self.preview_maker != None and self.preview_maker.isRunning():
+        #        print("Thread is still running!")
+        #        return
+        #except RuntimeError as e:
+        #    # We get this RuntimeError when self.thread has been garbage collected.
+        #    # It means that it's safe to run the rest of this function.
+        #    # print(e)
+        #    pass
+        self.glyph_pane.viewer.yg_glyph.save_source()
+        source = self.yg_font.source
+        font = self.yg_font.preview_font
+        glyph = self.glyph_pane.viewer.yg_glyph.gname
+        self.preview_maker = ygPreviewFontMaker(font, source, glyph)
+        self.preview_maker.finished.connect(self.preview_maker.deleteLater)
+        self.preview_maker.sig_preview_ready.connect(self.preview_ready)
+        self.preview_maker.sig_preview_error.connect(self.preview_error)
+        self.preview_maker.start()
         self.pv_bigger_one_action.setEnabled(True)
         self.pv_bigger_ten_action.setEnabled(True)
         self.pv_smaller_one_action.setEnabled(True)
@@ -941,9 +976,7 @@ class MainWindow(QMainWindow):
 # if __name__ == "__main__":
 def main():
 
-    # print(dir(freetype))
-
-    print("My name is " + str(__name__))
+    print(dir(QObject.inherits))
 
     app = QApplication([])
     top_window = MainWindow(app)

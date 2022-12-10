@@ -964,6 +964,7 @@ class ygGlyph(QObject):
         self.glyph_viewer = None
 
         self.sig_hints_changed.connect(self.hints_changed)
+        self.sig_hints_changed.connect(self.preferences.top_window().preview_current_glyph)
 
     #
     # Ordering and structuring YAML source
