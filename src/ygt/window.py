@@ -13,7 +13,9 @@ from .ygSchema import (
     is_prep_valid,
     are_macros_valid,
     are_functions_valid,
-    are_defaults_valid)
+    are_defaults_valid,
+    are_names_valid,
+    are_properties_valid)
 from xgridfit import compile_one, compile_all
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject
 from PyQt6.QtWidgets import (
@@ -337,6 +339,10 @@ class MainWindow(QMainWindow):
 
         self.edit_cvt_action = self.code_menu.addAction("Edit cvt...")
 
+        self.edit_names_action = self.code_menu.addAction("Edit point names...")
+
+        self.edit_properties_action = self.code_menu.addAction("Edit glyph properties...")
+
         self.edit_prep_action = self.code_menu.addAction("Edit prep...")
 
         self.edit_cvar_action = self.code_menu.addAction("Edit cvar...")
@@ -384,15 +390,15 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def preview_current_glyph(self):
-        #try:
-        #    if self.preview_maker != None and self.preview_maker.isRunning():
-        #        print("Thread is still running!")
-        #        return
-        #except RuntimeError as e:
-        #    # We get this RuntimeError when self.thread has been garbage collected.
-        #    # It means that it's safe to run the rest of this function.
-        #    # print(e)
-        #    pass
+        try:
+            if self.preview_maker != None and self.preview_maker.isRunning():
+                print("Thread is still running!")
+                return
+        except RuntimeError as e:
+            # We get this RuntimeError when self.thread has been garbage collected.
+            # It means that it's safe to run the rest of this function.
+            print(e)
+            pass
         self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
         font = self.yg_font.preview_font
@@ -520,6 +526,8 @@ class MainWindow(QMainWindow):
         self.edit_functions_action.triggered.connect(self.edit_functions)
         self.edit_macros_action.triggered.connect(self.edit_macros)
         self.edit_defaults_action.triggered.connect(self.edit_defaults)
+        self.edit_names_action.triggered.connect(self.edit_names)
+        self.edit_properties_action.triggered.connect(self.edit_properties)
         self.to_coords_action.triggered.connect(self.indices_to_coords)
         self.to_indices_action.triggered.connect(self.coords_to_indices)
 
@@ -927,6 +935,24 @@ class MainWindow(QMainWindow):
         self.default_editor.show()
         # self.default_editor.raise()
         self.default_editor.activateWindow()
+
+    @pyqtSlot()
+    def edit_names(self):
+        self.names_editor = editorDialog(self.preferences,
+                                         self.glyph_pane.viewer.yg_glyph.names,
+                                         "names",
+                                         are_names_valid)
+        self.names_editor.show()
+        self.names_editor.activateWindow()
+
+    @pyqtSlot()
+    def edit_properties(self):
+        self.properties_editor = editorDialog(self.preferences,
+                                              self.glyph_pane.viewer.yg_glyph.props,
+                                              "properties",
+                                              are_properties_valid)
+        self.properties_editor.show()
+        self.properties_editor.activateWindow()
 
     #
     # Miscellaneous dialogs
