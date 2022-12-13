@@ -1389,7 +1389,9 @@ class ygGlyphViewer(QGraphicsScene):
         self.center_x = self.xTranslate + round(self.adv / 2)
         self.center_x = self.xTranslate + round(self.adv / 2)
         self.update()
-        self.yg_glyph.refresh_hints()
+        self.install_hints(self.yg_glyph.hints())
+        # This will have the effect of moving point labels to the new positions
+        # of the points. Affect only those already visible.
         for p in self.yg_point_view_list:
             if p.has_label():
                 p.add_label()
