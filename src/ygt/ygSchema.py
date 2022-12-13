@@ -1,4 +1,5 @@
 from schema import Or, Optional, Schema, SchemaError
+from .ygModel import unicode_categories
 import re
 
 standard_error = "YAML source is not valid"
@@ -160,6 +161,23 @@ defaults_struct = {
     Optional("cleartype"): bool
 }
 
+properties_struct = {
+    Optional("category"): Or("Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
+                             "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
+                             "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
+                             "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
+                             "Cn", "C"),
+    Optional("xoffset"): int,
+    Optional("yoffset"): int,
+    Optional("assume-y"): bool,
+    Optional("init-graphics"): bool,
+    Optional("compact"): bool
+}
+
+names_struct = {
+    str: is_point_valid_2
+}
+
 def tag_checker(s):
     return bool(re.match("^[A-Za-z]{4}$", s))
 
@@ -203,6 +221,8 @@ cvar_schema =     Schema(cvar_entry_struct)
 prep_schema =     Schema({ "code": str })
 function_schema = Schema(function_entry_struct)
 macro_schema =    Schema(macro_entry_struct)
+props_schema =    Schema(properties_struct)
+names_schema =    Schema(names_struct)
 
 def is_cvt_valid(t):
     try:
@@ -264,6 +284,22 @@ def are_defaults_valid(t):
         print("Error in are_defaults_valid:")
         print(s)
     return False
+
+def are_names_valid(t):
+    try:
+        names_schema.validate(t)
+        return True
+    except SchemaError as s:
+        print("Error in are_names_valid:")
+        print(s)
+
+def are_properties_valid(t):
+    try:
+        props_schema.validate(t)
+        return True
+    except SchemaError as s:
+        print("Error in are_properties_valid:")
+        print(s)
 
 def always_valid(t):
     return True
