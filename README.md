@@ -28,7 +28,8 @@ In this window, glyphs that are already hinted are highlighted in blue, and you 
 
 This is the cvt table. As you type, ygt will validate the code and display the current status ("Valid" or "Invalid") in the title bar (more detailed validation info is not yet available—I'm working on this). Graphical methods for editing the cvt and cvar tables will be added in due course.
 
-To install, download the zip file (the project is not yet on PyPi), unzip, make sure you're in an environment where Python 3.7 or higher is available, navigate to the directory with the file `pyproject.toml`, and type:
+Ygt must be installed and run from the command line. Download the zip file (the project is not yet on PyPi), unzip, make sure you're in an environment where Python 3.7 or higher is available, navigate to the directory with the file `pyproject.toml`, and type:
 ```
 pip install .
 ```
+After pip has installed Ygt and its dependencies, type `ygt` at the command line to launch the program. Open a TrueType font to get started. When you save (as you often should, since ygt is new and in development), your work will be stored not in the font file, but in a file with the same name as the font and the extension `.yaml`. Open this and not the font the next time you run ygt.
