@@ -672,8 +672,12 @@ class ygPoint:
         self.coord = "{" + str(self.font_x - _xoffset) + ";" + str(self.font_y - _yoffset) + "}"
         self.on_curve = on_curve
         self.label_pref = label_pref
+        self.preferred_name = None
 
-    def preferred_label(self, normalized=False):
+    def preferred_label(self, normalized=False, name_allowed=True):
+        if name_allowed:
+            if self.preferred_name != None and len(self.preferred_name) > 0:
+                return self.preferred_name
         if self.label_pref == "coord":
             if normalized:
                 t = self.coord.replace("{","")
@@ -682,12 +686,6 @@ class ygPoint:
                 return t
             else:
                 return self.coord
-        elif self.label_pref == "name" and self.name != None:
-            return self.name
-        elif self.label_pref == "index":
-            return self.index
-        if self.name != None:
-            return self.name
         return self.index
 
     def __eq__(self, other):
@@ -796,94 +794,96 @@ class ygSet:
         return result
 
 
-class ygGlyphProperties:
+class ygGlyphProperties(ygSourceable):
     def __init__(self, glyph):
-        self._clean = True
+        print("type of glyph:")
+        print(type(glyph))
+        super().__init__(glyph.yg_font, None)
         self.yg_glyph = glyph
-        try:
-            self.data = copy.deepcopy(self.yg_glyph.gsource["props"])
-        except KeyError:
-            self.data = {}
 
     def add_property(self, k, v):
-        self.data[k] = v
+        if not "props" in self.yg_glyph.gsource:
+            self.yg_glyph.gsource["props"] = {}
+        self.yg_glyph.gsource["props"][k] = v
         self.set_clean(False)
-
-    def set_property(self, k, v):
-        self.add_property(k, v)
 
     def get_property(self, k):
         try:
-            return self.data[k]
+            return self.yg_glyph.gsource["props"][k]
         except KeyError:
             return None
 
     def set_clean(self, c):
-        self._clean = c
-        if not self._clean:
+        if not c:
             self.yg_glyph.set_dirty()
-            self.yg_glyph.yg_font.set_dirty()
 
-    def clean(self):
-        return self._clean
+    def source(self):
+        if "props" in self.yg_glyph.gsource:
+            return self.yg_glyph.gsource["props"]
+        return {}
 
     def del_property(self, k):
         try:
-            del self.data[k]
+            del self.yg_glyph.gsource["props"][k]
             self.set_clean(False)
         except KeyError:
             pass
 
-    def save(self):
-        if self._clean:
-            return
-        if len(self.data) > 0:
-            self.yg_glyph.gsource["props"] = self.data
+    def save(self, c):
+        if c != None and len(c) > 0:
+            self.yg_glyph.gsource["props"] = c
         else:
             if "props" in self.yg_glyph.gsource:
                 del self.yg_glyph.gsource["props"]
-        self.set_clean(True)
+        self.set_clean(False)
 
 
 
-class ygGlyphNames:
+class ygGlyphNames(ygSourceable):
     def __init__(self, glyph):
-        self._clean = True
         self.yg_glyph = glyph
-        try:
-            self.data = copy.deepcopy(self.yg_glyph.gsource["names"])
-        except KeyError:
-            self.data = {}
+        super().__init__(glyph.yg_font, None)
 
     def add(self, pt, name):
+        if not "names" in self.yg_glyph.gsource:
+            self.yg_glyph.gsource["names"] = {}
         if type(pt) is not list:
-            self.data[name] = self.yg_glyph.resolve_point_identifier(pt).preferred_label()
+            self.yg_glyph.gsource["names"][name] = self.yg_glyph.resolve_point_identifier(pt).preferred_label(name_allowed=False)
         else:
             if len(pt) == 1:
-                self.data[name] = pt[0].preferred_label()
+                self.yg_glyph.gsource["names"][name] = pt[0].preferred_label(name_allowed=False)
             elif len(pt) > 1:
                 pt_list = []
                 for p in pt:
-                    pt_list.append(p.preferred_label())
-                self.data[name] = pt_list
+                    pt_list.append(p.preferred_label(name_allowed=False))
+                self.yg_glyph.gsource["names"][name] = pt_list
         self.set_clean(False)
 
     def set_clean(self, b):
-        self._clean = b
-        if not self._clean:
+        if not b:
             self.yg_glyph.set_dirty()
 
     def has_name(self, n):
-        return n in self.data
+        if "names" in self.yg_glyph.gsource:
+            return n in self.yg_glyph.gsource["names"]
+        return False
+
+    def source(self):
+        if "names" in self.yg_glyph.gsource:
+            return self.yg_glyph.gsource["names"]
+        return {}
 
     def get(self, n):
         if self.has_name(n):
-            return self.data[n]
+            return self.yg_glyph.gsource["names"][n]
 
-    def save(self):
-        if not self._clean:
-            self.yg_glyph.gsource["names"] = self.data
-        self.set_clean(True)
+    def save(self, c):
+        if c != None and len(c) > 0:
+            self.yg_glyph.gsource["names"] = c
+        else:
+            if "names" in self.yg_glyph.gsource:
+                del self.yg_glyph.gsource["names"]
+        self.set_clean(False)
 
 
 
@@ -1408,8 +1408,6 @@ class ygGlyph(QObject):
             self.yg_font.save_glyph_source({"points": tcopy},
                                            self.current_axis(),
                                            self.gname)
-            self.props.save()
-            self.names.save()
             self.set_clean()
         # Also save the other things (cvt, etc.) if dirty.
 
