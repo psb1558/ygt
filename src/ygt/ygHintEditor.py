@@ -2413,9 +2413,13 @@ class ygGlyphViewer(QGraphicsScene):
         if len(selected_points) > 1:
             msg += "s"
         name_action = cmenu.addAction(msg)
-        if msg == None:
-            name_action.setEnabled(False)
-            name_action.setVisible(False)
+        #if msg == None:
+        #    name_action.setEnabled(False)
+        #    name_action.setVisible(False)
+        # Disable this while I figure out why it is clobbering other label
+        # display signals.
+        name_action.setEnabled(False)
+        name_action.setVisible(False)
 
         action = cmenu.exec(event.screenPos())
 
