@@ -184,7 +184,7 @@ class editorDialog(QDialog):
     def text_changed(self):
         self.sourceable.set_clean(False)
         if len(self.edit_pane.toPlainText()) == 0:
-            self.setPlainText(self._empty_string)
+            self.edit_pane.setPlainText(self._empty_string)
         try:
             v = self.is_valid(yaml.safe_load(self.edit_pane.toPlainText()))
         except Exception as e:
@@ -202,7 +202,6 @@ class editorDialog(QDialog):
         if c != None:
             if self.is_valid(c):
                 self.sourceable.save(c)
-                print("Saved a Sourceable")
             else:
                 err = True
         else:
