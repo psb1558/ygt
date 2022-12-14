@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
         self.window_list = []
         self.thread = None
         self.preview_maker = None
+        self.auto_preview_update = True
 
         self.menu = self.menuBar()
 
@@ -166,6 +167,12 @@ class MainWindow(QMainWindow):
         self.save_current_glyph_action = self.preview_menu.addAction("Update Preview")
         self.save_current_glyph_action.setShortcut(QKeySequence("Ctrl+u"))
         self.save_current_glyph_action.setEnabled(False)
+
+        self.toggle_auto_preview_action = self.preview_menu.addAction("Auto update")
+        self.toggle_auto_preview_action.setCheckable(True)
+        self.toggle_auto_preview_action.setChecked(True)
+
+        self.preview_menu.addSeparator()
 
         self.pv_bigger_one_action = self.preview_menu.addAction("Grow by One")
         self.pv_bigger_one_action.setShortcut(QKeySequence.StandardKey.MoveToPreviousLine)
@@ -353,8 +360,6 @@ class MainWindow(QMainWindow):
 
         self.edit_defaults_action = self.code_menu.addAction("Edit Defaults...")
 
-        # self.code_menu.aboutToShow.connect(self.code_menu_about_to_show)
-
         self.code_menu.setEnabled(False)
 
         self.central_widget = self.qs
@@ -389,6 +394,15 @@ class MainWindow(QMainWindow):
         self.yg_preview.update()
 
     @pyqtSlot()
+    def toggle_auto_preview(self):
+        self.auto_preview_update = not self.auto_preview_update
+        try:
+            self.glyph_pane.viewer.yg_glyph.set_auto_preview_connection()
+        except Exception as e:
+            print(e)
+            pass
+
+    @pyqtSlot()
     def preview_current_glyph(self):
         try:
             if self.preview_maker != None and self.preview_maker.isRunning():
@@ -397,7 +411,7 @@ class MainWindow(QMainWindow):
         except RuntimeError as e:
             # We get this RuntimeError when self.thread has been garbage collected.
             # It means that it's safe to run the rest of this function.
-            print(e)
+            # print(e)
             pass
         self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
@@ -480,10 +494,20 @@ class MainWindow(QMainWindow):
     def preview_menu_about_to_show(self):
         if self.yg_preview != None and self.yg_preview.face != None:
             self.pv_render_mode_menu.setEnabled(True)
+        self.toggle_auto_preview_action.setChecked(self.auto_preview_update)
 
     #
     # Connection setup
     #
+
+    # In the hierarchy of major objects, MainWindow and MyView are always present, while
+    # ygGlyph and ygGlyphViewer are destroyed whenever we move from one glyph to another.
+    # To avoid complications, avoid connecting signals to ygGlyph and ygGlyphView; otherwise,
+    # we've got to kill one connection and create another whenever we switch from one glyph
+    # to another.
+    #
+    # These connect menus and toolbar buttons; ygGlyph and ygGlyphViewer have their own
+    # signals.
 
     def setup_editor_connections(self):
         self.compile_action.triggered.connect(self.source_editor.yaml_source)
@@ -533,6 +557,7 @@ class MainWindow(QMainWindow):
 
     def setup_preview_connections(self):
         self.save_current_glyph_action.triggered.connect(self.preview_current_glyph)
+        self.toggle_auto_preview_action.triggered.connect(self.toggle_auto_preview)
         self.pv_bigger_one_action.triggered.connect(self.yg_preview.bigger_one)
         self.pv_bigger_ten_action.triggered.connect(self.yg_preview.bigger_ten)
         self.pv_smaller_one_action.triggered.connect(self.yg_preview.smaller_one)
@@ -548,55 +573,22 @@ class MainWindow(QMainWindow):
                 i.triggered.connect(self.yg_preview.set_instance)
 
     def setup_zoom_connections(self):
-        # These connections don't get destroyed when the glyph is switched. Why the singleshot connection?
-        self.zoom_in_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
-        self.zoom_out_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
-        self.original_size_action.triggered.connect(self.glyph_pane.zoom, type=Qt.ConnectionType.SingleShotConnection)
-
-    def disconnect_zoom(self):
-        try:
-            self.next_glyph_action.triggered.disconnect(self.glyph_pane.next_glyph)
-        except Exception:
-            pass
-        try:
-            self.previous_glyph_action.triggered.disconnect(self.glyph_pane.previous_glyph)
-        except Exception:
-            pass
-        try:
-            self.goto_action.triggered.disconnect(self.show_goto_dialog)
-        except Exception:
-            pass
+        self.zoom_in_action.triggered.connect(self.glyph_pane.zoom)
+        self.zoom_out_action.triggered.connect(self.glyph_pane.zoom)
+        self.original_size_action.triggered.connect(self.glyph_pane.zoom)
 
     def setup_point_label_connections(self):
         self.index_label_action.triggered.connect(self.index_labels)
         self.coord_label_action.triggered.connect(self.coord_labels)
 
     def setup_nav_connections(self):
-        self.next_glyph_action.triggered.connect(self.glyph_pane.next_glyph, type=Qt.ConnectionType.SingleShotConnection)
-        self.previous_glyph_action.triggered.connect(self.glyph_pane.previous_glyph, type=Qt.ConnectionType.SingleShotConnection)
+        self.next_glyph_action.triggered.connect(self.glyph_pane.next_glyph)
+        self.previous_glyph_action.triggered.connect(self.glyph_pane.previous_glyph)
         self.goto_action.triggered.connect(self.show_goto_dialog)
         self.glyph_pane.setup_goto_signal(self.show_goto_dialog)
         self.font_view_action.triggered.connect(self.show_font_view)
 
-    def disconnect_nav(self):
-        try:
-            self.next_glyph_action.triggered.disconnect(self.glyph_pane.next_glyph)
-        except Exception:
-            pass
-        try:
-            self.previous_glyph_action.triggered.disconnect(self.glyph_pane.previous_glyph)
-        except Exception:
-            pass
-        try:
-            self.goto_action.triggered.disconnect(self.show_goto_dialog)
-        except Exception:
-            pass
-
     def setup_cursor_connections(self):
-        self.hand_action.toggled.connect(self.set_mouse_panning)
-        self.cursor_action.toggled.connect(self.set_mouse_editing)
-
-    def disconnect_cursor(self):
         self.hand_action.toggled.connect(self.set_mouse_panning)
         self.cursor_action.toggled.connect(self.set_mouse_editing)
 
@@ -607,11 +599,11 @@ class MainWindow(QMainWindow):
         self.source_editor.setup_status_indicator(self.set_status_validity_msg)
         self.setup_cursor_connections()
 
-    def disconnect_glyph_pane(self):
-        self.disconnect_nav()
-        self.disconnect_zoom()
+    def connect_editor_signals(self):
+        self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
+
+    def disconnect_editor_signals(self):
         self.source_editor.disconnect_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
-        self.disconnect_cursor()
 
     #
     # GUI setup
@@ -1002,7 +994,7 @@ class MainWindow(QMainWindow):
 # if __name__ == "__main__":
 def main():
 
-    print(dir(QObject.inherits))
+    # print(dir(QObject.inherits))
 
     app = QApplication([])
     top_window = MainWindow(app)

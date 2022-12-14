@@ -328,7 +328,6 @@ class ygHintView(QGraphicsItem, ygSelectable):
         mypoints = []
         if type(mpt) is ygSet:
             for p in mpt.point_list():
-                # pp = self.yg_glyph_view.resolve_point_identifier(p)
                 mypoints.append(p)
         elif type(mpt) is ygParams:
             mypoints.extend(self._get_macfunc_targets(mpt))
@@ -700,12 +699,10 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
                 path = QPainterPath(bottomPoint)
                 path.quadTo(handle2, self._center_point)
                 path.quadTo(handle1, topPoint)
-                # path.cubicTo(handle2, handle1, topPoint)
             else:
                 path = QPainterPath(topPoint)
                 path.quadTo(handle1, self._center_point)
                 path.quadTo(handle2, bottomPoint)
-                # path.cubicTo(handle1, handle2, bottomPoint)
         elif self.shape in ["flat", "flattish"]:
             handle1 = QPointF(leftPoint.x() + partial_x_distance, leftPoint.y())
             handle2 = QPointF(rightPoint.x() - partial_x_distance, rightPoint.y())
@@ -714,12 +711,10 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
                 path = QPainterPath(rightPoint)
                 path.quadTo(handle2, self._center_point)
                 path.quadTo(handle1, leftPoint)
-                # path.cubicTo(handle2, handle1, leftPoint)
             else:
                 path = QPainterPath(leftPoint)
                 path.quadTo(handle1, self._center_point)
                 path.quadTo(handle2, rightPoint)
-                # path.cubicTo(handle1, handle2, rightPoint)
         else:
             # This has never happened.
             print("What's going on?")
@@ -958,7 +953,6 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
             p = self.yg_viewer.resolve_point_identifier(self.point_dict[k])
             if type(p) is ygSet:
                 p = p.main_point()
-            # print(p)
             ptv = self.yg_viewer.yg_point_view_index[p.id]
             h = ygPointMarker(self.yg_viewer, ptv, self.hint_type, name=k)
             marker_list.append(h)
@@ -1306,7 +1300,7 @@ class ygGlyphViewer(QGraphicsScene):
         # Set up glyph info
 
         self.yg_glyph = yg_glyph
-        # self.axis = self.yg_glyph.current_axis()
+
         # Try to get rid of ref to this scene in the model's ygGlyph class.
         self.yg_glyph.glyph_viewer = self
 
@@ -1442,10 +1436,8 @@ class ygGlyphViewer(QGraphicsScene):
         """
         f = self.yg_glyph.yg_font.ft_font
         x_size = abs(f['head'].xMin) + abs(f['head'].xMax) + (GLYPH_WIDGET_MARGIN * 2)
-        # x_size = abs(self.lsb) + abs(self.adv) + (GLYPH_WIDGET_MARGIN * 2)
         y_size = abs(f['head'].yMin) + abs(f['head'].yMax) + (GLYPH_WIDGET_MARGIN * 2)
         zero_x = abs(f['head'].xMin) + GLYPH_WIDGET_MARGIN
-        # zero_x = abs(self.lsb) + GLYPH_WIDGET_MARGIN
         zero_y = abs(f['head'].yMax) + GLYPH_WIDGET_MARGIN
         return (round(x_size * self.zoom_factor), round(y_size * self.zoom_factor),
                 round(zero_x * self.zoom_factor), round(zero_y * self.zoom_factor))
@@ -1619,7 +1611,6 @@ class ygGlyphViewer(QGraphicsScene):
             if self.point_numbers_showing:
                 if p.isVisible():
                     p.add_label()
-        # self.update()
 
     @pyqtSlot(object)
     def swap_macfunc_points(self, data):
@@ -2200,7 +2191,6 @@ class ygGlyphViewer(QGraphicsScene):
         # Set control value for stem hint (ntype == 3)
 
         set_stem_cv = cmenu.addMenu("Set control value...")
-        # cv_list = self.yg_glyph.yg_font.cvt.get_list("dist", self.current_axis())
         cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
                                                      type="dist",
                                                      axis=self.current_axis(),
@@ -2499,41 +2489,38 @@ class MyView(QGraphicsView):
         return self.yg_font.get_glyph_index(self.viewer.yg_glyph.gname, short_index=True)
 
     def go_to_glyph(self, g):
-        # self.sender().disconnect()
-        self.parent().parent().disconnect_glyph_pane()
+        self.preferences['top_window'].disconnect_editor_signals()
         try:
             self.yg_font.get_glyph_index(g, short_index=True)
             self.switch_to(g)
         except Exception as e:
             print(e)
             self.preferences.top_window().show_error_message(["Warning", "Warning", "Can't load requested glyph."])
-        self.parent().parent().setup_glyph_pane_connections()
+        self.preferences['top_window'].connect_editor_signals()
 
     # sender returns None when we use the decorator. Rethink these signals?
-    # @pyqtSlot()
-    def next_glyph(self, a):
-        self.sender().disconnect()
-        self.parent().parent().disconnect_glyph_pane()
+    @pyqtSlot()
+    def next_glyph(self):
+        self.preferences['top_window'].disconnect_editor_signals()
         current_index = self._current_index()
         if current_index < len(self.yg_font.glyph_list) - 1:
             gname = self.yg_font.glyph_list[current_index + 1][1]
         self.switch_to(gname)
-        self.parent().parent().setup_glyph_pane_connections()
+        self.preferences['top_window'].connect_editor_signals()
 
-    # @pyqtSlot()
-    def previous_glyph(self, a):
-        self.parent().parent().disconnect_glyph_pane()
-        self.sender().disconnect()
+    @pyqtSlot()
+    def previous_glyph(self):
+        self.preferences['top_window'].disconnect_editor_signals()
         current_index = self._current_index()
         if current_index > 0:
             gname = self.yg_font.glyph_list[current_index - 1][1]
         self.switch_to(gname)
-        self.parent().parent().setup_glyph_pane_connections()
+        self.preferences['top_window'].connect_editor_signals()
 
     def switch_from_font_viewer(self, gname):
-        self.parent().parent().disconnect_glyph_pane()
+        self.preferences['top_window'].disconnect_editor_signals()
         self.switch_to(gname)
-        self.parent().parent().setup_glyph_pane_connections()
+        self.preferences['top_window'].connect_editor_signals()
 
     def switch_to(self, gname):
         self.viewer.yg_glyph.save_source()
@@ -2583,16 +2570,15 @@ class MyView(QGraphicsView):
     # situation?
     # @pyqtSlot(object)
     def zoom(self, sender_text):
-        self.sender().disconnect()
         sender_text = self.sender().text()
         if sender_text == "Original Size":
             self.viewer.set_zoom_factor(1)
         elif sender_text == "Zoom In":
-            if self.viewer.zoom_factor <= 5.5:
-                self.viewer.set_zoom_factor(self.viewer.zoom_factor + 0.5)
+            if self.viewer.zoom_factor <= 5.75:
+                self.viewer.set_zoom_factor(self.viewer.zoom_factor + 0.25)
         elif sender_text == "Zoom Out":
-            if self.viewer.zoom_factor >= 1:
-                self.viewer.set_zoom_factor(self.viewer.zoom_factor - 0.5)
+            if self.viewer.zoom_factor >= 0.5:
+                self.viewer.set_zoom_factor(self.viewer.zoom_factor - 0.25)
 
         # What I'd *like* to do here is keep the center of the viewport centered
         # after the zoom. But I haven't been able to make this work with the
@@ -2604,7 +2590,6 @@ class MyView(QGraphicsView):
         # self.centerOn(self.mapToScene(qp))
 
         self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
-        self.parent().parent().setup_zoom_connections()
 
     def keyPressEvent(self, event):
         if event.key() in [16777219, 16777223]:

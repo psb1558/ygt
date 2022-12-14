@@ -195,7 +195,6 @@ class ygFont:
         except FileNotFoundError:
             raise Exception("Can't find font file " + str(fontfile))
         self.preview_font = copy.deepcopy(self.ft_font)
-        print(self.preview_font)
         #
         # If it's a variable font, get a list of instances
         #
@@ -796,8 +795,6 @@ class ygSet:
 
 class ygGlyphProperties(ygSourceable):
     def __init__(self, glyph):
-        print("type of glyph:")
-        print(type(glyph))
         super().__init__(glyph.yg_font, None)
         self.yg_glyph = glyph
 
@@ -916,10 +913,6 @@ class ygGlyph(QObject):
         self.gsource = yg_font.get_glyph(gname)
         self.gname = gname
         self.names = ygGlyphNames(self)
-        # if "names" in self.gsource:
-        #    self.names = copy.deepcopy(self.gsource["names"])
-        # else:
-        #    self.names = {}
         self.props = ygGlyphProperties(self)
         if "y" in self.gsource:
             self.y_block = self.combine_point_blocks(copy.deepcopy(self.gsource["y"]))
@@ -964,7 +957,7 @@ class ygGlyph(QObject):
         self.glyph_viewer = None
 
         self.sig_hints_changed.connect(self.hints_changed)
-        self.sig_hints_changed.connect(self.preferences.top_window().preview_current_glyph)
+        self.set_auto_preview_connection()
 
     #
     # Ordering and structuring YAML source
@@ -998,8 +991,6 @@ class ygGlyph(QObject):
                     r = self._add_hint(h, block, conditional=True)
                     if r:
                         placed[h["uuid"]] = h
-                        # placed.append(h)
-                        #try:
             # print("Tests at bottom of loop:")
             # print("last_placed_len: " + str(last_placed_len))
             # print("len(placed): " + str(len(placed)) + "(total_to_place = " + str(total_to_place) + ")")
@@ -1367,7 +1358,6 @@ class ygGlyph(QObject):
         self.preferences["current_axis"] = new_axis
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
-        # self.sig_hints_changed.emit(self.hints())
         self._hints_changed(self.hints(), dirty=False)
         self.send_yaml_to_editor()
 
@@ -1589,12 +1579,7 @@ class ygGlyph(QObject):
             result = self.names.get(ptid)
             if self._is_pt_obj(result):
                 return result
-        # elif self.names != None and ptid in self.names:
-        #    result = self.names[ptid]
-        #    if self._is_pt_obj(result):
-        #        return result
         if result == None or depth > 20:
-            # raise Exception("Failed to resolve point identifier " + str(ptid) + " (" + str(result) + ")")
             m =  "Failed to resolve point identifier "
             m += str(ptid)
             m += " in glyph "
@@ -1609,6 +1594,16 @@ class ygGlyph(QObject):
     #
     # Signals and slots
     #
+
+    def set_auto_preview_connection(self):
+        if self.preferences.top_window().auto_preview_update:
+            self.sig_hints_changed.connect(self.preferences.top_window().preview_current_glyph)
+        else:
+            try:
+                self.sig_hints_changed.disconnect(self.preferences.top_window().preview_current_glyph)
+            except Exception as e:
+                print(e)
+                pass
 
     def set_yaml_editor(self, ed):
         """ Registers a slot in a ygYAMLEditor object, for installing source.
@@ -1632,9 +1627,6 @@ class ygGlyph(QObject):
         self.set_dirty()
         self.sig_hints_changed.emit(self.hints())
         self.send_yaml_to_editor()
-
-    def refresh_hints(self):
-        self.sig_hints_changed.emit(self.hints())
 
     @pyqtSlot(object)
     def hints_changed(self, hint_list):
