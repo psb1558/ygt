@@ -23,7 +23,7 @@ class ygPreview(QWidget):
         self.face = None
         self.hinting = "on"
         self.glyph_index = 0
-        self.char_size = 40
+        self.char_size = 30
         self.label = QLabel()
         self.label.setStyleSheet("QLabel {background-color: transparent; color: red;}")
         self.label.setText(str(self.char_size) + "ppem")

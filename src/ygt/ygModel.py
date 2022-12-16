@@ -494,6 +494,56 @@ class ygcvt(ygSourceable):
             result.append(key)
         return result
 
+    def _closest(self, lst, v):
+        """ Helper for get_closest_cv_action
+        """
+        return lst[min(range(len(lst)), key = lambda i: abs(lst[i] - v))]
+
+    def _get_val_from_hint(self, hint, axis):
+        """ Helper for get_closest_cv_action
+        """
+        tgt = hint.yg_glyph.resolve_point_identifier(hint.target())
+        ref = hint.ref()
+        if ref != None:
+            ref = hint.yg_glyph.resolve_point_identifier(ref)
+            if type(ref) is not ygPoint:
+                return None
+        if type(tgt) is not ygPoint:
+            return None
+        if ref == None:
+            if axis == "y":
+                return tgt.font_y
+            else:
+                return tgt.font_x
+        else:
+            if axis == "y":
+                return abs(tgt.font_y - ref.font_y)
+            else:
+                return abs(tgt.font_x - ref.font_x)
+
+
+    def get_closest_cv_action(self, alst, hint):
+        """ Return the QAction from lst with name of the cv with value closest
+            to the one in the hint.
+
+            alst is a list of QActions; hint is the hint we're operating on.
+            The hint must be type 0 (anchor) or 3 (single-point target, can take cv).
+            Hint type should have been checked before we got here.
+        """
+        alst.pop(0)
+        alst.pop(0)
+        axis = hint.yg_glyph.current_axis()
+        val = self._get_val_from_hint(hint, axis)
+        vlist = []
+        for a in alst:
+            vv = self.get_cv(a.text())
+            if type(vv) == dict:
+                vlist.append(vv["val"])
+            else:
+                vlist.append(vv)
+        c = self._closest(vlist, val)
+        return alst[vlist.index(c)]
+
     def get_cv(self, name):
         """ Retrieve a control value by name. This will usually be a dict
             rather than just a number.

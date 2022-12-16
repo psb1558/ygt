@@ -1820,6 +1820,13 @@ class ygGlyphViewer(QGraphicsScene):
     def current_axis(self):
         return self.yg_glyph.current_axis()
 
+    def _distance(self, pt_a, pt_b):
+        pa = self._model_point(pt_a)
+        pb = self._model_point(pt_b)
+        if self.current_axis() == "y":
+            return(abs(pa.font_y - pb.font_y))
+        return(abs(pa.font_x - pb.font_x))
+
     #
     # Factories
     #
@@ -2163,23 +2170,23 @@ class ygGlyphViewer(QGraphicsScene):
                                                      cat=self.yg_glyph.get_category(),
                                                      suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
-        cv_list = ["None"] + cv_list
-        if len(cv_list) > 0:
-            ccv = QAction("None", self, checkable=True)
-            if hint and (hint.yg_hint.cv() == None):
-                ccv.setChecked(True)
-            cv_anchor_action_list.append(ccv)
-            for c in cv_list:
-                ccv = QAction(c, self, checkable=True)
-                if hint != None:
-                    if ccv.text() == "None":
-                        if hint.yg_hint.cv() == None:
-                            ccv.setChecked(True)
-                    else:
-                        if c == hint.yg_hint.cv():
-                            ccv.setChecked(True)
-                    set_anchor_cv.addAction(ccv)
-                    cv_anchor_action_list.append(ccv)
+        cv_list = ["None", "Closest"] + cv_list
+        # ccv = QAction("None", self, checkable=True)
+        # if hint and (hint.yg_hint.cv() == None):
+        #    ccv.setChecked(True)
+        # cv_anchor_action_list.append(ccv)
+        for c in cv_list:
+            ccv = QAction(c, self, checkable=True)
+            if hint != None:
+                if ccv.text() == "None":
+                    if hint.yg_hint.cv() == None:
+                        ccv.setChecked(True)
+                else:
+                    if c == hint.yg_hint.cv():
+                        ccv.setChecked(True)
+                set_anchor_cv.addAction(ccv)
+                cv_anchor_action_list.append(ccv)
+
         if hint == None or ntype != 0:
             for c in cv_anchor_action_list:
                 c.setEnabled(False)
@@ -2187,6 +2194,8 @@ class ygGlyphViewer(QGraphicsScene):
             a = set_anchor_cv.menuAction()
             a.setEnabled(False)
             a.setVisible(False)
+
+
 
         # Set control value for stem hint (ntype == 3)
 
@@ -2197,19 +2206,19 @@ class ygGlyphViewer(QGraphicsScene):
                                                      cat=self.yg_glyph.get_category(),
                                                      suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
-        cv_list = ["None"] + cv_list
-        if len(cv_list) > 0:
-            for c in cv_list:
-                ccv = QAction(c, self, checkable=True)
-                if hint != None:
-                    if ccv.text() == "None":
-                        if hint.yg_hint.cv() == None:
-                            ccv.setChecked(True)
-                    else:
-                        if c == hint.yg_hint.cv():
-                            ccv.setChecked(True)
-                    set_stem_cv.addAction(ccv)
-                    cv_stem_action_list.append(ccv)
+        cv_list = ["None", "Closest"] + cv_list
+        #if len(cv_list) > 0:
+        for c in cv_list:
+            ccv = QAction(c, self, checkable=True)
+            if hint != None:
+                if ccv.text() == "None":
+                    if hint.yg_hint.cv() == None:
+                        ccv.setChecked(True)
+                else:
+                    if c == hint.yg_hint.cv():
+                        ccv.setChecked(True)
+                set_stem_cv.addAction(ccv)
+                cv_stem_action_list.append(ccv)
         if hint == None or ntype != 3:
             for c in cv_stem_action_list:
                 c.setEnabled(False)
@@ -2423,9 +2432,26 @@ class ygGlyphViewer(QGraphicsScene):
             self.sig_set_category.emit(action.text())
         if hint and (action == reverse_hint):
             self.sig_reverse_hint.emit(hint.yg_hint)
+
+        #else:
+        #    p = self._model_hint(hint).target()
+        #    if type(p) is ygPoint:
+        #        if self.current_axis == "x":
+        #            v = p.font_x
+        #        else:
+        #            v = p.font_y
+        #        a = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_anchor_action_list, v)
+
+
         if hint and action in cv_anchor_action_list:
+            if action.text() == "Closest":
+                action = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_anchor_action_list,
+                                                                         self._model_hint(hint))
             self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
         if hint and action in cv_stem_action_list:
+            if action.text() == "Closest":
+                action = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_stem_action_list,
+                                                                         self._model_hint(hint))
             self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
         if hint and ntype == 3 and (action == black_space):
             self.sig_change_hint_color.emit({"hint":  hint, "color": "blackspace"})

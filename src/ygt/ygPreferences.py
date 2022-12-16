@@ -1,4 +1,8 @@
 import yaml
+try:
+    import winreg
+except ModuleNotFoundError:
+    pass
 import os
 from yaml import Loader, Dumper
 
@@ -17,6 +21,13 @@ class ygPreferences(dict):
         self["recents"] = []
         self["zoom_factor"] = 1.0
         self["points_as_coords"] = False
+        self["auto_preview"] = True
+
+    def auto_preview(self):
+        return self["auto_preview"]
+
+    def set_auto_preview(self, p):
+        self["auto_preview"] = p
 
     def zoom_factor(self):
         return self["zoom_factor"]
@@ -109,3 +120,55 @@ def open_config(top_window):
         p = ygPreferences()
         p["top_window"] = top_window
         return p
+
+def read_win_registry():
+    path = winreg.HKEY_CURRENT_USER
+    p = ygPreferences()
+    try:
+        key = winreg.OpenKeyEx(path, r"SOFTWARE\\ygt\\")
+        p["show_off_curve_points"] = bool(winreg.QueryValueEx(key, "show_off_curve_points")[0])
+        p["show_point_numbers"] = bool(winreg.QueryValueEx(key, "show_point_numbers")[0])
+        p["current_axis"] = winreg.QueryValueEx(key, "current_axis")[0]
+        p["save_points_as"] = winreg.QueryValueEx(key, "save_points_as")[0]
+        p["current_font"] = winreg.QueryValueEx(key, "current_font")[0]
+        p["show_metrics"] = bool(winreg.QueryValueEx(key, "show_metrics")[0])
+        p["zoom_factor"] = winreg.QueryValueEx(key, "zoom_factor")[0]
+        p["points_as_coords"] = bool(winreg.QueryValueEx(key, "points_as_coords")[0])
+        p["auto_preview"] = bool(winreg.QueryValueEx(key, "auto_preview")[0])
+        # Also need "current_glyph" (dict) and "recents" (list)
+        if key:
+            winreg.CloseKey(key)
+        return p
+    except Exception as e:
+        print(e)
+    return None
+
+def write_win_registry(prefs):
+    path = winreg.HKEY_CURRENT_USER
+    try:
+        key = winreg.OpenKeyEx(path, r"SOFTWARE\\")
+        yg_key = winreg.CreateKey(key,"ygt")
+        winreg.SetValueEx(yg_key, "show_off_curve_points", 0, winreg.REG_DWORD,
+                          int(prefs["show_off_curve_points"]))
+        winreg.SetValueEx(yg_key, "show_point_numbers", 0, winreg.REG_DWORD,
+                          int(prefs["show_point_numbers"]))
+        winreg.SetValueEx(yg_key, "current_axis", 0, winreg.REG_SZ,
+                          int(prefs["current_axis"]))
+        winreg.SetValueEx(yg_key, "save_points_as", 0, winreg.REG_SZ,
+                          int(prefs["save_points_as"]))
+        winreg.SetValueEx(yg_key, "current_font", 0, winreg.REG_SZ,
+                          int(prefs["current_font"]))
+        winreg.SetValueEx(yg_key, "show_metrics", 0, winreg.REG_DWORD,
+                          int(prefs["show_metrics"]))
+        winreg.SetValueEx(yg_key, "zoom_factor", 0, winreg.REG_DWORD,
+                          prefs["zoom_factor"])
+        winreg.SetValueEx(yg_key, "points_as_coords", 0, winreg.REG_DWORD,
+                          int(prefs["points_as_coords"]))
+        winreg.SetValueEx(yg_key, "auto_preview", 0, winreg.REG_DWORD,
+                          int(prefs["auto_preview"]))
+        if yg_key:
+            winreg.CloseKey(yg_key)
+        return True
+    except Exception as e:
+        print(e)
+    return False
