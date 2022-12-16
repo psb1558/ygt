@@ -1,4 +1,5 @@
 import yaml
+import platform
 try:
     import winreg
 except ModuleNotFoundError:
@@ -84,6 +85,8 @@ class ygPreferences(dict):
             self["points_as"] = val
 
     def save_config(self):
+        if platform.system() == "Windows":
+          write_win_registry(self)
         config_dir = os.path.expanduser('~/.ygt/')
         if not os.path.isdir(config_dir):
             try:
@@ -102,9 +105,10 @@ class ygPreferences(dict):
             f.write(yaml.dump(save_dict, sort_keys=False, Dumper=Dumper))
 
 def open_config(top_window):
+    if platform.system() == "Windows":
+        return read_win_registry(top_window)
     try:
         config_path = os.path.expanduser('~/.ygt/ygt_config.yaml')
-        print(config_path)
         with open(config_path, 'r') as pstream:
             pref_dict = yaml.safe_load(pstream)
         p = ygPreferences()
@@ -121,27 +125,36 @@ def open_config(top_window):
         p["top_window"] = top_window
         return p
 
-def read_win_registry():
+def read_win_registry(top_window):
     path = winreg.HKEY_CURRENT_USER
     p = ygPreferences()
     try:
         key = winreg.OpenKeyEx(path, r"SOFTWARE\\ygt\\")
+    except Exception as e:
+        print("Can't open registry")
+        p["top_window"] = top_window
+        return p
+    try:
         p["show_off_curve_points"] = bool(winreg.QueryValueEx(key, "show_off_curve_points")[0])
         p["show_point_numbers"] = bool(winreg.QueryValueEx(key, "show_point_numbers")[0])
         p["current_axis"] = winreg.QueryValueEx(key, "current_axis")[0]
         p["save_points_as"] = winreg.QueryValueEx(key, "save_points_as")[0]
         p["current_font"] = winreg.QueryValueEx(key, "current_font")[0]
         p["show_metrics"] = bool(winreg.QueryValueEx(key, "show_metrics")[0])
-        p["zoom_factor"] = winreg.QueryValueEx(key, "zoom_factor")[0]
+        p["zoom_factor"] = float(winreg.QueryValueEx(key, "zoom_factor")[0])
         p["points_as_coords"] = bool(winreg.QueryValueEx(key, "points_as_coords")[0])
         p["auto_preview"] = bool(winreg.QueryValueEx(key, "auto_preview")[0])
-        # Also need "current_glyph" (dict) and "recents" (list)
-        if key:
-            winreg.CloseKey(key)
-        return p
+        p["recents"] = winreg.QueryValueEx(key, "recents")[0]
     except Exception as e:
         print(e)
-    return None
+    # Also need "current_glyph" (dict) and "recents" (list)
+    try:
+        if key:
+            winreg.CloseKey(key)
+        p["top_window"] = top_window
+    except Exception as e:
+        pass
+    return p
 
 def write_win_registry(prefs):
     path = winreg.HKEY_CURRENT_USER
@@ -153,19 +166,21 @@ def write_win_registry(prefs):
         winreg.SetValueEx(yg_key, "show_point_numbers", 0, winreg.REG_DWORD,
                           int(prefs["show_point_numbers"]))
         winreg.SetValueEx(yg_key, "current_axis", 0, winreg.REG_SZ,
-                          int(prefs["current_axis"]))
+                          prefs["current_axis"])
         winreg.SetValueEx(yg_key, "save_points_as", 0, winreg.REG_SZ,
-                          int(prefs["save_points_as"]))
+                          prefs["save_points_as"])
         winreg.SetValueEx(yg_key, "current_font", 0, winreg.REG_SZ,
-                          int(prefs["current_font"]))
+                          prefs["current_font"])
         winreg.SetValueEx(yg_key, "show_metrics", 0, winreg.REG_DWORD,
                           int(prefs["show_metrics"]))
-        winreg.SetValueEx(yg_key, "zoom_factor", 0, winreg.REG_DWORD,
-                          prefs["zoom_factor"])
+        winreg.SetValueEx(yg_key, "zoom_factor", 0, winreg.REG_SZ,
+                          str(prefs["zoom_factor"]))
         winreg.SetValueEx(yg_key, "points_as_coords", 0, winreg.REG_DWORD,
                           int(prefs["points_as_coords"]))
         winreg.SetValueEx(yg_key, "auto_preview", 0, winreg.REG_DWORD,
                           int(prefs["auto_preview"]))
+        winreg.SetValueEx(yg_key, "recents", 0, winreg.REG_MULTI_SZ,
+                          prefs["recents"])
         if yg_key:
             winreg.CloseKey(yg_key)
         return True
