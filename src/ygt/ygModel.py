@@ -523,7 +523,7 @@ class ygcvt(ygSourceable):
 
 
     def get_closest_cv_action(self, alst, hint):
-        """ Return the QAction from lst with name of the cv with value closest
+        """ Return the QAction from alst with value closest
             to the one in the hint.
 
             alst is a list of QActions; hint is the hint we're operating on.
