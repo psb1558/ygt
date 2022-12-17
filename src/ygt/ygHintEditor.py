@@ -1390,6 +1390,12 @@ class ygGlyphViewer(QGraphicsScene):
             if p.has_label():
                 p.add_label()
 
+    def reset_scale(self):
+        c = self.original_coordinates
+        ft_font = self.yg_glyph.yg_font.ft_font
+        ft_font['glyf']._setCoordinates(self.yg_glyph.glyph_name(), c, ft_font['hmtx'].metrics)
+        
+
     def scale_glyph(self):
         # Start out clean, with coordinates as in original font. That way,
         # zoom_factor always operates on the original, as opposed to the last
@@ -2549,6 +2555,7 @@ class MyView(QGraphicsView):
         self.preferences['top_window'].connect_editor_signals()
 
     def switch_to(self, gname):
+        self.viewer.reset_scale()
         self.viewer.yg_glyph.save_source()
         new_glyph = ygGlyph(self.preferences, self.yg_font, gname)
         self.viewer = ygGlyphViewer(self.preferences, new_glyph)
