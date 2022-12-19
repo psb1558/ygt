@@ -1290,6 +1290,7 @@ class ygGlyphViewer(QGraphicsScene):
         self.yg_hint_view_index = {}
         self.yg_hint_view_list = []
         super(ygGlyphViewer, self).__init__()
+        self.cv_error_msg = "Error while looking for a control value."
 
         # Current display preferences
 
@@ -1498,6 +1499,33 @@ class ygGlyphViewer(QGraphicsScene):
     #
     # Editing slots
     #
+
+    def guess_cv(self):
+        """ Called from a slot in MyView
+        """
+        _selected_objects = self.selected_objects(False)
+        selected_hint = None
+        for s in _selected_objects:
+            if type(s) is ygHintView or type(s) is ygHint:
+                selected_hint = self._model_hint(s)
+                break
+        # print("Selected hint: " + str(type(selected_hint)))
+        if selected_hint != None:
+            htn = self.get_hint_type_num(selected_hint.hint_type())
+            cv_type = "pos"
+            if htn == 3:
+                cv_type = "dist"
+            # print("axis: " + self.current_axis())
+            # print("category: " + self.yg_glyph.get_category())
+            cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
+                                                         type=cv_type,
+                                                         axis=self.current_axis(),
+                                                         cat=self.yg_glyph.get_category(),
+                                                         suffix=self.yg_glyph.get_suffixes())
+            # print("cv_list: " + str(cv_list))
+            cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, selected_hint)
+            print("cv_name: " + str(cv_name))
+            selected_hint.set_cv(cv_name)
 
     @pyqtSlot(object)
     def edit_macfunc_params(self, hint):
@@ -2176,7 +2204,7 @@ class ygGlyphViewer(QGraphicsScene):
                                                      cat=self.yg_glyph.get_category(),
                                                      suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
-        cv_list = ["None", "Closest"] + cv_list
+        cv_list = ["None", "Guess"] + cv_list
         # ccv = QAction("None", self, checkable=True)
         # if hint and (hint.yg_hint.cv() == None):
         #    ccv.setChecked(True)
@@ -2212,7 +2240,7 @@ class ygGlyphViewer(QGraphicsScene):
                                                      cat=self.yg_glyph.get_category(),
                                                      suffix=self.yg_glyph.get_suffixes())
         cv_list.sort()
-        cv_list = ["None", "Closest"] + cv_list
+        cv_list = ["None", "Guess"] + cv_list
         #if len(cv_list) > 0:
         for c in cv_list:
             ccv = QAction(c, self, checkable=True)
@@ -2450,15 +2478,21 @@ class ygGlyphViewer(QGraphicsScene):
 
 
         if hint and action in cv_anchor_action_list:
-            if action.text() == "Closest":
-                action = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_anchor_action_list,
-                                                                         self._model_hint(hint))
-            self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
+            try:
+                if action.text() == "Guess":
+                    action = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_anchor_action_list,
+                                                                             self._model_hint(hint))
+                self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
+            except Exception:
+                self.preferences.top_window().show_error_message(["Error", "Error", self.cv_error_msg])
         if hint and action in cv_stem_action_list:
-            if action.text() == "Closest":
-                action = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_stem_action_list,
-                                                                         self._model_hint(hint))
-            self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
+            try:
+                if action.text() == "Guess":
+                    action = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_stem_action_list,
+                                                                             self._model_hint(hint))
+                self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
+            except Exception:
+                self.preferences.top_window().show_error_message(["Error", "Error", self.cv_error_msg])
         if hint and ntype == 3 and (action == black_space):
             self.sig_change_hint_color.emit({"hint":  hint, "color": "blackspace"})
         if hint and ntype == 3 and (action == white_space):
@@ -2565,6 +2599,13 @@ class MyView(QGraphicsView):
         self.parent().parent().set_window_title()
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
+
+    @pyqtSlot()
+    def guess_cv(self):
+        try:
+            self.viewer.guess_cv()
+        except Exception:
+            self.preferences.top_window().show_error_message(["Error", "Error", "Error while looking for a control value."])
 
     @pyqtSlot()
     def switch_to_x(self):

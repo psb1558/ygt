@@ -521,6 +521,26 @@ class ygcvt(ygSourceable):
             else:
                 return abs(tgt.font_x - ref.font_x)
 
+    def get_closest_cv_name(self, cvlist, hint):
+        """ cvlist is a list of cv names. hint is a ygModel.ygHint object.
+        """
+        axis = hint.yg_glyph.current_axis()
+        val = self._get_val_from_hint(hint, axis)
+        # print("val: " + str(val))
+        # print("cvlist: " + str(cvlist))
+        vlist = []
+        for c in cvlist:
+            vv = self.get_cv(c)
+            if type(vv) is dict:
+                vlist.append(vv["val"])
+                # print("from dict: " + str(vv["val"]))
+            else:
+                vlist.append(vv)
+                # print("No dict: " + str(vv))
+        # print(vlist)
+        cc = self._closest(vlist, val)
+        # print("cc: " + str(cc))
+        return cvlist[vlist.index(cc)]
 
     def get_closest_cv_action(self, alst, hint):
         """ Return the QAction from alst with value closest
@@ -537,7 +557,7 @@ class ygcvt(ygSourceable):
         vlist = []
         for a in alst:
             vv = self.get_cv(a.text())
-            if type(vv) == dict:
+            if type(vv) is dict:
                 vlist.append(vv["val"])
             else:
                 vlist.append(vv)
@@ -1964,6 +1984,12 @@ class ygHint(QObject):
             else:
                 self._source[cvtype] = new_cv
         self.hint_changed_signal.emit(self)
+
+    def min_dist(self):
+        return True
+
+    def cut_in(self):
+        return True
 
     def hint_has_changed(self, h):
         self.hint_changed_signal.emit(h)
