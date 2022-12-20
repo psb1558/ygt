@@ -4,7 +4,9 @@ from PyQt6.QtWidgets import (QDialog,
                              QDialogButtonBox,
                              QComboBox,
                              QLineEdit,
-                             QLabel)
+                             QLabel,
+                             QWidget,
+                             QTabWidget)
 from .ygModel import unicode_categories, unicode_cat_names
 
 class makeCVDialog(QDialog):
@@ -15,10 +17,22 @@ class makeCVDialog(QDialog):
         super(makeCVDialog,self).__init__(self.top_window)
         self.setWindowTitle("Make Control Value")
         self.layout = QVBoxLayout()
+
+        # Set up tabs
+        self.tabs = QTabWidget()
+        self.general_tab = QWidget()
+        self.link_tab = QWidget()
+        self.tabs.addTab(self.general_tab, "General")
+        self.tabs.addTab(self.link_tab, "Same As")
+
+        # Set up buttons
         QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
+
+        # set up general tab
+        self.general_tab_layout = QVBoxLayout()
         if p2 != None:
             init_type = "dist"
         else:
@@ -43,45 +57,84 @@ class makeCVDialog(QDialog):
         cv_cat = cvUCatWidget()
         cv_suffix = cvSuffixWidget()
 
-        self.widgets = []
+        self.gen_widgets = []
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("name"))
-        self.widgets[-1].addWidget(cv_name)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("name"))
+        self.gen_widgets[-1].addWidget(cv_name)
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("val"))
-        self.widgets[-1].addWidget(cv_val)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("val"))
+        self.gen_widgets[-1].addWidget(cv_val)
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("type"))
-        self.widgets[-1].addWidget(cv_type)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("type"))
+        self.gen_widgets[-1].addWidget(cv_type)
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("axis"))
-        self.widgets[-1].addWidget(cv_axis)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("axis"))
+        self.gen_widgets[-1].addWidget(cv_axis)
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("cat"))
-        self.widgets[-1].addWidget(cv_cat)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("cat"))
+        self.gen_widgets[-1].addWidget(cv_cat)
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("suffix"))
-        self.widgets[-1].addWidget(cv_suffix)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("suffix"))
+        self.gen_widgets[-1].addWidget(cv_suffix)
 
-        self.widgets.append(QHBoxLayout())
-        self.widgets[-1].addWidget(QLabel("color"))
-        self.widgets[-1].addWidget(cv_color)
+        self.gen_widgets.append(QHBoxLayout())
+        self.gen_widgets[-1].addWidget(QLabel("color"))
+        self.gen_widgets[-1].addWidget(cv_color)
 
-        for w in self.widgets:
-            self.layout.addLayout(w)
+        # Set up link tab
+
+        self.link_tab_layout = QVBoxLayout()
+
+        cv_below_names_widget = cvNamesWidget(cvt)
+        cv_above_names_widget = cvNamesWidget(cvt)
+        # cv_over_under_widget = cvOverUnderWidget()
+        self.cv_below_val_widget = cvValueWidget(40)
+        self.cv_above_val_widget = cvValueWidget(40)
+
+        self.link_widgets = []
+
+        self.link_widgets.append(QHBoxLayout())
+        self.link_widgets[-1].addWidget(QLabel("same as"))
+        self.link_widgets[-1].addWidget(cv_below_names_widget)
+
+        self.link_widgets.append(QHBoxLayout())
+        self.link_widgets[-1].addWidget(QLabel("below"))
+        self.link_widgets[-1].addWidget(self.cv_below_val_widget)
+        self.link_widgets[-1].addWidget(QLabel("ppem"))
+
+        self.link_widgets.append(QHBoxLayout())
+        self.link_widgets[-1].addWidget(QLabel("and"))
+
+        self.link_widgets.append(QHBoxLayout())
+        self.link_widgets[-1].addWidget(QLabel("same as"))
+        self.link_widgets[-1].addWidget(cv_above_names_widget)
+
+        self.link_widgets.append(QHBoxLayout())
+        self.link_widgets[-1].addWidget(QLabel("above"))
+        self.link_widgets[-1].addWidget(self.cv_above_val_widget)
+        self.link_widgets[-1].addWidget(QLabel("ppem"))
+
+        for w in self.gen_widgets:
+            self.general_tab_layout.addLayout(w)
+        for w in self.link_widgets:
+            self.link_tab_layout.addLayout(w)
+
+        self.general_tab.setLayout(self.general_tab_layout)
+        self.link_tab.setLayout(self.link_tab_layout)
+        self.layout.addWidget(self.tabs)
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
 
     def accept(self):
         new_cv_vals = {}
         cv_name = None
-        for w in self.widgets:
+        for w in self.gen_widgets:
             val_name = w.itemAt(0).widget().text()
             if val_name != "name":
                 val = w.itemAt(1).widget()._text()
@@ -102,6 +155,29 @@ class makeCVDialog(QDialog):
                 cv_name = w.itemAt(1).widget()._text()
                 if cv_name == None or len(cv_name) == 0:
                     cv_name = "new-control-value"
+        same_as = {}
+        for i, w in enumerate(self.link_widgets):
+            if i == 0:
+                print(type(w.itemAt(1).widget()))
+                cv_below_name = w.itemAt(1).widget()._text()
+            elif i == 1:
+                try:
+                    cv_below_ppem = int(w.itemAt(1).widget()._text())
+                except Exception:
+                    cv_below_ppem = 40
+            elif i == 3:
+                cv_above_name = w.itemAt(1).widget()._text()
+            elif i == 4:
+                try:
+                    cv_above_ppem = int(w.itemAt(1).widget()._text())
+                except Exception:
+                    cv_above_ppem = 40
+        if cv_below_name != "None":
+            same_as["below"] = {"cv": cv_below_name, "ppem": cv_below_ppem}
+        if cv_above_name != "None":
+            same_as["above"] = {"cv": cv_above_name, "ppem": cv_above_ppem}
+        if len(same_as) > 0:
+            new_cv_vals["same-as"] = same_as
         self.cvt.add_cv(cv_name, new_cv_vals)
         super().accept()
 
@@ -186,3 +262,29 @@ class cvValueWidget(QLineEdit):
 
     def _text(self):
         return self.text()
+
+
+
+class cvNamesWidget(QComboBox):
+    def __init__(self, cvt):
+        super().__init__()
+        cv_list = cvt.get_list(None)
+        self.addItem("None")
+        for c in cv_list:
+            self.addItem(c)
+        self.setCurrentText("None")
+
+    def _text(self):
+        return self.currentText()
+
+
+
+#class cvOverUnderWidget(QComboBox):
+#    def __init__(self):
+#        super().__init__()
+#        self.addItem("below")
+#        self.addItem("above")
+#        self.setCurrentText("below")
+#
+#    def _text(self):
+#        return self.currentText()

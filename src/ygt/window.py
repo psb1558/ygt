@@ -328,6 +328,11 @@ class MainWindow(QMainWindow):
         self.make_set_action.setShortcut(QKeySequence(Qt.Key.Key_K))
         self.make_set_action.setEnabled(False)
 
+        self.make_cv_guess_action = self.toolbar.addAction("Guess Control Value (?)")
+        self.make_cv_guess_action.setIcon(QIcon(QPixmap(self.icon_path + "cv_guess.png")))
+        self.make_cv_guess_action.setShortcut(QKeySequence(Qt.Key.Key_Question))
+        self.make_cv_guess_action.setEnabled(False)
+
         self.make_cv_action = self.toolbar.addAction("Make Control Value (C)")
         self.make_cv_action.setIcon(QIcon(QPixmap(self.icon_path + "cv.png")))
         self.make_cv_action.setShortcut(QKeySequence(Qt.Key.Key_C))
@@ -538,6 +543,7 @@ class MainWindow(QMainWindow):
         self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.make_set_action.triggered.connect(self.glyph_pane.make_set)
         self.make_cv_action.triggered.connect(self.glyph_pane.make_control_value)
+        self.make_cv_guess_action.triggered.connect(self.glyph_pane.guess_cv)
         # These two connections don't get destroyed when we switch glyphs.
         # Make sure they're not created over and over.
         self.vertical_action.triggered.connect(self.glyph_pane.switch_to_y)
@@ -737,6 +743,7 @@ class MainWindow(QMainWindow):
         self.interpolate_action.setEnabled(True)
         self.anchor_action.setEnabled(True)
         self.make_cv_action.setEnabled(True)
+        self.make_cv_guess_action.setEnabled(True)
         self.make_set_action.setEnabled(True)
         self.vertical_action.setEnabled(True)
         self.horizontal_action.setEnabled(True)

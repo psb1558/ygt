@@ -1899,8 +1899,8 @@ class ygGlyphViewer(QGraphicsScene):
                 gtarget = ygSetView(self, target, hint_type)
             else:
                 gtarget = self.yg_point_view_index[target.id]
-            # If this is going to crash, need to catch it and recover. Maybe
-            # mark the hint as invalid and skip it when drawing or compiling? ***
+            # *** If this is going to crash, need to catch it and recover. Maybe
+            # mark the hint as invalid and skip it when drawing or compiling?
             if hint.ref() == None:
                 print("Warning: ref is None (target is " + str(target.index) + ")")
             ref = self.resolve_point_identifier(hint.ref())

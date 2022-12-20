@@ -468,7 +468,7 @@ class ygcvt(ygSourceable):
         for key in keys:
             entry = self.data[key]
             include_this = True
-            if type(entry) is dict:
+            if glyph != None and type(entry) is dict:
                 if "type" in entry:
                     if entry["type"] != filters["type"]:
                         include_this = False

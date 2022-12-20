@@ -121,6 +121,16 @@ point_struct = {
     ]
 }
 
+cv_ppem_struct = {
+    "ppem": int,
+    "cv": str
+}
+
+cv_same_as_struct = {
+    Optional("above"): cv_ppem_struct,
+    Optional("below"): cv_ppem_struct
+}
+
 cvt_entry_struct = {
     "val": int,
     "type": Or("pos", "dist"),
@@ -131,7 +141,8 @@ cvt_entry_struct = {
                         "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
                         "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
                         "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
-                        "Cn", "C")
+                        "Cn", "C"),
+    Optional("same-as"): cv_same_as_struct
 }
 
 function_entry_struct = {
