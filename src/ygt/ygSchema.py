@@ -83,12 +83,17 @@ def validate_points(pt):
         set_error_message("point " + str(pt) + " is not valid.")
     return False
 
+def is_round_valid(r):
+    if type(r) is bool:
+        return True
+    return r in ["to-grid", "to-half-grid", "to-double-grid", "down-to-grid", "up-to-grid"]
+
 nested_point_struct = {
     "ptid":               is_point_valid_2,
     Optional("ref"):      is_point_valid_2,
     Optional("dist"):     str,
     Optional("pos"):      str,
-    Optional("round"):    bool,
+    Optional("round"):    is_round_valid,
     "rel": Or("stem",
               "blackspace",
               "whitespace",
@@ -106,7 +111,7 @@ point_struct = {
             Optional("ref"):      is_point_valid_2,
             Optional("dist"):     str,
             Optional("pos"):      str,
-            Optional("round"):    bool,
+            Optional("round"):    is_round_valid,
             Optional("function"): Or(str, dict),
             Optional("macro"):    Or(str, dict),
             Optional("rel"):      Or("stem",
@@ -165,11 +170,15 @@ macro_entry_struct = {
     "code": str
 }
 
+hint_types = ["blackspace", "whitespace", "grayspace", "anchor", "shift", "align", "interpolate"]
+
 defaults_struct = {
     Optional("use-truetype-defaults"): bool,
     Optional("init-graphics"): bool,
     Optional("assume-always-y"): bool,
-    Optional("cleartype"): bool
+    Optional("cleartype"): bool,
+    Optional("round"): hint_types,
+    Optional("no-round"): hint_types
 }
 
 properties_struct = {

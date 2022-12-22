@@ -217,35 +217,61 @@ class ygFont:
             cvt["baseline"] = {"val": 0, "type": "pos", "axis": "y"}
             try:
                 os2 = self.ft_font['OS/2']
-                cvt["cap-height"] = {"val": os2.sCapHeight,
-                                     "type": "pos",
-                                     "axis": "y"}
-                cvt["cap-height-overshoot"] = {"val": self.extreme_points("O")[0],
-                                               "type": "pos",
-                                               "axis": "y"}
+                cvt["cap-height"] =              {"val": os2.sCapHeight,
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Lu"}
+                cvt["cap-height-overshoot"] =    {"val": self.extreme_points("O")[0],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Lu",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "cap-height"}}}
                 cvt["cap-baseline-undershoot"] = {"val": self.extreme_points("O")[1],
-                                                "type": "pos",
-                                                "axis": "y"}
-                cvt["xheight"] = {"val": os2.sxHeight,
-                                  "type": "pos",
-                                  "axis": "y"}
-                cvt["xheight-overshoot"] = {"val": self.extreme_points("o")[0],
-                                            "type": "pos",
-                                            "axis": "y"}
-                cvt["lc-baseline-undershoot"] = {"val": self.extreme_points("o")[1],
-                                            "type": "pos",
-                                            "axis": "y"}
-                cvt["lc-ascender"] = {"val": self.extreme_points("b")[0],
-                                      "type": "pos",
-                                      "axis": "y"}
-                cvt["lc-descender"] = {"val": self.extreme_points("p")[1],
-                                       "type": "pos",
-                                       "axis": "y"}
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Lu",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}}}
+                cvt["xheight"] =                 {"val": os2.sxHeight,
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Ll"}
+                cvt["xheight-overshoot"] =       {"val": self.extreme_points("o")[0],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Ll",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "xheight"}}}
+                cvt["lc-baseline-undershoot"] =  {"val": self.extreme_points("o")[1],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Ll",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}}}
+                cvt["lc-ascender"] =             {"val": self.extreme_points("b")[0],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Ll"}
+                cvt["lc-descender"] =            {"val": self.extreme_points("p")[1],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Ll"}
+                cvt["num-round-top"] =           {"val": self.extreme_points("eight")[0],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Nd",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "num-flat-top"}}}
+                cvt["num-flat-top"] =            {"val": self.extreme_points("five")[0],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Nd"}
+                cvt["num-baseline-undershoot"] = {"val": self.extreme_points("eight")[1],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Nd",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}}}
             except Exception as e:
                 print("Error while building cvt:")
                 print(e)
                 # pass
-        self.cvt         = ygcvt(self, self.source)
+        self.cvt         = ygcvt(self,  self.source)
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
         if "functions" in self.source:
@@ -326,7 +352,7 @@ class ygFont:
         """ Helper for setting up an initial cvt.
 
         """
-        g = ygGlyph(None, self, glyph_name)
+        g = ygGlyph(ygPreferences(), self, glyph_name)
         highest = -10000
         lowest = 10000
         plist = g.point_list
@@ -526,20 +552,14 @@ class ygcvt(ygSourceable):
         """
         axis = hint.yg_glyph.current_axis()
         val = self._get_val_from_hint(hint, axis)
-        # print("val: " + str(val))
-        # print("cvlist: " + str(cvlist))
         vlist = []
         for c in cvlist:
             vv = self.get_cv(c)
             if type(vv) is dict:
                 vlist.append(vv["val"])
-                # print("from dict: " + str(vv["val"]))
             else:
                 vlist.append(vv)
-                # print("No dict: " + str(vv))
-        # print(vlist)
         cc = self._closest(vlist, val)
-        # print("cc: " + str(cc))
         return cvlist[vlist.index(cc)]
 
     def get_closest_cv_action(self, alst, hint):
@@ -1027,7 +1047,8 @@ class ygGlyph(QObject):
         self.glyph_viewer = None
 
         self.sig_hints_changed.connect(self.hints_changed)
-        self.set_auto_preview_connection()
+        if self.preferences.top_window() != None:
+            self.set_auto_preview_connection()
 
     #
     # Ordering and structuring YAML source
@@ -1935,15 +1956,14 @@ class ygHint(QObject):
 
     def rounded(self):
         if "round" in self._source:
-            return self._source["round"]
-        return self.round_is_default()
+            if self._source["round"] == False:
+                return False
+            return True
+        else:
+            return self.round_is_default()
 
     def toggle_rounding(self):
-        if "round" in self._source:
-            current_round = self._source["round"]
-        else:
-            current_round = self.round_is_default()
-        current_round = not current_round
+        current_round = not self.rounded()
         if current_round == self.round_is_default():
             if "round" in self._source:
                 del self._source["round"]
@@ -1953,6 +1973,12 @@ class ygHint(QObject):
 
     def round_is_default(self):
         return hint_type_nums[self.hint_type()] in [0, 3]
+
+    def set_round(self, b, update=False):
+        if b != self.round_is_default():
+            self._source["round"] = b
+        if update:
+            self.hint_changed_signal.emit(self)
 
     def cv(self):
         if "pos" in self._source:

@@ -1509,22 +1509,17 @@ class ygGlyphViewer(QGraphicsScene):
             if type(s) is ygHintView or type(s) is ygHint:
                 selected_hint = self._model_hint(s)
                 break
-        # print("Selected hint: " + str(type(selected_hint)))
         if selected_hint != None:
             htn = self.get_hint_type_num(selected_hint.hint_type())
             cv_type = "pos"
             if htn == 3:
                 cv_type = "dist"
-            # print("axis: " + self.current_axis())
-            # print("category: " + self.yg_glyph.get_category())
             cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
                                                          type=cv_type,
                                                          axis=self.current_axis(),
                                                          cat=self.yg_glyph.get_category(),
                                                          suffix=self.yg_glyph.get_suffixes())
-            # print("cv_list: " + str(cv_list))
             cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, selected_hint)
-            print("cv_name: " + str(cv_name))
             selected_hint.set_cv(cv_name)
 
     @pyqtSlot(object)
@@ -1978,6 +1973,18 @@ class ygGlyphViewer(QGraphicsScene):
         self.make_macfunc_from_selection(hint_type, name=name)
         # Called function will send the signal to the model.
 
+    def get_round_default(self, hint):
+        t = hint.hint_type()
+        l = self.yg_glyph.yg_font.defaults.get_default("round")
+        if l != None:
+            if t in l:
+                return True
+        l = self.yg_glyph.yg_font.defaults.get_default("no-round")
+        if l != None:
+            if t in l:
+                return False
+        return None
+
     def make_hint_from_selection(self, hint_type):
         """ Make a hint based on selection in the editing panel.
 
@@ -1993,6 +2000,9 @@ class ygGlyphViewer(QGraphicsScene):
             if pplen >= 1:
                 h = {"ptid": self._model_point(pp[0]).preferred_label()}
                 new_yg_hint = ygHint(self.yg_glyph, h)
+                dr = self.get_round_default(new_yg_hint)
+                if dr != None:
+                    new_yg_hint.set_round(dr)
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num in [1, 3]:
             if pplen >= 2:
@@ -2004,6 +2014,9 @@ class ygGlyphViewer(QGraphicsScene):
                 ref_name = self._model_point(pp[0]).preferred_label()
                 h = {"ptid": target_name, "ref": ref_name, "rel": hint_type}
                 new_yg_hint = ygHint(self.yg_glyph, h)
+                dr = self.get_round_default(new_yg_hint)
+                if dr != None:
+                    new_yg_hint.set_round(dr)
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num == 2:
             if pplen >= 3:
@@ -2041,6 +2054,9 @@ class ygGlyphViewer(QGraphicsScene):
                     target_name = target.preferred_label()
                     h = {"ptid": target_name, "ref": ref_names, "rel": hint_type}
                     new_yg_hint = ygHint(self.yg_glyph, h)
+                dr = self.get_round_default(new_yg_hint)
+                if dr != None:
+                    new_yg_hint.set_round(dr)
                 self.sig_new_hint.emit(new_yg_hint)
 
     def make_macfunc_from_selection(self, hint_type, **kwargs):
