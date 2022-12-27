@@ -360,7 +360,6 @@ class ygHintView(QGraphicsItem, ygSelectable):
                     if kk in macfunc and "subtype" in macfunc[kk] and macfunc[kk]["subtype"] == "target":
                         plist.append(p.point_dict[kk])
             except Exception as e:
-                print("Exception in _get_macfunc_targets")
                 print(e)
         return plist
 
@@ -1295,7 +1294,7 @@ class ygGlyphViewer(QGraphicsScene):
         # Current display preferences
 
         self.off_curve_points_showing = self.preferences.show_off_curve_points()
-        self.point_numbers_showing = self.preferences.show_point_numbers()
+        self.point_numbers_showing = self.preferences.top_window().show_point_numbers
         self.zoom_factor = self.preferences.zoom_factor()
 
         # Set up glyph info
@@ -1379,7 +1378,7 @@ class ygGlyphViewer(QGraphicsScene):
 
     def set_zoom_factor(self, new_zoom):
         self.zoom_factor = new_zoom
-        self.preferences.set_zoom_factor(self.zoom_factor)
+        self.preferences.top_window().zoom_factor = self.zoom_factor
         self.scale_glyph()
         self.center_x = self.xTranslate + round(self.adv / 2)
         self.center_x = self.xTranslate + round(self.adv / 2)
@@ -1532,7 +1531,7 @@ class ygGlyphViewer(QGraphicsScene):
     @pyqtSlot()
     def toggle_off_curve_visibility(self):
         self.off_curve_points_showing = not self.off_curve_points_showing
-        self.preferences.set_show_off_curve_points(self.off_curve_points_showing)
+        self.preferences.top_window().show_off_curve_points = self.off_curve_points_showing
         for p in self.yg_point_view_list:
             if not p.yg_point.on_curve:
                 if self.off_curve_points_showing:
@@ -1616,7 +1615,7 @@ class ygGlyphViewer(QGraphicsScene):
     @pyqtSlot()
     def toggle_point_numbers(self):
         self.point_numbers_showing = not self.point_numbers_showing
-        self.preferences.set_show_point_numbers(self.point_numbers_showing)
+        self.preferences.top_window().show_point_numbers = self.point_numbers_showing
         for p in self.yg_point_view_list:
             if self.point_numbers_showing:
                 if p.isVisible():
@@ -2576,7 +2575,7 @@ class MyView(QGraphicsView):
             self.yg_font.get_glyph_index(g, short_index=True)
             self.switch_to(g)
         except Exception as e:
-            print(e)
+            # print(e)
             self.preferences.top_window().show_error_message(["Warning", "Warning", "Can't load requested glyph."])
         self.preferences['top_window'].connect_editor_signals()
 

@@ -11,9 +11,9 @@ from .ygModel import unicode_categories, unicode_cat_names
 
 class makeCVDialog(QDialog):
     def __init__(self, p1, p2, cvt, preferences):
-        self.top_window = preferences["top_window"]
+        self.top_window = preferences.top_window()
         self.cvt = cvt
-        self.axis = preferences["current_axis"]
+        self.axis = preferences.top_window().current_axis
         super(makeCVDialog,self).__init__(self.top_window)
         self.setWindowTitle("Make Control Value")
         self.layout = QVBoxLayout()

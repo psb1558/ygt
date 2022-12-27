@@ -1,7 +1,12 @@
 import numpy
 import os
 import freetype
-from freetype import FT_LOAD_RENDER, FT_LOAD_TARGET_LCD 
+from freetype import (
+    FT_LOAD_RENDER,
+    FT_LOAD_TARGET_LCD,
+    FT_LOAD_NO_HINTING,
+    FT_LOAD_NO_AUTOHINT
+)
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel
@@ -29,7 +34,7 @@ class ygPreview(QWidget):
         self.label.setText(str(self.char_size) + "ppem")
         self.label.setParent(self)
         self.label.move(50, 30)
-        self.setMinimumSize(800, 1000)
+        self.setMinimumSize(600, 1000)
         self.vertical_margin = 50
         self.horizontal_margin = 50
         self.max_pixel_size = 12
@@ -39,6 +44,7 @@ class ygPreview(QWidget):
         self.instance = None
         self.colors = self.mk_color_list()
         self.render_mode = 2
+        self.hinting_on = True
         self.paintEvent = self.paintEvent_b
 
     def mk_color_list(self):
@@ -62,10 +68,11 @@ class ygPreview(QWidget):
             flags = FT_LOAD_RENDER | FT_LOAD_TARGET_LCD 
         else:
             flags = 4
+        if not self.hinting_on:
+            flags = flags | FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT
         self.face.set_char_size(self.char_size * 64)
         if self.instance != None:
             self.face.set_var_named_instance(self.instance)
-        # Experiment with default flags = 4
         self.face.load_glyph(self.glyph_index, flags=flags)
         ft_bitmap = self.face.glyph.bitmap
         ft_width  = self.face.glyph.bitmap.width
@@ -75,10 +82,10 @@ class ygPreview(QWidget):
         char_width = ft_width
         if self.render_mode > 1:
             char_width = ft_width / 3
-        if char_width * self.pixel_size > 700:
-            self.pixel_size = round(700/char_width)
-        if ft_rows * self.pixel_size > 700:
-            self.pixel_size = round(700/ft_rows)
+        if char_width * self.pixel_size > 500:
+            self.pixel_size = round(500/char_width)
+        if ft_rows * self.pixel_size > 500:
+            self.pixel_size = round(500/ft_rows)
         if self.render_mode == 3:
             nn = self.pixel_size % 3
             if nn != 0:
@@ -96,17 +103,11 @@ class ygPreview(QWidget):
         else:
             self.Z = numpy.array(data,dtype=numpy.ubyte).reshape(ft_rows, ft_width)
 
-    def toggle_hinting(self):
-        """ This can't be used right now, since including the no hinting flag
-            in a call to load_glyph causes a crash.
-        """
-        if self.glyph_index != 0 and self.face != None:
-            if self.hinting == "on":
-                self.hinting = "off"
-            else:
-                self.hinting = "on"
-            self._build_glyph()
-            self.update()
+    @pyqtSlot()
+    def toggle_show_hints(self):
+        self.hinting_on = not self.hinting_on
+        self._build_glyph()
+        self.update()
 
     @pyqtSlot()
     def render1(self):
@@ -163,9 +164,46 @@ class ygPreview(QWidget):
     def add_instances(self, instances):
         self.instance_dict = instances
 
+    def instance_list(self):
+        l = []
+        if self.instance_dict:
+            kk = self.instance_dict.keys()
+            for k in kk:
+                l.append(k)
+        return l
+
+    @pyqtSlot()
+    def next_instance(self):
+        if self.instance and self.instance_dict:
+            kk = self.instance_dict.keys()
+            il = self.instance_list()
+            i = il.index(self.instance)
+            try:
+                k = il[i + 1]
+            except Exception:
+                k = il[0]
+            self.instance = k
+            self._set_instance()
+            
+    @pyqtSlot()
+    def prev_instance(self):
+        if self.instance and self.instance_dict:
+            kk = self.instance_dict.keys()
+            il = self.instance_list()
+            i = il.index(self.instance)
+            try:
+                k = il[i - 1]
+            except Exception:
+                k = il[-1]
+            self.instance = k
+            self._set_instance()
+
     @pyqtSlot()
     def set_instance(self):
         self.instance = self.sender().text()
+        self._set_instance()
+
+    def _set_instance(self):
         self.set_label_text()
         self._build_glyph()
         self.update()        

@@ -298,7 +298,6 @@ def are_macros_valid(t):
 def are_defaults_valid(t):
     try:
         defaults_schema.validate(t)
-        print("returning from are_defaults_valid")
         return True
     except SchemaError as s:
         print("Error in are_defaults_valid:")

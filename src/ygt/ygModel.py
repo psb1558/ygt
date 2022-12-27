@@ -196,13 +196,14 @@ class ygFont:
             raise Exception("Can't find font file " + str(fontfile))
         self.preview_font = copy.deepcopy(self.ft_font)
         #
-        # If it's a variable font, get a list of instances
+        # If it's a variable font, get instances and axes
         #
         try:
             self.instances = {}
             for inst in self.ft_font['fvar'].instances:
                 nm = self.ft_font['name'].getName(inst.subfamilyNameID,3,1,0x409).toUnicode()
                 self.instances[nm] = inst.coordinates
+            self.axes = self.ft_font['fvar'].axes
             self.is_variable_font = True
         except Exception as e:
             self.is_variable_font = False
@@ -322,6 +323,20 @@ class ygFont:
         self.glyph_index = {}
         for glyph_counter, g in enumerate(self.glyph_list):
             self.glyph_index[g[1]] = glyph_counter
+
+    def default_instance(self):
+        if not self.is_variable_font:
+            return None
+        default_coordinates = {}
+        for a in self.axes:
+            default_coordinates[a.axisTag] = a.defaultValue
+        def_inst = None
+        kk = self.instances.keys()
+        for k in kk:
+            if self.instances[k] == default_coordinates:
+                def_inst = k
+                break
+        return def_inst
 
     def get_unicode(self, glyph_name, extended=False):
         u = 65535
@@ -733,7 +748,7 @@ class ygCaller:
         # select the non-point params.
         keys = self.data.keys()
         for k in keys:
-            if k != "code" and k != "stack-safe" and  not ("type" in self.data[k] and self.data[k]['type'] == "point"):
+            if k != "code" and k != "stack-safe" and k != "primitive" and  not ("type" in self.data[k] and self.data[k]['type'] == "point"):
                 pdict[k] = self.data[k]
         return pdict
 
@@ -1035,7 +1050,7 @@ class ygGlyph(QObject):
         for p in self.point_list:
             self.point_coord_dict[p.coord] = p
         if self.preferences:
-            self._current_axis = self.preferences["current_axis"]
+            self._current_axis = self.preferences.top_window().current_axis
         else:
             self._current_axis = "y"
         # Fix up the source and build a tree of ygHhint objects.
@@ -1422,7 +1437,7 @@ class ygGlyph(QObject):
         pt_list = []
         gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font['glyf'])
         lpref = "index"
-        if self.preferences["points_as_coords"]:
+        if self.preferences.top_window().points_as_coords:
             lpref = "coord"
         for point_index, p in enumerate(zip(gl[0], gl[2])):
             is_on_curve = p[1] & 0x01 == 0x01
@@ -1446,7 +1461,7 @@ class ygGlyph(QObject):
             return
         self.save_source()
         self._current_axis = new_axis
-        self.preferences["current_axis"] = new_axis
+        self.preferences.top_window().current_axis = new_axis
         self._yaml_add_parents(self.current_block())
         self._yaml_supply_refs(self.current_block())
         self._hints_changed(self.hints(), dirty=False)
@@ -1693,7 +1708,7 @@ class ygGlyph(QObject):
             try:
                 self.sig_hints_changed.disconnect(self.preferences.top_window().preview_current_glyph)
             except Exception as e:
-                print(e)
+                # print(e)
                 pass
 
     def set_yaml_editor(self, ed):
@@ -1963,6 +1978,8 @@ class ygHint(QObject):
             return self.round_is_default()
 
     def toggle_rounding(self):
+        """ Ignores rounding types.
+        """
         current_round = not self.rounded()
         if current_round == self.round_is_default():
             if "round" in self._source:

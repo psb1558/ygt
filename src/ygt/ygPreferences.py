@@ -16,13 +16,24 @@ class ygPreferences(dict):
         self["current_glyph"] = {}
         self["current_axis"] = "y"
         self["save_points_as"] = "coord" # "coord" or "name" or "index"
-        # self["view_points_as"] = "coord" # "coord" or "name" or "index"
         self["current_font"] = None
         self["show_metrics"] = True
         self["recents"] = []
         self["zoom_factor"] = 1.0
         self["points_as_coords"] = False
         self["auto_preview"] = True
+
+    def current_axis(self):
+        return self["current_axis"]
+
+    def set_current_axis(self, a):
+        self["current_axis"] = a
+
+    def points_as_coords(self):
+        return self["points_as_coords"]
+
+    def set_points_as_coords(self, b):
+        self["points_as_coords"] = b
 
     def auto_preview(self):
         return self["auto_preview"]
@@ -40,12 +51,13 @@ class ygPreferences(dict):
         return self["recents"]
 
     def add_recent(self, f):
-        fl = self["recents"]
-        if not f in fl:
-            fl = [f] + fl
-        if len(fl) > 5:
-            fl.pop()
-        self["recents"] = fl
+        if os.path.splitext(f)[1] == ".yaml":
+            fl = self["recents"]
+            if not f in fl:
+                fl = [f] + fl
+            if len(fl) > 5:
+                fl.pop()
+            self["recents"] = fl
 
     def top_window(self):
         return self["top_window"]
@@ -101,6 +113,7 @@ class ygPreferences(dict):
         for kk in k:
             if not kk in ["top_window", "current_font"]:
                 save_dict[kk] = self[kk]
+        print(save_dict)
         with open(config_file, "w") as f:
             f.write(yaml.dump(save_dict, sort_keys=False, Dumper=Dumper))
 
