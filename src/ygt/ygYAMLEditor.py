@@ -129,6 +129,7 @@ class ygYAMLEditor(QPlainTextEdit):
         self._highlighter.setDocument(self.document())
 
 
+
 class editorDialog(QDialog):
     def __init__(self, preferences, sourceable, title, validator, top_structure="dict"):
         super().__init__()

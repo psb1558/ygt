@@ -223,7 +223,7 @@ class MainWindow(QMainWindow):
         self.pv_bigger_one_action.setEnabled(False)
 
         self.pv_bigger_ten_action = self.preview_menu.addAction("Grow by Ten")
-        self.pv_bigger_ten_action.setShortcut(QKeySequence.StandardKey.SelectPreviousLine)
+        self.pv_bigger_ten_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
         self.pv_bigger_ten_action.setEnabled(False)
 
         self.pv_smaller_one_action = self.preview_menu.addAction("Shrink by One")
@@ -231,7 +231,7 @@ class MainWindow(QMainWindow):
         self.pv_smaller_one_action.setEnabled(False)
 
         self.pv_smaller_ten_action = self.preview_menu.addAction("Shrink by Ten")
-        self.pv_smaller_ten_action.setShortcut(QKeySequence.StandardKey.SelectNextLine)
+        self.pv_smaller_ten_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
         self.pv_smaller_ten_action.setEnabled(False)
 
         self.pv_show_hints_action = self.preview_menu.addAction("Show hinting")
@@ -729,9 +729,9 @@ class MainWindow(QMainWindow):
         if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
             self.preview_menu.addSeparator()
             self.prev_instance_action = self.preview_menu.addAction("Previous instance")
-            self.prev_instance_action.setShortcut(QKeySequence.StandardKey.SelectPreviousChar)
+            self.prev_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Left))
             self.next_instance_action = self.preview_menu.addAction("Next instance")
-            self.next_instance_action.setShortcut(QKeySequence.StandardKey.SelectNextChar)
+            self.next_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Right))
             self.instance_menu = self.preview_menu.addMenu("&Instances")
             self.instance_actions = []
             instance_names = []
@@ -1207,7 +1207,7 @@ class mainWinEventFilter(QObject):
 # if __name__ == "__main__":
 def main():
 
-    # print(dir(QMainWindow))
+    print(dir(Qt.Modifier))
 
     app = QApplication([])
     top_window = MainWindow(app)
