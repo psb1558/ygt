@@ -1518,8 +1518,11 @@ class ygGlyphViewer(QGraphicsScene):
                                                          axis=self.current_axis(),
                                                          cat=self.yg_glyph.get_category(),
                                                          suffix=self.yg_glyph.get_suffixes())
-            cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, selected_hint)
-            selected_hint.set_cv(cv_name)
+            try:
+                cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, selected_hint)
+                selected_hint.set_cv(cv_name)
+            except Exception:
+                pass
 
     def guess_cv_for_hint(self, hint):
         if hint != None:
@@ -1532,8 +1535,11 @@ class ygGlyphViewer(QGraphicsScene):
                                                          axis=self.current_axis(),
                                                          cat=self.yg_glyph.get_category(),
                                                          suffix=self.yg_glyph.get_suffixes())
-            cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, hint)
-            hint.set_cv(cv_name)
+            try:
+                cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, hint)
+                hint.set_cv(cv_name)
+            except Exception:
+                pass
 
     @pyqtSlot(object)
     def edit_macfunc_params(self, hint):
@@ -1998,7 +2004,7 @@ class ygGlyphViewer(QGraphicsScene):
                 return False
         return None
 
-    def make_hint_from_selection(self, hint_type, ctrl=False):
+    def make_hint_from_selection(self, hint_type, ctrl=False, shift=False):
         """ Make a hint based on selection in the editing panel.
 
             Should we be making ygModel.ygHint instances here? Since
@@ -2018,6 +2024,8 @@ class ygGlyphViewer(QGraphicsScene):
                     new_yg_hint.set_round(dr)
                 if ctrl:
                     self.guess_cv_for_hint(new_yg_hint)
+                if shift:
+                    new_yg_hint.set_round(True)
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num in [1, 3]:
             if pplen >= 2:
@@ -2034,6 +2042,8 @@ class ygGlyphViewer(QGraphicsScene):
                     new_yg_hint.set_round(dr)
                 if ctrl and hint_type_num == 3:
                     self.guess_cv_for_hint(new_yg_hint)
+                if shift:
+                    new_yg_hint.set_round(True)
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num == 2:
             if pplen >= 3:
@@ -2074,6 +2084,8 @@ class ygGlyphViewer(QGraphicsScene):
                 dr = self.get_round_default(new_yg_hint)
                 if dr != None:
                     new_yg_hint.set_round(dr)
+                if shift:
+                    new_yg_hint.set_round(True)
                 self.sig_new_hint.emit(new_yg_hint)
 
     def make_macfunc_from_selection(self, hint_type, **kwargs):
@@ -2500,16 +2512,6 @@ class ygGlyphViewer(QGraphicsScene):
         if hint and (action == reverse_hint):
             self.sig_reverse_hint.emit(hint.yg_hint)
 
-        #else:
-        #    p = self._model_hint(hint).target()
-        #    if type(p) is ygPoint:
-        #        if self.current_axis == "x":
-        #            v = p.font_x
-        #        else:
-        #            v = p.font_y
-        #        a = self.yg_glyph.yg_font.cvt.get_closest_cv_action(cv_anchor_action_list, v)
-
-
         if hint and action in cv_anchor_action_list:
             try:
                 if action.text() == "Guess":
@@ -2667,8 +2669,9 @@ class MyView(QGraphicsView):
                              "White Distance (W)": "whitespace",
                              "Black Distance (B)": "blackspace",
                              "Gray Distance (G)": "grayspace"}
-        with_ctrl = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier
-        self.viewer.make_hint_from_selection(menu_to_hint_type[self.sender().text()], ctrl=with_ctrl)
+        with_ctrl =  (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier
+        with_shift = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier) == Qt.KeyboardModifier.ShiftModifier
+        self.viewer.make_hint_from_selection(menu_to_hint_type[self.sender().text()], ctrl=with_ctrl, shift=with_shift)
 
     @pyqtSlot()
     def make_set(self):

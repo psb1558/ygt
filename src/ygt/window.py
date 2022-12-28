@@ -339,39 +339,51 @@ class MainWindow(QMainWindow):
 
         self.black_action = self.toolbar.addAction("Black Distance (B)")
         self.black_action.setIcon(QIcon(QPixmap(self.icon_path + "black_distance.png")))
-        self.black_action.setShortcuts([QKeySequence(Qt.Key.Key_B), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B)])
+        self.black_action.setShortcuts([QKeySequence(Qt.Key.Key_B),
+                                        QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B),
+                                        QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_B),
+                                        QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_B)])
         self.black_action.setEnabled(False)
 
         self.toolbar.insertSeparator(self.black_action)
 
         self.white_action = self.toolbar.addAction("White Distance (W)")
         self.white_action.setIcon(QIcon(QPixmap(self.icon_path + "white_distance.png")))
-        self.white_action.setShortcuts([QKeySequence(Qt.Key.Key_W), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W)])
+        self.white_action.setShortcuts([QKeySequence(Qt.Key.Key_W),
+                                        QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W),
+                                        QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_W),
+                                        QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_W)])
         self.white_action.setEnabled(False)
 
         self.gray_action = self.toolbar.addAction("Gray Distance (G)")
         self.gray_action.setIcon(QIcon(QPixmap(self.icon_path + "gray_distance.png")))
-        self.gray_action.setShortcuts([QKeySequence(Qt.Key.Key_G), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G)])
+        self.gray_action.setShortcuts([QKeySequence(Qt.Key.Key_G),
+                                       QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G),
+                                       QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_G),
+                                       QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_G)])
         self.gray_action.setEnabled(False)
 
         self.shift_action = self.toolbar.addAction("Shift (S)")
         self.shift_action.setIcon(QIcon(QPixmap(self.icon_path + "shift.png")))
-        self.shift_action.setShortcut(QKeySequence(Qt.Key.Key_S))
+        self.shift_action.setShortcuts([QKeySequence(Qt.Key.Key_S), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_S)])
         self.shift_action.setEnabled(False)
 
         self.align_action = self.toolbar.addAction("Align (L)")
         self.align_action.setIcon(QIcon(QPixmap(self.icon_path + "align.png")))
-        self.align_action.setShortcut(QKeySequence(Qt.Key.Key_L))
+        self.align_action.setShortcuts([QKeySequence(Qt.Key.Key_L), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_L)])
         self.align_action.setEnabled(False)
 
         self.interpolate_action = self.toolbar.addAction("Interpolate (I)")
         self.interpolate_action.setIcon(QIcon(QPixmap(self.icon_path + "interpolate.png")))
-        self.interpolate_action.setShortcut(QKeySequence(Qt.Key.Key_I))
+        self.interpolate_action.setShortcuts([QKeySequence(Qt.Key.Key_I), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_I)])
         self.interpolate_action.setEnabled(False)
 
         self.anchor_action = self.toolbar.addAction("Anchor (A)")
         self.anchor_action.setIcon(QIcon(QPixmap(self.icon_path + "anchor.png")))
-        self.anchor_action.setShortcuts([QKeySequence(Qt.Key.Key_A), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A)])
+        self.anchor_action.setShortcuts([QKeySequence(Qt.Key.Key_A),
+                                         QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A),
+                                         QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_A),
+                                         QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_A)])
         self.anchor_action.setEnabled(False)
 
         self.make_set_action = self.toolbar.addAction("Make Set (K)")
