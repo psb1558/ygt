@@ -1521,6 +1521,20 @@ class ygGlyphViewer(QGraphicsScene):
             cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, selected_hint)
             selected_hint.set_cv(cv_name)
 
+    def guess_cv_for_hint(self, hint):
+        if hint != None:
+            htn = self.get_hint_type_num(hint.hint_type())
+            cv_type = "pos"
+            if htn == 3:
+                cv_type = "dist"
+            cv_list = self.yg_glyph.yg_font.cvt.get_list(self.yg_glyph,
+                                                         type=cv_type,
+                                                         axis=self.current_axis(),
+                                                         cat=self.yg_glyph.get_category(),
+                                                         suffix=self.yg_glyph.get_suffixes())
+            cv_name = self.yg_glyph.yg_font.cvt.get_closest_cv_name(cv_list, hint)
+            hint.set_cv(cv_name)
+
     @pyqtSlot(object)
     def edit_macfunc_params(self, hint):
         ed_dialog = macfuncDialog(hint)
@@ -1984,7 +1998,7 @@ class ygGlyphViewer(QGraphicsScene):
                 return False
         return None
 
-    def make_hint_from_selection(self, hint_type):
+    def make_hint_from_selection(self, hint_type, ctrl=False):
         """ Make a hint based on selection in the editing panel.
 
             Should we be making ygModel.ygHint instances here? Since
@@ -2002,6 +2016,8 @@ class ygGlyphViewer(QGraphicsScene):
                 dr = self.get_round_default(new_yg_hint)
                 if dr != None:
                     new_yg_hint.set_round(dr)
+                if ctrl:
+                    self.guess_cv_for_hint(new_yg_hint)
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num in [1, 3]:
             if pplen >= 2:
@@ -2016,6 +2032,8 @@ class ygGlyphViewer(QGraphicsScene):
                 dr = self.get_round_default(new_yg_hint)
                 if dr != None:
                     new_yg_hint.set_round(dr)
+                if ctrl and hint_type_num == 3:
+                    self.guess_cv_for_hint(new_yg_hint)
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num == 2:
             if pplen >= 3:
@@ -2649,7 +2667,8 @@ class MyView(QGraphicsView):
                              "White Distance (W)": "whitespace",
                              "Black Distance (B)": "blackspace",
                              "Gray Distance (G)": "grayspace"}
-        self.viewer.make_hint_from_selection(menu_to_hint_type[self.sender().text()])
+        with_ctrl = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier
+        self.viewer.make_hint_from_selection(menu_to_hint_type[self.sender().text()], ctrl=with_ctrl)
 
     @pyqtSlot()
     def make_set(self):

@@ -37,6 +37,7 @@ from PyQt6.QtGui import (
     QKeySequence,
     QIcon,
     QPixmap,
+    QAction,
     QActionGroup
 )
 
@@ -235,7 +236,7 @@ class MainWindow(QMainWindow):
         self.pv_smaller_ten_action.setEnabled(False)
 
         self.pv_show_hints_action = self.preview_menu.addAction("Show hinting")
-        self.pv_show_hints_action.setShortcut(QKeySequence("Ctrl+b"))
+        self.pv_show_hints_action.setShortcut(QKeySequence("Ctrl+t"))
         self.pv_show_hints_action.setCheckable(True)
         self.pv_show_hints_action.setChecked(True)
         self.pv_show_hints_action.setEnabled(False)
@@ -338,19 +339,19 @@ class MainWindow(QMainWindow):
 
         self.black_action = self.toolbar.addAction("Black Distance (B)")
         self.black_action.setIcon(QIcon(QPixmap(self.icon_path + "black_distance.png")))
-        self.black_action.setShortcut(QKeySequence(Qt.Key.Key_B))
+        self.black_action.setShortcuts([QKeySequence(Qt.Key.Key_B), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B)])
         self.black_action.setEnabled(False)
 
         self.toolbar.insertSeparator(self.black_action)
 
         self.white_action = self.toolbar.addAction("White Distance (W)")
         self.white_action.setIcon(QIcon(QPixmap(self.icon_path + "white_distance.png")))
-        self.white_action.setShortcut(QKeySequence(Qt.Key.Key_W))
+        self.white_action.setShortcuts([QKeySequence(Qt.Key.Key_W), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W)])
         self.white_action.setEnabled(False)
 
         self.gray_action = self.toolbar.addAction("Gray Distance (G)")
         self.gray_action.setIcon(QIcon(QPixmap(self.icon_path + "gray_distance.png")))
-        self.gray_action.setShortcut(QKeySequence(Qt.Key.Key_G))
+        self.gray_action.setShortcuts([QKeySequence(Qt.Key.Key_G), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G)])
         self.gray_action.setEnabled(False)
 
         self.shift_action = self.toolbar.addAction("Shift (S)")
@@ -370,7 +371,7 @@ class MainWindow(QMainWindow):
 
         self.anchor_action = self.toolbar.addAction("Anchor (A)")
         self.anchor_action.setIcon(QIcon(QPixmap(self.icon_path + "anchor.png")))
-        self.anchor_action.setShortcut(QKeySequence(Qt.Key.Key_A))
+        self.anchor_action.setShortcuts([QKeySequence(Qt.Key.Key_A), QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A)])
         self.anchor_action.setEnabled(False)
 
         self.make_set_action = self.toolbar.addAction("Make Set (K)")
@@ -1145,11 +1146,18 @@ class MainWindow(QMainWindow):
             return 0
         return 2
 
+    def del_from_win_list(self, w):
+        try:
+            self.win_list.remove(w)
+        except ValueError:
+            pass
 
     def closeEvent(self, event):
         if self.yg_font == None:
+            self.del_from_win_list(self)
             event.accept()
         elif self.yg_font.clean():
+            self.del_from_win_list(self)
             self.set_preferences()
             event.accept()
         else:
@@ -1157,19 +1165,39 @@ class MainWindow(QMainWindow):
             if result == 1:
                 event.ignore()
             else:
+                self.del_from_win_list(self)
                 event.accept()
-        
+
+    def all_clean(self):
+        for w in self.win_list:
+            if not w.yg_font.clean():
+                return False
+        return True
 
     def quit(self):
         if self.yg_font == None:
             self.app.quit()
-        elif self.yg_font.clean():
+        elif self.all_clean():
             self.set_preferences()
             self.preferences.save_config()
             self.app.quit()
         else:
-            result = self.save_query()
-            if result != 2:
+            exiting = True
+            del_list = []
+            for w in self.win_list:
+                if not w.yg_font.clean():
+                    r = w.save_query()
+                    if r != 2:
+                        del_list.append(w)
+                    else:
+                        exiting = False
+                        break
+            for d in del_list:
+                try:
+                    self.win_list.remove(d)
+                except ValueError:
+                    pass
+            if exiting:
                 self.preferences.save_config()
                 self.app.quit()
 
@@ -1207,7 +1235,7 @@ class mainWinEventFilter(QObject):
 # if __name__ == "__main__":
 def main():
 
-    print(dir(Qt.Modifier))
+    print(dir(QAction.ActionEvent.Trigger))
 
     app = QApplication([])
     top_window = MainWindow(app)
