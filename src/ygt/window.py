@@ -37,7 +37,6 @@ from PyQt6.QtGui import (
     QKeySequence,
     QIcon,
     QPixmap,
-    QAction,
     QActionGroup
 )
 
@@ -240,6 +239,12 @@ class MainWindow(QMainWindow):
         self.pv_show_hints_action.setCheckable(True)
         self.pv_show_hints_action.setChecked(True)
         self.pv_show_hints_action.setEnabled(False)
+
+        self.pv_show_grid_action = self.preview_menu.addAction("Show grid")
+        self.pv_show_grid_action.setShortcut(QKeySequence("Ctrl+t"))
+        self.pv_show_grid_action.setCheckable(True)
+        self.pv_show_grid_action.setChecked(True)
+        self.pv_show_grid_action.setEnabled(False)
 
         self.instance_menu = None
 
@@ -509,6 +514,7 @@ class MainWindow(QMainWindow):
         self.pv_smaller_ten_action.setEnabled(True)
         self.pv_set_size_action.setEnabled(True)
         self.pv_show_hints_action.setEnabled(True)
+        self.pv_show_grid_action.setEnabled(True)
         if self.instance_menu != None:
             self.prev_instance_action.setEnabled(True)
             self.next_instance_action.setEnabled(True)
@@ -588,6 +594,7 @@ class MainWindow(QMainWindow):
             if self.yg_preview.face != None:
                 self.pv_render_mode_menu.setEnabled(True)
             self.pv_show_hints_action.setChecked(self.yg_preview.hinting_on)
+            self.pv_show_grid_action.setChecked(self.yg_preview.show_grid)
         self.toggle_auto_preview_action.setChecked(self.auto_preview_update)
 
     #
@@ -662,6 +669,7 @@ class MainWindow(QMainWindow):
         self.pv_mode_2_action.triggered.connect(self.yg_preview.render2)
         self.pv_mode_3_action.triggered.connect(self.yg_preview.render3)
         self.pv_show_hints_action.triggered.connect(self.yg_preview.toggle_show_hints)
+        self.pv_show_grid_action.triggered.connect(self.yg_preview.toggle_grid)
 
     def setup_preview_instance_connections(self):
         if self.yg_font.is_variable_font and self.instance_actions != None:
@@ -1247,7 +1255,7 @@ class mainWinEventFilter(QObject):
 # if __name__ == "__main__":
 def main():
 
-    print(dir(QAction.ActionEvent.Trigger))
+    # print(dir(freetype.GlyphMetrics))
 
     app = QApplication([])
     top_window = MainWindow(app)

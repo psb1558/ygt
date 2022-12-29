@@ -1,5 +1,4 @@
 import numpy
-import os
 import freetype
 from freetype import (
     FT_LOAD_RENDER,
@@ -19,7 +18,8 @@ from PyQt6.QtGui import (
 from PyQt6.QtCore import (
     Qt,
     QRect,
-    pyqtSlot
+    pyqtSlot,
+    QLine
 )
 
 class ygPreview(QWidget):
@@ -39,6 +39,9 @@ class ygPreview(QWidget):
         self.horizontal_margin = 50
         self.max_pixel_size = 12
         self.pixel_size = 12
+        self.current_glyph_height = 0
+        self.bitmap_top = 0
+        self.show_grid = True
         self.Z = []
         self.instance_dict = None
         self.instance = None
@@ -77,7 +80,9 @@ class ygPreview(QWidget):
         ft_bitmap = self.face.glyph.bitmap
         ft_width  = self.face.glyph.bitmap.width
         ft_rows   = self.face.glyph.bitmap.rows
+        self.current_glyph_height = ft_rows
         ft_pitch  = self.face.glyph.bitmap.pitch
+        self.bitmap_top = self.face.glyph.bitmap_top
         self.pixel_size = self.max_pixel_size
         char_width = ft_width
         if self.render_mode > 1:
@@ -106,6 +111,12 @@ class ygPreview(QWidget):
     @pyqtSlot()
     def toggle_show_hints(self):
         self.hinting_on = not self.hinting_on
+        self._build_glyph()
+        self.update()
+
+    @pyqtSlot()
+    def toggle_grid(self):
+        self.show_grid = not self.show_grid
         self._build_glyph()
         self.update()
 
@@ -226,6 +237,44 @@ class ygPreview(QWidget):
         if self.char_size > 20:
             self.resize_by(-10)
 
+    def draw_grid(self, painter):
+        if self.pixel_size < 5:
+            return
+        top = self.vertical_margin
+        left= self.horizontal_margin
+        height = self.current_glyph_height
+        if self.bitmap_top > self.current_glyph_height:
+            height = self.bitmap_top
+        height += 1
+        baseline = self.bitmap_top
+        pen = painter.pen()
+        pen.setWidth(1)
+        line_length = (self.face.glyph.bitmap.width * self.pixel_size)
+        if self.render_mode > 1:
+            line_length = int(line_length / 3)
+        for i, r in enumerate(range(height)):
+            if i == baseline:
+                pen.setColor(QColor("red"))
+            else:
+                pen.setColor(QColor(50,50,50,50))
+            painter.setPen(pen)
+            painter.drawLine(QLine(left, top, left + line_length, top))
+            top += self.pixel_size
+        if self.render_mode < 3:
+            grid_width = self.face.glyph.bitmap.width + 1
+            if self.render_mode == 2:
+                grid_width = round(grid_width / 3) + 1
+            y_top = self.vertical_margin
+            y_bot = top - self.pixel_size
+            pen.setColor(QColor(50,50,50,50))
+            painter.setPen(pen)
+            for i, r in enumerate(range(grid_width)):
+                okay_now = True
+                if okay_now:
+                    painter.drawLine(QLine(left, y_top, left, y_bot))
+                left += self.pixel_size
+
+
     def paintEvent_a(self, event):
         painter = QPainter(self)
         brush = QBrush()
@@ -246,6 +295,8 @@ class ygPreview(QWidget):
                 xposition += self.pixel_size
             yposition += self.pixel_size
             xposition = self.horizontal_margin
+        if self.show_grid:
+            self.draw_grid(painter)
         painter.end()
 
     def paintEvent_b(self, event):
@@ -271,6 +322,8 @@ class ygPreview(QWidget):
                 xposition += self.pixel_size
             yposition += self.pixel_size
             xposition = self.horizontal_margin
+        if self.show_grid:
+            self.draw_grid(painter)
         painter.end()
 
     def paintEvent_c(self, event):
@@ -299,6 +352,8 @@ class ygPreview(QWidget):
                     xposition += self.pixel_size/3
             yposition += self.pixel_size
             xposition = self.horizontal_margin
+        if self.show_grid:
+            self.draw_grid(painter)
         painter.end()
 
 class ygSizeLabel(QLabel):

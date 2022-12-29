@@ -1994,6 +1994,9 @@ class ygHint(QObject):
     def set_round(self, b, update=False):
         if b != self.round_is_default():
             self._source["round"] = b
+        else:
+            if "round" in self._source:
+                del self._source["round"]
         if update:
             self.hint_changed_signal.emit(self)
 
