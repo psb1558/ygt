@@ -269,9 +269,7 @@ class ygPreview(QWidget):
             pen.setColor(QColor(50,50,50,50))
             painter.setPen(pen)
             for i, r in enumerate(range(grid_width)):
-                okay_now = True
-                if okay_now:
-                    painter.drawLine(QLine(left, y_top, left, y_bot))
+                painter.drawLine(QLine(left, y_top, left, y_bot))
                 left += self.pixel_size
 
 
