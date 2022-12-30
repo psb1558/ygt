@@ -750,9 +750,11 @@ class MainWindow(QMainWindow):
         if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
             self.preview_menu.addSeparator()
             self.prev_instance_action = self.preview_menu.addAction("Previous instance")
-            self.prev_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Left))
+            # self.prev_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Left))
+            self.prev_instance_action.setShortcut(QKeySequence(Qt.Key.Key_Less))
             self.next_instance_action = self.preview_menu.addAction("Next instance")
-            self.next_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Right))
+            # self.next_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Right))
+            self.next_instance_action.setShortcut(QKeySequence(Qt.Key.Key_Greater))
             self.instance_menu = self.preview_menu.addMenu("&Instances")
             self.instance_actions = []
             instance_names = []
@@ -1255,7 +1257,7 @@ class mainWinEventFilter(QObject):
 # if __name__ == "__main__":
 def main():
 
-    # print(dir(freetype.GlyphMetrics))
+    # print(dir(Qt.Key))
 
     app = QApplication([])
     top_window = MainWindow(app)
