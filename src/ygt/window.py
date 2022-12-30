@@ -944,17 +944,14 @@ class MainWindow(QMainWindow):
                 yaml_source["cvt"] = {}
                 yaml_source["prep"] = {}
                 prep_code = """<code xmlns=\"http://xgridfit.sourceforge.net/Xgridfit2\">
+                    <!-- Turn off hinting above 300 ppem -->
                     <if test="pixels-per-em &gt; 300">
                         <disable-instructions/>
                     </if>
+                    <!-- Dropout control -->
                     <push>4 511</push>
                     <command name="SCANCTRL"/>
                     <command name="SCANTYPE"/>
-                    <!-- Demonstration of how to change control values at certain resolutions. -->
-                    <if test="pixels-per-em &lt; 40">
-                        <setcv name="xheight-overshoot" unit="pixel" value="control-value(xheight)"/>
-                        <setcv name="lc-baseline-undershoot" unit="pixel" value="control-value(baseline)"/>
-                    </if>
                   </code>"""
                 yaml_source["prep"] = {"code": prep_code}
                 yaml_source["functions"] = {}
