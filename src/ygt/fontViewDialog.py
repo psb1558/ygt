@@ -20,6 +20,9 @@ class fontViewDialog(QDialog):
         self.setWindowTitle("Font View")
         self.face = freetype.Face(filename)
         self.face.set_char_size(24*64)
+        self.ascender = round(self.face.size.ascender/64)
+        self.descender = round(self.face.size.descender/64)
+        self.face_height = self.ascender + abs(self.descender)
         self.yg_font = yg_font
         self.glyph_list = glyph_list
         self.top_window = top_window
@@ -84,11 +87,12 @@ class fontViewCell(QWidget):
 
         face = self.dialog.face
         face.load_glyph(self.glyph_index)
-        ft_slot = face.glyph
+        # ft_slot = face.glyph
         ft_bitmap = face.glyph.bitmap
         ft_width  = face.glyph.bitmap.width
         ft_rows   = face.glyph.bitmap.rows
         ft_pitch  = face.glyph.bitmap.pitch
+        top_offset = self.dialog.ascender - self.dialog.face.glyph.bitmap_top
         self.pixel_size = 1
         data = []
         for i in range(ft_rows):
@@ -99,10 +103,11 @@ class fontViewCell(QWidget):
             painter.end()
             return
 
-        yposition = int((36 - ft_rows) / 2)
+        # yposition = int((36 - ft_rows) / 2)
+        yposition = top_offset + int((36 - self.dialog.face_height) / 2)
         xposition = int((36 - ft_width) / 2)
 
-        pixmap_index = 0
+        # pixmap_index = 0
         qp = QPen(QColor('black'))
         qp.setWidth(1)
         painter.setPen(qp)
