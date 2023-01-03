@@ -318,6 +318,10 @@ class ygFont:
         self.glyph_list.sort(key = lambda x : x[1])
         self.glyph_list.sort(key = lambda x : x[0])
 
+        self.unicode_to_name = {}
+        for g in self.glyph_list:
+            self.unicode_to_name[g[0]] = g[1]
+
         # Like name_to_index, but this one looks up the index in a slimmed-down,
         # non-composite-only list. This is for navigating in this program.
         self.glyph_index = {}

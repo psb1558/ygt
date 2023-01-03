@@ -3,7 +3,7 @@ import os
 import copy
 from .ygModel import ygFont, ygGlyph, unicode_cat_names
 from .fontViewDialog import fontViewDialog
-from .ygPreview import ygPreview
+from .ygPreview import ygPreview, ygStringPreview, ygPreviewContainer
 from .ygYAMLEditor import ygYAMLEditor, editorDialog
 from .ygHintEditor import ygGlyphViewer, MyView
 from .ygPreferences import ygPreferences, open_config
@@ -31,7 +31,8 @@ from PyQt6.QtWidgets import (
     QSizePolicy,
     QGraphicsView,
     QLabel,
-    QProgressBar
+    QProgressBar,
+    QVBoxLayout
 )
 from PyQt6.QtGui import (
     QKeySequence,
@@ -129,6 +130,7 @@ class MainWindow(QMainWindow):
         self.spacer = QWidget()
         self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.spacer_action = self.toolbar.addWidget(self.spacer)
+        self.preview_container = QVBoxLayout()
         self.qs = QSplitter(self)
         self.glyph_pane = None
         self.yg_font = None
@@ -521,6 +523,16 @@ class MainWindow(QMainWindow):
             self.instance_menu.setEnabled(True)
 
     @pyqtSlot()
+    def string_preview_text(self):
+        pass
+
+    def update_string_preview(self, s):
+        if s != None:
+            pass
+        else:
+            self.yg_string_preview.update()
+
+    @pyqtSlot()
     def show_font_view(self):
         """ Display the modeless dialog in fontViewDialog.py.
         """
@@ -717,9 +729,11 @@ class MainWindow(QMainWindow):
 
     def add_preview(self, previewer):
         self.yg_preview = previewer
+        self.yg_string_preview = ygStringPreview(self.yg_preview, self)
         self.preview_scroller = QScrollArea()
         self.preview_scroller.setWidget(self.yg_preview)
-        self.qs.addWidget(self.preview_scroller)
+        ygpc = ygPreviewContainer(self.preview_scroller, self.yg_string_preview)
+        self.qs.addWidget(ygpc)
         self.setup_preview_connections()
 
     def add_editor(self, editor):
@@ -964,6 +978,7 @@ class MainWindow(QMainWindow):
 
             self.yg_preview = ygPreview()
             self.add_preview(self.yg_preview)
+            self.yg_preview.set_up_signal(self.update_string_preview)
             self.source_editor = ygYAMLEditor(self.preferences)
             self.add_editor(self.source_editor)
             if yaml_source != None:
