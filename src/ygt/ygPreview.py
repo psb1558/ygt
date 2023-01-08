@@ -509,7 +509,8 @@ class ygStringPreviewPanel(QWidget):
                                  s,
                                  xposition,
                                  yposition,
-                                 4).draw()
+                                 self.yg_preview.render_mode,
+                                 self.yg_preview.hinting_on).draw()
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):
                 if yposition == 66:
@@ -521,14 +522,22 @@ class ygStringPreviewPanel(QWidget):
 
 
 class ygLetter:
-    def __init__(self, painter, face, glyph_index, size, base_x, base_y, load_flags):
+    def __init__(self, painter, face, glyph_index, size, base_x, base_y, render_mode, hinting_on):
+        self.hinting_on = hinting_on
+        self.render_mode = render_mode
         self.painter = painter
         self.size = size
         self.base_x = base_x
         self.base_y = base_y
         face.set_char_size(size * 64)
         self.ascender = round(face.size.ascender/64)
-        face.load_glyph(glyph_index, flags=load_flags)
+        if render_mode > 1:
+            self.flags = FT_LOAD_RENDER | FT_LOAD_TARGET_LCD 
+        else:
+            self.flags = 4
+        if not self.hinting_on:
+            self.flags = self.flags | FT_LOAD_NO_HINTING | FT_LOAD_NO_AUTOHINT
+        face.load_glyph(glyph_index, flags=self.flags)
         self.glyph_slot = face.glyph
         self.bitmap = self.glyph_slot.bitmap
         self.width = self.glyph_slot.bitmap.width
@@ -537,17 +546,24 @@ class ygLetter:
         self.bitmap_top = self.glyph_slot.bitmap_top
         self.bitmap_left = self.glyph_slot.bitmap_left
         self.top_offset = self.ascender - self.bitmap_top
+        # print("advance.x: " + str(self.glyph_slot.advance.x))
+        # print("linearHoriAdvance: " + str(self.glyph_slot.linearHoriAdvance))
         self.advance = round(self.glyph_slot.advance.x / 64)
         self.glyph_top = self.base_y - self.bitmap_top
+        if self.render_mode == 1:
+            self.draw = self.draw_a
+        else:
+            self.draw = self.draw_b
 
-    def draw(self):
+    def draw_a(self):
+        # print("draw_a")
         data = []
         for i in range(self.rows):
             data.extend(self.bitmap.buffer[i*self.pitch:i*self.pitch+self.width])
         Z = numpy.array(data,dtype=numpy.ubyte).reshape(self.rows, self.width)
         qp = QPen(QColor('black'))
         qp.setWidth(1)
-        self.painter.setPen(qp)
+        # self.painter.setPen(qp)
         y = self.glyph_top
         for row in Z:
             x = self.base_x + self.bitmap_left
@@ -558,6 +574,32 @@ class ygLetter:
                 x += 1
             y += 1
         return self.advance
+
+    def draw_b(self):
+        # print("draw_b")
+        data = []
+        for i in range(self.rows):
+            data.extend(self.bitmap.buffer[i*self.pitch:i*self.pitch+self.width])
+        Z = numpy.array(data,dtype=numpy.ubyte).reshape(self.rows, int(self.width/3), 3)
+        y = self.glyph_top
+        qp = QPen(QColor('black'))
+        qp.setWidth(1)
+        white_color = QColor("white")
+        for row in Z:
+            x = self.base_x + self.bitmap_left
+            for col in row:
+                rgb = []
+                for elem in col:
+                    rgb.append(elem)
+                qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
+                if qc != white_color:
+                    qp.setColor(qc)
+                    self.painter.setPen(qp)
+                    self.painter.drawPoint(x, y)
+                x += 1
+            y += 1
+        return self.advance
+
 
 
 class ygStringPreview(QWidget):
