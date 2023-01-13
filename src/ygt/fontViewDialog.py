@@ -1,4 +1,4 @@
-from freetype import *
+from .freetypeFont import freetypeFont, RENDER_GRAYSCALE
 from math import ceil
 from PyQt6.QtCore import (Qt, QRect, pyqtSignal)
 from PyQt6.QtWidgets import (QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea)
@@ -17,15 +17,11 @@ class fontViewDialog(QDialog):
 
     def __init__(self, filename, yg_font, glyph_list, top_window):
         super().__init__()
+        self.top_window = top_window
         self.setWindowTitle("Font View")
-        self.face = Face(filename)
-        self.face.set_char_size(24*64)
-        self.ascender = round(self.face.size.ascender/64)
-        self.descender = round(self.face.size.descender/64)
-        self.face_height = self.ascender + abs(self.descender)
+        self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
         self.yg_font = yg_font
         self.glyph_list = glyph_list
-        self.top_window = top_window
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -71,7 +67,6 @@ class fontViewCell(QWidget):
         self.dialog = dialog
         self.glyph = glyph[1]
         self.setFixedSize(36,36)
-        self.glyph_index = dialog.yg_font.get_glyph_index(self.glyph)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -85,40 +80,11 @@ class fontViewCell(QWidget):
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
 
-        face = self.dialog.face
-        face.load_glyph(self.glyph_index)
-        # ft_slot = face.glyph
-        ft_bitmap = face.glyph.bitmap
-        ft_width  = face.glyph.bitmap.width
-        ft_rows   = face.glyph.bitmap.rows
-        ft_pitch  = face.glyph.bitmap.pitch
-        top_offset = self.dialog.ascender - self.dialog.face.glyph.bitmap_top
-        self.pixel_size = 1
-        data = []
-        for i in range(ft_rows):
-            data.extend(ft_bitmap.buffer[i*ft_pitch:i*ft_pitch+ft_width])
-        Z = numpy.array(data,dtype=numpy.ubyte).reshape(ft_rows, ft_width)
+        self.dialog.face.set_char(self.dialog.face.name_to_index(self.glyph))
+        baseline = round((36 - self.dialog.face.face_height) / 2) + self.dialog.face.ascender
+        xpos = round((36 - self.dialog.face.advance) / 2)
+        self.dialog.face.draw_char(painter, xpos, baseline)
 
-        if len(Z) == 0:
-            painter.end()
-            return
-
-        # yposition = int((36 - ft_rows) / 2)
-        yposition = top_offset + int((36 - self.dialog.face_height) / 2)
-        xposition = int((36 - ft_width) / 2)
-
-        # pixmap_index = 0
-        qp = QPen(QColor('black'))
-        qp.setWidth(1)
-        painter.setPen(qp)
-        for row in Z:
-            px = xposition
-            for col in row:
-                qp.setColor(QColor(0,0,0,col))
-                painter.setPen(qp)
-                painter.drawPoint(px, yposition)
-                px += 1
-            yposition += 1
         painter.end()
 
     def mousePressEvent(self, event):

@@ -53,23 +53,23 @@ class ygPreviewFontMaker(QThread):
 
         source: the source for this font's hints
 
-        glyph_name: the name of the glyph for which we want to make the preview.
+        glyph_list: the names of the glyphs for which we want to make the preview.
     """
 
     sig_preview_ready = pyqtSignal(object)
     sig_preview_error = pyqtSignal()
 
-    def __init__(self, font, source, glyph_name):
+    def __init__(self, font, source, glyph_list):
         super().__init__()
         self.ft_font = font
         self.source = source
-        self.glyph_name = glyph_name
+        self.glyph_list = glyph_list
         self.error = False
 
     def run(self):
         try:
             font = copy.deepcopy(self.ft_font)
-            tmp_font, glyph_index, failed_glyph_list = compile_one(font, self.source, self.glyph_name)
+            tmp_font, glyph_index, failed_glyph_list = compile_one(font, self.source, self.glyph_list)
             self.sig_preview_ready.emit({"font": tmp_font, "gindex": glyph_index, "failed": failed_glyph_list})
         except Exception as e:
             # print(e.args)
@@ -133,10 +133,13 @@ class MainWindow(QMainWindow):
         self.preview_container = QVBoxLayout()
         self.qs = QSplitter(self)
         self.glyph_pane = None
+        self.preview_glyph_name = None
+        self.preview_glyph_name_list = []
         self.yg_font = None
         self.source_editor = None
         self.preview_scroller = None
         self.yg_preview = None
+        self.yg_string_preview = None
         self.app = app
 
         # Stuff that's stored in the preference file
@@ -243,7 +246,6 @@ class MainWindow(QMainWindow):
         self.pv_show_hints_action.setEnabled(False)
 
         self.pv_show_grid_action = self.preview_menu.addAction("Show grid")
-        self.pv_show_grid_action.setShortcut(QKeySequence("Ctrl+t"))
         self.pv_show_grid_action.setCheckable(True)
         self.pv_show_grid_action.setChecked(True)
         self.pv_show_grid_action.setEnabled(False)
@@ -452,8 +454,6 @@ class MainWindow(QMainWindow):
 
         self.setup_edit_connections()
 
-        # self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        # print("focus policy: " + str(self.focusPolicy()))
         self.mwe = mainWinEventFilter(self)
         self.installEventFilter(self.mwe)
 
@@ -478,7 +478,8 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(object)
     def preview_ready(self, args):
-        self.yg_preview.fetch_glyph(args["font"], args["gindex"])
+        glyph_index = args["gindex"][self.preview_glyph_name]
+        self.yg_preview.fetch_glyph(args["font"], glyph_index)
         self.yg_preview.update()
 
     @pyqtSlot()
@@ -504,8 +505,18 @@ class MainWindow(QMainWindow):
         self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
         font = self.yg_font.preview_font
-        glyph = self.glyph_pane.viewer.yg_glyph.gname
-        self.preview_maker = ygPreviewFontMaker(font, source, glyph)
+        self.preview_glyph_name = self.glyph_pane.viewer.yg_glyph.gname
+        self.preview_glyph_name_list = [self.preview_glyph_name]
+        preview_text = self.yg_string_preview.panel._text
+        if preview_text != None and len(preview_text) > 0:
+            l = self.yg_font.string_to_name_list(preview_text)
+            # l is the list with reduncancies removed.
+            self.preview_glyph_name_list.extend(l)
+        #    self.yg_string_preview.set_string_preview()
+        #else:
+        #    self.yg_string_preview.set_size_array()
+        self.yg_string_preview.set_face(self.yg_preview.face)
+        self.preview_maker = ygPreviewFontMaker(font, source, self.preview_glyph_name_list)
         self.preview_maker.finished.connect(self.preview_maker.deleteLater)
         self.preview_maker.sig_preview_ready.connect(self.preview_ready)
         self.preview_maker.sig_preview_error.connect(self.preview_error)
@@ -526,11 +537,15 @@ class MainWindow(QMainWindow):
     def string_preview_text(self):
         pass
 
+    @pyqtSlot(object)
     def update_string_preview(self, s):
-        if s != None:
-            pass
+        preview_text = self.yg_string_preview.panel._text
+        if preview_text != None and len(preview_text) > 0:
+            self.yg_string_preview.set_string_preview()
         else:
-            self.yg_string_preview.update()
+            self.yg_string_preview.set_size_array()
+        self.yg_string_preview.set_face(self.yg_preview.face)
+        self.yg_string_preview.update()
 
     @pyqtSlot()
     def show_font_view(self):
@@ -976,7 +991,7 @@ class MainWindow(QMainWindow):
             # current_font appears not to be used!
             self.preferences["current_font"] = filename
 
-            self.yg_preview = ygPreview()
+            self.yg_preview = ygPreview(self)
             self.add_preview(self.yg_preview)
             self.yg_preview.set_up_signal(self.update_string_preview)
             self.source_editor = ygYAMLEditor(self.preferences)

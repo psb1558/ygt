@@ -301,9 +301,10 @@ class ygFont:
         self.name_to_index = {}
         raw_order_list = self.ft_font.getGlyphOrder()
         for order_index, gn in enumerate(raw_order_list):
-            g = self.ft_font['glyf'][gn]
-            if not g.isComposite():
-                self.name_to_index[gn] = order_index
+            self.name_to_index[gn] = order_index
+            #g = self.ft_font['glyf'][gn]
+            #if not g.isComposite():
+            #    self.name_to_index[gn] = order_index
 
         # Get a list of tuples containing unicodes and glyph names (still
         # omitting composites). Sort first by unicode, then by name. This
@@ -431,6 +432,24 @@ class ygFont:
             return self.glyph_index[gname]
         else:
             return self.name_to_index[gname]
+
+    def get_glyph_name(self, char):
+        try:
+            return self.unicode_to_name[ord(char)]
+        except Exception:
+            return ".notdef"
+
+    def string_to_name_list(self, s):
+        """ Get the names of the glyphs needed to make string s
+            from the current font.
+        """
+        result = []
+        for c in s:
+            gn = self.get_glyph_name(c)
+            if not gn in result:
+                result.append(gn)
+        return result
+
 
     def save_glyph_source(self, source, axis, gname):
         """ Save a y or x block to the in-memory source.
