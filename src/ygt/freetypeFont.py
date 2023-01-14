@@ -1,0 +1,247 @@
+import freetype as ft
+import numpy
+import copy
+from tempfile import SpooledTemporaryFile
+from PyQt6.QtGui import (
+    QColor,
+    QPen
+)
+
+RENDER_GRAYSCALE = 1
+RENDER_LCD_1     = 2
+RENDER_LCD_2     = 3
+
+class freetypeFont:
+    """ Holds a FreeType font. It will also keep the metrics and supply
+        key info, e.g. the ascender, or the top of a bitmap for a specific
+        character. It will keep a record of the current render state, and
+        it will draw a character (given a QPainter).
+
+        params:
+
+        font: must be either a SpooledTemporaryFile or a str (filename).
+
+        size (int): The initial size of the characters (in pixels per em).
+        Default is 30.
+
+        Minimal example, to draw a character in the default size:
+          ftf = freetypeFont("Elstob-Regular.ttf")
+          # The GID of the desired character
+          ftf.set_char(60)
+          ftf.draw_char(painter)
+    """
+    def __init__(self, font, size=30, render_mode=RENDER_LCD_1, hinting_on=True, instance=None):
+        if type(font) is SpooledTemporaryFile:
+            font.seek(0)
+            self.face = ft.Face(font)
+            font.close()
+        else:
+            self.face = ft.Face(font)
+        self.char_size = size * 64
+        self.ascender = 0
+        self.descender = 0
+        self.face_height = 0
+        self.advance = 0
+        self.glyph_slot = None
+        self.bitmap_top = 0
+        self.bitmap_left = 0
+        self.top_offset = 0
+        self.instance = instance
+        self.hinting_on = hinting_on
+        self.bw_colors = self.mk_bw_color_list()
+        self.draw_char = self._draw_char_lcd
+        self.set_render_mode(render_mode)
+        self.face.set_char_size(self.char_size)
+        self._get_font_metrics()
+
+    def mk_bw_color_list(self):
+        l = [0] * 256
+        for count, c in enumerate(l):
+            l[count] = QColor(0,0,0,count)
+        return l
+
+    def set_params(self, glyph=None, render_mode=None, hinting_on=None, size=None, instance=None):
+        if render_mode != None:
+            self.set_render_mode(render_mode)
+        if hinting_on == None:
+            self.set_hinting_on(hinting_on)
+        if instance != None:
+            self.set_instance(instance)
+        if size != None:
+            self.set_size(size)
+        if glyph != None:
+            self.set_char(glyph)
+
+    def set_render_mode(self, render_mode):
+        self.render_mode = render_mode
+        if self.render_mode == RENDER_LCD_1:
+            self.draw_char = self._draw_char_lcd
+        elif self.render_mode == RENDER_LCD_2:
+            self.draw_char = self._draw_char_lcd
+        else:
+            self.draw_char = self._draw_char_grayscale
+
+    def set_hinting_on(self, h):
+        self.hinting_on = h
+
+    def toggle_hinting(self):
+        self.hinting_on = not self.hinting_on
+
+    def set_size(self, i):
+        self.size = i
+        self.face.set_char_size(i * 64)
+        self._get_font_metrics()
+            
+    def _get_font_metrics(self):
+        """ Populate class variables with basic metrics info for this font
+            at the current size.
+        """
+        self.ascender = round(self.face.size.ascender/64)
+        self.descender = round(self.face.size.descender/64)
+        self.face_height = self.ascender + abs(self.descender)
+
+    def set_instance(self, instance):
+        self.instance = instance
+        if self.instance != None:
+            self.face.set_var_named_instance(self.instance)
+
+    def set_char(self, glyph_index):
+        """ Load a glyph (given its index in the font), generating the appropriate
+            kind of bitmap, and populate class variables with glyph-specific metrics
+            info.
+        """
+        flags = 4        # i.e. grayscale
+        if self.render_mode in [RENDER_LCD_1, RENDER_LCD_2]:
+            flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD 
+        if not self.hinting_on:
+            flags = flags | ft.FT_LOAD_NO_HINTING | ft.FT_LOAD_NO_AUTOHINT
+        self.face.load_glyph(glyph_index, flags=flags)
+        self.glyph_slot = self.face.glyph
+        self.advance = round(self.glyph_slot.advance.x / 64)
+        self.bitmap_top = self.glyph_slot.bitmap_top
+        self.bitmap_left = self.glyph_slot.bitmap_left
+        self.top_offset = self.ascender - self.bitmap_top
+
+    def _get_bitmap_metrics(self):
+        # print("runninbg _get_bitmap_metrics")
+        r = {}
+        r["width"] = self.glyph_slot.bitmap.width
+        r["rows"] = self.glyph_slot.bitmap.rows
+        r["pitch"] = self.glyph_slot.bitmap.pitch
+        r["bitmap_top"] = self.glyph_slot.bitmap_top
+        r["bitmap_left"] = self.glyph_slot.bitmap_left
+        r["advance"] = round(self.glyph_slot.advance.x / 64)
+        # r["advance_width"] = round(self.glyph_slot.linearHoriAdvance / 65536)
+        return r
+
+    def mk_array(self, metrics, render_mode):
+        data = []
+        rows = metrics["rows"]
+        width = metrics["width"]
+        pitch = metrics["pitch"]
+        for i in range(rows):
+            data.extend(self.glyph_slot.bitmap.buffer[i * pitch: i * pitch + width])
+        if render_mode == RENDER_GRAYSCALE:
+            return numpy.array(data, dtype=numpy.ubyte).reshape(rows, width)
+        else:
+            return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width/3), 3)
+
+    def _draw_char_lcd(self, painter, x, y):
+        """ Draws a bitmap with subpixel rendering (suitable for an lcd screen)
+
+            Params:
+
+            painter (QPainter): a Qt tool to draw with
+
+            x (int): The left origin of the glyph
+
+            y (int): The baseline
+
+        """
+        gdata = self._get_bitmap_metrics()
+        Z = self.mk_array(gdata, RENDER_LCD_1)
+        ypos = y - gdata["bitmap_top"]
+        qp = QPen(QColor('black'))
+        qp.setWidth(1)
+        white_color = QColor("white")
+        for row in Z:
+            xpos = x + gdata["bitmap_left"]
+            for col in row:
+                rgb = []
+                for elem in col:
+                    rgb.append(elem)
+                qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
+                if qc != white_color:
+                    qp.setColor(qc)
+                    painter.setPen(qp)
+                    painter.drawPoint(xpos, ypos)
+                xpos += 1
+            ypos += 1
+        return gdata["advance"]
+
+    def _draw_char_grayscale(self, painter, x, y):
+        """ Draws a bitmap with grayscale rendering
+
+            Params:
+
+            painter (QPainter): a Qt tool to draw with
+
+            x (int): The left origin of the glyph
+
+            y (int): The baseline
+
+        """
+        gdata = self._get_bitmap_metrics()
+        Z = self.mk_array(gdata, RENDER_GRAYSCALE)
+        ypos = y - gdata["bitmap_top"]
+        qp = QPen(QColor('black'))
+        qp.setWidth(1)
+        for row in Z:
+            xpos = x + gdata["bitmap_left"]
+            for col in row:
+                qp.setColor(self.bw_colors[col])
+                painter.setPen(qp)
+                painter.drawPoint(xpos, ypos)
+                xpos += 1
+            ypos += 1
+        return self.advance
+
+    def name_to_index(self, gname):
+        s = bytes(gname, 'utf8')
+        try:
+            return self.face.get_name_index(s)
+        except Exception as e:
+            print(e)
+            return None
+
+    def char_to_index(self, char):
+        try:
+            return self.face.get_char_index(char)
+            # u = ord(char)
+            # return self.face.get_char_index(u)
+        except Exception:
+            return None
+
+    def string_to_indices(self, s):
+        indices = []
+        for ss in s:
+            try:
+                i = self.char_to_index(ss)
+                if i != None:
+                    indices.append(i)
+            except Exception:
+                pass
+        return indices
+
+    def draw_string(self, painter, s, x, y, x_limit=200, y_increment=67):
+        indices = self.string_to_indices(s)
+        xpos = x
+        ypos = y
+        for i in indices:
+            self.set_char(i)
+            xpos += self.draw_char(painter, xpos, ypos)
+            if xpos >= x_limit:
+                xpos = x
+                ypos += y_increment
+            if ypos > y + y_increment:
+                break
