@@ -99,6 +99,7 @@ class ygFontGenerator(QThread):
             self.sig_font_gen_error.emit()
 
 
+
 class MainWindow(QMainWindow):
     def __init__(self, app, win_list=None, prefs=None, parent=None):
         super(MainWindow,self).__init__(parent=parent)
@@ -441,12 +442,6 @@ class MainWindow(QMainWindow):
 
         self.edit_defaults_action = self.window_menu.addAction("Edit Defaults...")
 
-        # self.open_win_menu = self.window_menu.addMenu(" Files...")
-
-        # self.window_menu.aboutToShow.connect(self.window_menu_about_to_show)
-
-        # ***
-
         self.central_widget = self.qs
         self.setCentralWidget(self.central_widget)
 
@@ -456,6 +451,10 @@ class MainWindow(QMainWindow):
 
         self.mwe = mainWinEventFilter(self)
         self.installEventFilter(self.mwe)
+
+    #
+    # Panning and Editing buttons
+    #
 
     @pyqtSlot(bool)
     def set_mouse_panning(self, panning_on):
@@ -468,6 +467,10 @@ class MainWindow(QMainWindow):
         if self.glyph_pane:
             if editing_on:
                 self.glyph_pane.setDragMode(QGraphicsView.DragMode.NoDrag)
+
+    #
+    # Preview panes
+    #
 
     @pyqtSlot()
     def preview_error(self):
@@ -533,10 +536,6 @@ class MainWindow(QMainWindow):
             self.next_instance_action.setEnabled(True)
             self.instance_menu.setEnabled(True)
 
-    @pyqtSlot()
-    def string_preview_text(self):
-        pass
-
     @pyqtSlot(object)
     def update_string_preview(self, s):
         preview_text = self.yg_string_preview.panel._text
@@ -546,6 +545,10 @@ class MainWindow(QMainWindow):
             self.yg_string_preview.set_size_array()
         self.yg_string_preview.set_face(self.yg_preview.face)
         self.yg_string_preview.update()
+
+    #
+    # Font view window
+    #
 
     @pyqtSlot()
     def show_font_view(self):
@@ -558,6 +561,10 @@ class MainWindow(QMainWindow):
         self.font_viewer.show()
         self.font_viewer.activateWindow()
 
+    #
+    # Indices vs. coordinates outline display
+    #
+
     @pyqtSlot()
     def index_labels(self):
         self.points_as_coords = False
@@ -567,6 +574,10 @@ class MainWindow(QMainWindow):
     def coord_labels(self):
         self.points_as_coords = True
         self.glyph_pane.viewer.set_point_display("coord")
+
+    #
+    # Prep for menu display
+    #
 
     @pyqtSlot()
     def view_menu_about_to_show(self):
@@ -738,6 +749,27 @@ class MainWindow(QMainWindow):
     def disconnect_editor_signals(self):
         self.source_editor.disconnect_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
 
+    def set_up_instance_list(self):
+        if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
+            self.preview_menu.addSeparator()
+            self.prev_instance_action = self.preview_menu.addAction("Previous instance")
+            # self.prev_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Left))
+            self.prev_instance_action.setShortcut(QKeySequence(Qt.Key.Key_Less))
+            self.next_instance_action = self.preview_menu.addAction("Next instance")
+            # self.next_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Right))
+            self.next_instance_action.setShortcut(QKeySequence(Qt.Key.Key_Greater))
+            self.instance_menu = self.preview_menu.addMenu("&Instances")
+            self.instance_actions = []
+            instance_names = []
+            for k in self.yg_font.instances.keys():
+                self.instance_actions.append(self.instance_menu.addAction(k))
+                instance_names.append(k)
+            self.yg_preview.add_instances(self.yg_font.instances)
+            self.yg_preview.instance = self.yg_font.default_instance()
+            self.prev_instance_action.setEnabled(False)
+            self.next_instance_action.setEnabled(False)
+            self.instance_menu.setEnabled(False)
+
     #
     # GUI setup
     #
@@ -774,27 +806,6 @@ class MainWindow(QMainWindow):
             self.horizontal_action.setChecked(True)
         self.vertical_action.setEnabled(False)
         self.horizontal_action.setEnabled(False)
-
-    def set_up_instance_list(self):
-        if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
-            self.preview_menu.addSeparator()
-            self.prev_instance_action = self.preview_menu.addAction("Previous instance")
-            # self.prev_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Left))
-            self.prev_instance_action.setShortcut(QKeySequence(Qt.Key.Key_Less))
-            self.next_instance_action = self.preview_menu.addAction("Next instance")
-            # self.next_instance_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Right))
-            self.next_instance_action.setShortcut(QKeySequence(Qt.Key.Key_Greater))
-            self.instance_menu = self.preview_menu.addMenu("&Instances")
-            self.instance_actions = []
-            instance_names = []
-            for k in self.yg_font.instances.keys():
-                self.instance_actions.append(self.instance_menu.addAction(k))
-                instance_names.append(k)
-            self.yg_preview.add_instances(self.yg_font.instances)
-            self.yg_preview.instance = self.yg_font.default_instance()
-            self.prev_instance_action.setEnabled(False)
-            self.next_instance_action.setEnabled(False)
-            self.instance_menu.setEnabled(False)
 
     #
     # File operations
@@ -1047,7 +1058,6 @@ class MainWindow(QMainWindow):
         self.statusbar_label.setText(status_text)
 
     def set_status_validity_msg(self, t):
-
         self.set_statusbar_text(bool(t))
 
     def show_error_message(self, msg_list):
@@ -1280,8 +1290,6 @@ class mainWinEventFilter(QObject):
 
 
 
-
-# if __name__ == "__main__":
 def main():
 
     # print(dir(Qt.Key))

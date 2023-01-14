@@ -5,13 +5,6 @@ from .freetypeFont import (
     RENDER_LCD_1,
     RENDER_LCD_2
 )
-#import freetype
-#from freetype import (
-#    FT_LOAD_RENDER,
-#    FT_LOAD_TARGET_LCD,
-#    FT_LOAD_NO_HINTING,
-#    FT_LOAD_NO_AUTOHINT
-#)
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
@@ -40,6 +33,7 @@ PREVIEW_HEIGHT        = 700
 STRING_PREVIEW_HEIGHT = 150
 PREVIEW_HORI_MARGIN   = 25
 PREVIEW_VERT_MARGIN   = 50
+
 
 
 class ygPreviewContainer(QWidget):
@@ -96,6 +90,7 @@ class ygPreview(QWidget):
         # The pixels of the glyph start this far down.
         self.top_char_margin = 0
         self.show_grid = True
+        # Two- or three-dimensional array shaped by numpy.
         self.Z = []
         self.instance_dict = None
         self.instance = None
@@ -108,23 +103,31 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.connect(func)
 
     def mk_color_list(self):
+        """ Pre-build a list of grayscale colors--for the big preview.
+
+        """
         l = [0] * 256
         for count, c in enumerate(l):
             l[count] = QColor(101,53,15,count)
         return l
 
     def fetch_glyph(self, font, glyph_index):
-        """ The font has to be a handle to an open temporary file. Once
-            we've gotten the glyph from it, we close it and it disappears.
+        """ Get a temporary FreeType font, then build the specified glyph.
+
+            params:
+
+            font: see freetypeFont for details.
+
+            glyph_index: Index in the font of the glyph to build.
+
         """
         self.glyph_index = glyph_index
         self.face = freetypeFont(font)
-        #font.seek(0)
-        #self.face = freetype.Face(font)
-        #font.close()
         self._build_glyph()
 
     def _build_glyph(self):
+        """ Shape the point array and figure some key values.
+        """
         if self.face == None:
             return False
         self.face.set_render_mode(self.render_mode)
@@ -135,10 +138,10 @@ class ygPreview(QWidget):
         gdata = self.face._get_bitmap_metrics()
 
         ft_bitmap = self.face.glyph_slot.bitmap
-        ft_width  = self.face.glyph_slot.bitmap.width
-        ft_rows   = self.face.glyph_slot.bitmap.rows
+        ft_width  = ft_bitmap.width
+        ft_rows   = ft_bitmap.rows
         self.current_glyph_height = ft_rows
-        ft_pitch  = self.face.glyph_slot.bitmap.pitch
+        # ft_pitch  = ft_bitmap.pitch
         self.bitmap_top = self.face.glyph_slot.bitmap_top
         self.grid_height = self.face.ascender + abs(self.face.descender)
         self.total_height = self.grid_height
@@ -344,6 +347,8 @@ class ygPreview(QWidget):
                 left += self.pixel_size
 
     def paintEvent_a(self, event):
+        """ Paint grayscale glyph.
+        """
         painter = QPainter(self)
         brush = QBrush()
         brush.setColor(QColor('white'))
@@ -372,6 +377,9 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.emit(None)
 
     def paintEvent_b(self, event):
+        """ Paint subpixel rendering with solid pixels.
+
+        """
         painter = QPainter(self)
         brush = QBrush()
         brush.setColor(QColor('white'))
@@ -403,6 +411,9 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.emit(None)
 
     def paintEvent_c(self, event):
+        """ Paint subpixel rendering with rgb pixel trios.
+
+        """
         painter = QPainter(self)
         brush = QBrush()
         brush.setColor(QColor('white'))
@@ -435,6 +446,8 @@ class ygPreview(QWidget):
             self.draw_grid(painter)
         painter.end()
         self.sig_preview_paint_done.emit(None)
+
+
 
 class ygStringPreviewPanel(QWidget):
     def __init__(self, yg_preview, top_window):
