@@ -1,4 +1,3 @@
-import numpy
 from .freetypeFont import (
     freetypeFont,
     RENDER_GRAYSCALE,
@@ -16,8 +15,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import (
     QPainter,
     QBrush,
-    QColor,
-    QPen
+    QColor
 )
 from PyQt6.QtCore import (
     Qt,
@@ -450,53 +448,33 @@ class ygPreview(QWidget):
 
 
 class ygStringPreviewPanel(QWidget):
+
+    sig_go_to_glyph = pyqtSignal(object)
+
     def __init__(self, yg_preview, top_window):
         super().__init__()
         self.yg_preview = yg_preview
-        # self.yg_font = top_window.glyph_pane.viewer.yg_glyph.yg_font
-        # self.yg_font = None
         self.top_window = top_window
         self.face = self.yg_preview.face
-        self.hinting = "on"
         self._text = ""
-        self.char_size = self.yg_preview.char_size
         self.minimum_x = PREVIEW_WIDTH
         self.minimum_y = 200
         self.setMinimumSize(self.minimum_x, self.minimum_y)
-        self.vertical_margin = 25
-        self.horizontal_margin = 50
-        self.current_glyph_height = 0
-        # Corresponds to font's ascender number
-        self.ascender = 0
-        # Corresponds to the font's descender number
-        self.descender = 0
-        # The height of the glyph above the baseline. Should be able to subtract
-        # this from self.ascender to get where on the grid we should start laying
-        # down pixels. If the result of the subtraction is negative, we need to
-        # display grid above the ascender number.
-        self.bitmap_top = 0
-        self.top_char_margin = 0
-        self.Z = []
-        self.instance_dict = None
-        self.instance = None
-        self.render_mode = RENDER_LCD_1
-        self.hinting_on = True
         self.paintEvent = self.paintEvent_a
+        self.rect_list = []
+
+    def set_go_to_signal(self, func):
+        self.sig_go_to_glyph.connect(func)
 
     def set_face(self, face):
         self.face = face
 
     def set_text(self, t):
         self._text = t
-        # if self._text != None and len(self._text) > 0:
-        #    self.sig_have_text.emit(self.string_to_glyph_list(t))
-        #    pass
-        #else:
-        #    # build the default display (a cascade of the current character,
-        #    # borrowing the Face from self.yg_preview, if possible)
-        #    pass
 
     def string_to_glyph_list(self, s):
+        """ Get a list of glyph names needed for string s.
+        """
         yg_font = self.top_window.glyph_pane.viewer.yg_glyph.yg_font
         result = []
         for c in s:
@@ -522,6 +500,7 @@ class ygStringPreviewPanel(QWidget):
             return
         if not self.yg_preview:
             return
+        self.face.reset_rect_list()
         xposition = 25
         yposition = 66
         for s in range(10,100):
@@ -538,6 +517,7 @@ class ygStringPreviewPanel(QWidget):
                     yposition = 133
                 else:
                     break
+        self.rect_list = self.face.rect_list
         painter.end()
 
     def paintEvent_b(self, event):
@@ -548,12 +528,29 @@ class ygStringPreviewPanel(QWidget):
         xposition = 25
         yposition = 66
         self.face = self.yg_preview.face
-        # self.face.set_params(render_mode = self.yg_preview.render_mode,
-        #                     hinting_on = self.yg_preview.hinting_on,
-        #                     size=s,
-        #                     instance=self.yg_preview.instance)
-        self.face.draw_string(painter, self._text, xposition, yposition, x_limit=PREVIEW_WIDTH - 50)
+        self.rect_list = self.face.draw_string(painter,
+                                               self._text,
+                                               xposition,
+                                               yposition,
+                                               x_limit=PREVIEW_WIDTH - 50)
         painter.end()
+
+    def mousePressEvent(self, event):
+        qp = event.position()
+        x = int(qp.x())
+        y = int(qp.y())
+        rr = None
+        for r in self.rect_list:
+            if r.contains(x,y):
+                rr = r
+                break
+        if rr != None:
+            if self.paintEvent == self.paintEvent_a:
+                self.yg_preview.set_size(rr.size)
+            else:
+                self.sig_go_to_glyph.emit(rr.gname.decode())
+
+
 
 
 
@@ -587,6 +584,9 @@ class ygStringPreview(QWidget):
         self._layout.addWidget(self.button_widget)
 
         self.setLayout(self._layout)
+
+    def set_go_to_signal(self, func):
+        self.panel.set_go_to_signal(func)
 
     def set_string_preview(self):
         self.panel.paintEvent = self.panel.paintEvent_b

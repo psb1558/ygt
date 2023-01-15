@@ -6,10 +6,29 @@ from PyQt6.QtGui import (
     QColor,
     QPen
 )
+from PyQt6.QtCore import QRect
+
 
 RENDER_GRAYSCALE = 1
 RENDER_LCD_1     = 2
 RENDER_LCD_2     = 3
+
+
+
+class ygLetterBox:
+    def __init__(self, x1, y1, x2, y2, glyph_index=0, gname=None, size=30):
+        self.x1 = x1
+        self.y1 = y1
+        self.x2 = x2
+        self.y2 = y2
+        self.glyph_index = glyph_index
+        self.size = size
+        self.gname = gname
+
+    def contains(self, x, y):
+        return (x >= self.x1 and x <= self.x2 and y >= self.y1 and y <= self.y2)
+
+
 
 class freetypeFont:
     """ Holds a FreeType font. It will also keep the metrics and supply
@@ -38,11 +57,13 @@ class freetypeFont:
         else:
             self.face = ft.Face(font)
         self.char_size = size * 64
+        self.size = 30
         self.ascender = 0
         self.descender = 0
         self.face_height = 0
         self.advance = 0
         self.glyph_slot = None
+        self.glyph_index = 0
         self.bitmap_top = 0
         self.bitmap_left = 0
         self.top_offset = 0
@@ -53,12 +74,16 @@ class freetypeFont:
         self.set_render_mode(render_mode)
         self.face.set_char_size(self.char_size)
         self._get_font_metrics()
+        self.rect_list = []
 
     def mk_bw_color_list(self):
         l = [0] * 256
         for count, c in enumerate(l):
             l[count] = QColor(0,0,0,count)
         return l
+
+    def reset_rect_list(self):
+        self.rect_list = []
 
     def set_params(self, glyph=None, render_mode=None, hinting_on=None, size=None, instance=None):
         if render_mode != None:
@@ -110,12 +135,13 @@ class freetypeFont:
             kind of bitmap, and populate class variables with glyph-specific metrics
             info.
         """
+        self.glyph_index = glyph_index
         flags = 4        # i.e. grayscale
         if self.render_mode in [RENDER_LCD_1, RENDER_LCD_2]:
             flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD 
         if not self.hinting_on:
             flags = flags | ft.FT_LOAD_NO_HINTING | ft.FT_LOAD_NO_AUTOHINT
-        self.face.load_glyph(glyph_index, flags=flags)
+        self.face.load_glyph(self.glyph_index, flags=flags)
         self.glyph_slot = self.face.glyph
         self.advance = round(self.glyph_slot.advance.x / 64)
         self.bitmap_top = self.glyph_slot.bitmap_top
@@ -123,7 +149,6 @@ class freetypeFont:
         self.top_offset = self.ascender - self.bitmap_top
 
     def _get_bitmap_metrics(self):
-        # print("runninbg _get_bitmap_metrics")
         r = {}
         r["width"] = self.glyph_slot.bitmap.width
         r["rows"] = self.glyph_slot.bitmap.rows
@@ -161,11 +186,13 @@ class freetypeFont:
         gdata = self._get_bitmap_metrics()
         Z = self.mk_array(gdata, RENDER_LCD_1)
         ypos = y - gdata["bitmap_top"]
+        starting_ypos = ypos
+        starting_xpos = xpos = x + gdata["bitmap_left"]
         qp = QPen(QColor('black'))
         qp.setWidth(1)
         white_color = QColor("white")
         for row in Z:
-            xpos = x + gdata["bitmap_left"]
+            xpos = starting_xpos
             for col in row:
                 rgb = []
                 for elem in col:
@@ -177,6 +204,13 @@ class freetypeFont:
                     painter.drawPoint(xpos, ypos)
                 xpos += 1
             ypos += 1
+        self.rect_list.append(ygLetterBox(starting_xpos,
+                              starting_ypos,
+                              starting_xpos + round(gdata["advance"]),
+                              starting_ypos + gdata["rows"],
+                              glyph_index=self.glyph_index,
+                              size=self.size,
+                              gname=self.index_to_name(self.glyph_index)))
         return gdata["advance"]
 
     def _draw_char_grayscale(self, painter, x, y):
@@ -194,16 +228,25 @@ class freetypeFont:
         gdata = self._get_bitmap_metrics()
         Z = self.mk_array(gdata, RENDER_GRAYSCALE)
         ypos = y - gdata["bitmap_top"]
+        starting_ypos = ypos
+        starting_xpos = xpos = x + gdata["bitmap_left"]
         qp = QPen(QColor('black'))
         qp.setWidth(1)
         for row in Z:
-            xpos = x + gdata["bitmap_left"]
+            xpos = starting_xpos
             for col in row:
                 qp.setColor(self.bw_colors[col])
                 painter.setPen(qp)
                 painter.drawPoint(xpos, ypos)
                 xpos += 1
             ypos += 1
+        self.rect_list.append(ygLetterBox(starting_xpos,
+                              starting_ypos,
+                              xpos,
+                              ypos,
+                              glyph_index=self.glyph_index,
+                              size=self.char_size / 64,
+                              gname=self.index_to_name(self.glyph_index)))
         return self.advance
 
     def name_to_index(self, gname):
@@ -213,6 +256,13 @@ class freetypeFont:
         except Exception as e:
             print(e)
             return None
+
+    def index_to_name(self, index):
+        try:
+            return self.face.get_glyph_name(index)
+        except Exception as e:
+            print(e)
+            return ".notdef"
 
     def char_to_index(self, char):
         try:
@@ -234,6 +284,7 @@ class freetypeFont:
         return indices
 
     def draw_string(self, painter, s, x, y, x_limit=200, y_increment=67):
+        self.reset_rect_list()
         indices = self.string_to_indices(s)
         xpos = x
         ypos = y
@@ -245,3 +296,4 @@ class freetypeFont:
                 ypos += y_increment
             if ypos > y + y_increment:
                 break
+        return self.rect_list

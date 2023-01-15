@@ -1,3 +1,4 @@
+# import inspect
 import sys
 import os
 import copy
@@ -777,6 +778,7 @@ class MainWindow(QMainWindow):
     def add_preview(self, previewer):
         self.yg_preview = previewer
         self.yg_string_preview = ygStringPreview(self.yg_preview, self)
+        self.yg_string_preview.set_go_to_signal(self.go_to_glyph)
         self.preview_scroller = QScrollArea()
         self.preview_scroller.setWidget(self.yg_preview)
         ygpc = ygPreviewContainer(self.preview_scroller, self.yg_string_preview)
@@ -1178,6 +1180,10 @@ class MainWindow(QMainWindow):
         if ok and text:
             self.glyph_pane.go_to_glyph(text)
 
+    @pyqtSlot(object)
+    def go_to_glyph(self, g):
+        self.glyph_pane.go_to_glyph(g)
+
     @pyqtSlot()
     def show_ppem_dialog(self):
         text, ok = QInputDialog().getText(self, "Set Points per Em", "Points per em:",
@@ -1292,7 +1298,8 @@ class mainWinEventFilter(QObject):
 
 def main():
 
-    # print(dir(Qt.Key))
+    # print(dir(freetype.Face.get_glyph_name))
+    # print(inspect.getargspec(freetype.Face.get_glyph_name))
 
     app = QApplication([])
     top_window = MainWindow(app)
