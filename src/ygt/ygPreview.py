@@ -509,7 +509,7 @@ class ygStringPreviewPanel(QWidget):
                                  hinting_on = self.yg_preview.hinting_on,
                                  size=s,
                                  instance=self.yg_preview.instance)
-            advance = self.face.draw_char(painter, xposition, yposition)
+            advance = self.face.draw_char(painter, xposition, yposition, spacing_mark=True)
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):
                 if yposition == 66:

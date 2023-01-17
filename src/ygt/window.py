@@ -510,21 +510,24 @@ class MainWindow(QMainWindow):
         source = self.yg_font.source
         font = self.yg_font.preview_font
         self.preview_glyph_name = self.glyph_pane.viewer.yg_glyph.gname
-        self.preview_glyph_name_list = [self.preview_glyph_name]
         preview_text = self.yg_string_preview.panel._text
+        self.preview_glyph_name_list = []
         if preview_text != None and len(preview_text) > 0:
             l = self.yg_font.string_to_name_list(preview_text)
             # l is the list with reduncancies removed.
             self.preview_glyph_name_list.extend(l)
-        #    self.yg_string_preview.set_string_preview()
-        #else:
-        #    self.yg_string_preview.set_size_array()
+        if not self.preview_glyph_name in self.preview_glyph_name_list:
+            self.preview_glyph_name_list.append(self.preview_glyph_name)
+
+        # What function does this line serve?
         self.yg_string_preview.set_face(self.yg_preview.face)
+
         self.preview_maker = ygPreviewFontMaker(font, source, self.preview_glyph_name_list)
         self.preview_maker.finished.connect(self.preview_maker.deleteLater)
         self.preview_maker.sig_preview_ready.connect(self.preview_ready)
         self.preview_maker.sig_preview_error.connect(self.preview_error)
         self.preview_maker.start()
+
         self.pv_bigger_one_action.setEnabled(True)
         self.pv_bigger_ten_action.setEnabled(True)
         self.pv_smaller_one_action.setEnabled(True)

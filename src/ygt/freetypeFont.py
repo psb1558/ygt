@@ -171,7 +171,7 @@ class freetypeFont:
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width/3), 3)
 
-    def _draw_char_lcd(self, painter, x, y):
+    def _draw_char_lcd(self, painter, x, y, spacing_mark=False):
         """ Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
             Params:
@@ -187,7 +187,13 @@ class freetypeFont:
         Z = self.mk_array(gdata, RENDER_LCD_1)
         ypos = y - gdata["bitmap_top"]
         starting_ypos = ypos
-        starting_xpos = xpos = x + gdata["bitmap_left"]
+        is_mark = spacing_mark and gdata["advance"] == 0
+        if is_mark:
+            starting_xpos = xpos = x
+            xpos += 2
+            gdata["advance"] = self.advance = round(gdata["width"] / 3) + 4
+        else:
+            starting_xpos = xpos = x + gdata["bitmap_left"]
         qp = QPen(QColor('black'))
         qp.setWidth(1)
         white_color = QColor("white")
@@ -204,16 +210,21 @@ class freetypeFont:
                     painter.drawPoint(xpos, ypos)
                 xpos += 1
             ypos += 1
+        ending_xpos = starting_xpos + round(gdata["advance"])
+        ending_ypos = starting_ypos + gdata["rows"]
+        if abs(ending_ypos - starting_ypos) <= 5:
+            starting_ypos -= 3
+            ending_ypos += 3
         self.rect_list.append(ygLetterBox(starting_xpos,
                               starting_ypos,
-                              starting_xpos + round(gdata["advance"]),
-                              starting_ypos + gdata["rows"],
+                              ending_xpos,
+                              ending_ypos,
                               glyph_index=self.glyph_index,
                               size=self.size,
                               gname=self.index_to_name(self.glyph_index)))
         return gdata["advance"]
 
-    def _draw_char_grayscale(self, painter, x, y):
+    def _draw_char_grayscale(self, painter, x, y, spacing_mark=False):
         """ Draws a bitmap with grayscale rendering
 
             Params:
@@ -229,7 +240,13 @@ class freetypeFont:
         Z = self.mk_array(gdata, RENDER_GRAYSCALE)
         ypos = y - gdata["bitmap_top"]
         starting_ypos = ypos
-        starting_xpos = xpos = x + gdata["bitmap_left"]
+        is_mark = spacing_mark and gdata["advance"] == 0
+        if is_mark:
+            starting_xpos = xpos = x
+            xpos += 2
+            gdata["advance"] = self.advance = gdata["width"] + 4
+        else:
+            starting_xpos = xpos = x + gdata["bitmap_left"]
         qp = QPen(QColor('black'))
         qp.setWidth(1)
         for row in Z:
@@ -240,14 +257,19 @@ class freetypeFont:
                 painter.drawPoint(xpos, ypos)
                 xpos += 1
             ypos += 1
+        ending_xpos = starting_xpos + round(gdata["advance"])
+        ending_ypos = starting_ypos + gdata["rows"]
+        if abs(ending_ypos - starting_ypos) <= 5:
+            starting_ypos -= 3
+            ending_ypos += 3
         self.rect_list.append(ygLetterBox(starting_xpos,
                               starting_ypos,
-                              xpos,
-                              ypos,
+                              ending_xpos,
+                              ending_ypos,
                               glyph_index=self.glyph_index,
-                              size=self.char_size / 64,
+                              size=self.size,
                               gname=self.index_to_name(self.glyph_index)))
-        return self.advance
+        return gdata["advance"]
 
     def name_to_index(self, gname):
         s = bytes(gname, 'utf8')
