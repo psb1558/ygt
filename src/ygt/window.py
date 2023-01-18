@@ -1242,7 +1242,7 @@ class MainWindow(QMainWindow):
                 return False
         return True
 
-    def quit(self):
+    def quit(self):  # ***
         if self.yg_font == None:
             self.app.quit()
         elif self.all_clean():
@@ -1255,7 +1255,9 @@ class MainWindow(QMainWindow):
             for w in self.win_list:
                 if not w.yg_font.clean():
                     r = w.save_query()
-                    if r != 2:
+                    if r in [0, 2]:
+                        if r == 2:
+                            w.yg_font.set_clean()
                         del_list.append(w)
                     else:
                         exiting = False
