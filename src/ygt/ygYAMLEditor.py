@@ -89,7 +89,7 @@ class ygYAMLEditor(QPlainTextEdit):
         self.sig_status.emit(valid)
 
     def setup_editor(self):
-        tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round)\:'
+        tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round|min)\:'
         twospace =   r'(  |\- )'
         fourspace =  r'(    |  \- )'
         sixspace =   r'(      |    \- )'

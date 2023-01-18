@@ -2000,6 +2000,29 @@ class ygHint(QObject):
         else:
             return self.round_is_default()
 
+    # def has_min_dist(self):
+    #     return "min-dist" in self._source
+
+    def min_dist(self):
+        try:
+            m = self._source["min"]
+            return m
+            # return self._source["min"]
+        except Exception:
+            return self.min_dist_is_default()
+
+    def min_dist_is_default(self):
+        return hint_type_nums[self.hint_type()] == 3
+
+    def toggle_min_dist(self):
+        current_min_dist = not self.min_dist()
+        if current_min_dist == self.min_dist_is_default():
+            if "min" in self._source:
+                del self._source["min"]
+        else:
+            self._source["min"] = current_min_dist
+        self.hint_changed_signal.emit(self)
+
     def toggle_rounding(self):
         """ Ignores rounding types.
         """
@@ -2053,9 +2076,6 @@ class ygHint(QObject):
             else:
                 self._source[cvtype] = new_cv
         self.hint_changed_signal.emit(self)
-
-    def min_dist(self):
-        return True
 
     def cut_in(self):
         return True
