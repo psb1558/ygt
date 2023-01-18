@@ -693,7 +693,9 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             bottom_point_x = bottomPoint.x()
             if self.shape == "y only":
                 flat_adjust = 10
-                if ydistance < 60:
+                if ydistance < 90:
+                    flat_adjust = 2
+                if ydistance < 50:
                     flat_adjust = 0
                 top_point_x -= flat_adjust
                 bottom_point_x -= flat_adjust
@@ -713,10 +715,12 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             right_point_y = rightPoint.y()
             if self.shape == "x only":
                 flat_adjust = 10
-                if xdistance < 60:
+                if xdistance < 90:
+                    flat_adjust = 2
+                if xdistance < 50:
                     flat_adjust = 0
-                left_point_y += 10
-                right_point_y += 10
+                left_point_y += flat_adjust
+                right_point_y += flat_adjust
             handle1 = QPointF(leftPoint.x() + partial_x_distance, left_point_y)
             handle2 = QPointF(rightPoint.x() - partial_x_distance, right_point_y)
             self._center_point = self.find_mid_point(handle1, handle2)
