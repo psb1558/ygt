@@ -74,6 +74,7 @@ class freetypeFont:
         self.set_render_mode(render_mode)
         self.face.set_char_size(self.char_size)
         self._get_font_metrics()
+        self.last_glyph_index = None
         self.rect_list = []
 
     def mk_bw_color_list(self):
@@ -306,16 +307,23 @@ class freetypeFont:
         return indices
 
     def draw_string(self, painter, s, x, y, x_limit=200, y_increment=67):
+        self.last_glyph_index = None
         self.reset_rect_list()
         indices = self.string_to_indices(s)
         xpos = x
         ypos = y
         for i in indices:
             self.set_char(i)
+            if self.last_glyph_index != None:
+                k = self.face.get_kerning(self.last_glyph_index, i, ft.FT_KERNING_DEFAULT)
+                # print("kerning: " + str(k.x))
+                xpos += k.x
             xpos += self.draw_char(painter, xpos, ypos)
             if xpos >= x_limit:
                 xpos = x
                 ypos += y_increment
+                self.last_glyph_index = None
             if ypos > y + y_increment:
                 break
+            self.last_glyph_index = i
         return self.rect_list
