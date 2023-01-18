@@ -621,10 +621,12 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         if xdistance == 0 and ydistance == 0:
             self.shape = "invisible"
             self.arrow_axis = None
-        elif xdistance == 0:
+        # elif box_ratio < 0.05:
+        elif xdistance < 10:
             self.shape = "y only"
             self.arrow_axis = "y"
-        elif ydistance == 0:
+        # elif box_ratio >= 1.0 and box_ratio <= 1.5:
+        elif ydistance < 10:
             self.shape = "x only"
             self.arrow_axis = "x"
         elif box_ratio < 0.3333:
@@ -686,13 +688,17 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         partial_x_distance = xdistance * 0.25
         if self.shape == "invisible":
             path = QPainterPath()
-        elif self.shape in ["y only", "x only"]:
-            path = QPainterPath(self.lineBegin)
-            path.lineTo(self.lineEnd)
-            self._center_point = self.find_mid_point(self.lineBegin, self.lineEnd)
-        elif self.shape in ["tall", "tallish"]:
-            handle1 = QPointF(topPoint.x(), topPoint.y() + partial_y_distance)
-            handle2 = QPointF(bottomPoint.x(), bottomPoint.y() - partial_y_distance)
+        elif self.shape in ["tall", "tallish", "y only"]:
+            top_point_x = topPoint.x()
+            bottom_point_x = bottomPoint.x()
+            if self.shape == "y only":
+                flat_adjust = 10
+                if ydistance < 60:
+                    flat_adjust = 0
+                top_point_x -= flat_adjust
+                bottom_point_x -= flat_adjust
+            handle1 = QPointF(top_point_x, topPoint.y() + partial_y_distance)
+            handle2 = QPointF(bottom_point_x, bottomPoint.y() - partial_y_distance)
             self._center_point = self.find_mid_point(handle1, handle2)
             if self.arrowhead_direction == "up":
                 path = QPainterPath(bottomPoint)
@@ -702,9 +708,17 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
                 path = QPainterPath(topPoint)
                 path.quadTo(handle1, self._center_point)
                 path.quadTo(handle2, bottomPoint)
-        elif self.shape in ["flat", "flattish"]:
-            handle1 = QPointF(leftPoint.x() + partial_x_distance, leftPoint.y())
-            handle2 = QPointF(rightPoint.x() - partial_x_distance, rightPoint.y())
+        elif self.shape in ["flat", "flattish", "x only"]:
+            left_point_y = leftPoint.y()
+            right_point_y = rightPoint.y()
+            if self.shape == "x only":
+                flat_adjust = 10
+                if xdistance < 60:
+                    flat_adjust = 0
+                left_point_y += 10
+                right_point_y += 10
+            handle1 = QPointF(leftPoint.x() + partial_x_distance, left_point_y)
+            handle2 = QPointF(rightPoint.x() - partial_x_distance, right_point_y)
             self._center_point = self.find_mid_point(handle1, handle2)
             if self.arrowhead_direction == "left":
                 path = QPainterPath(rightPoint)
@@ -1272,6 +1286,7 @@ class ygGlyphViewer(QGraphicsScene):
     sig_edit_macfunc_params = pyqtSignal(object)
     sig_change_cv = pyqtSignal(object)
     sig_round_hint = pyqtSignal(object)
+    sig_min_dist = pyqtSignal(object)
     sig_swap_macfunc_points = pyqtSignal(object)
     # sig_macfunc_target = pyqtSignal(object)
     # sig_macfunc_ref = pyqtSignal(object)
@@ -1353,6 +1368,7 @@ class ygGlyphViewer(QGraphicsScene):
         self.sig_toggle_point_numbers.connect(self.toggle_point_numbers)
         self.sig_set_category.connect(self.set_category)
         self.sig_round_hint.connect(self.toggle_hint_rounding)
+        self.sig_min_dist.connect(self.toggle_min_dist)
         self.sig_name_points.connect(self.name_points)
 
         # Get and display the hints.
@@ -1631,6 +1647,10 @@ class ygGlyphViewer(QGraphicsScene):
     @pyqtSlot(object)
     def toggle_hint_rounding(self, hint):
         self._model_hint(hint).toggle_rounding()
+
+    @pyqtSlot(object)
+    def toggle_min_dist(self, hint):
+        self._model_hint(hint).toggle_min_dist()
 
     @pyqtSlot()
     def toggle_point_numbers(self):
@@ -2240,6 +2260,15 @@ class ygGlyphViewer(QGraphicsScene):
             if self._model_hint(hint).rounded():
                 round_hint.setChecked(True)
 
+        min_dist_action = QAction("Minimum distance", checkable=True)
+        cmenu.addAction(min_dist_action)
+        if hint == None or ntype != 3:
+            min_dist_action.setEnabled(False)
+            min_dist_action.setVisible(False)
+        else:
+            mh = self._model_hint(hint)
+            min_dist_action.setChecked(mh.min_dist())
+
         # Set control value for anchor hint (ntype == 0)
 
         set_anchor_cv = cmenu.addMenu("Set control value...")
@@ -2548,6 +2577,8 @@ class ygGlyphViewer(QGraphicsScene):
         #    self.sig_macfunc_ref.emit({"hint": hint, "pt": new_target})
         if hint != None and action == round_hint:
             self.sig_round_hint.emit(hint)
+        if hint != None and action == min_dist_action:
+            self.sig_min_dist.emit(hint)
         if len(selected_points) > 0 and action == name_action:
             self.sig_name_points.emit(selected_points)
 
