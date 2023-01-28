@@ -39,7 +39,8 @@ from PyQt6.QtGui import (
     QKeySequence,
     QIcon,
     QPixmap,
-    QActionGroup
+    QActionGroup,
+    QUndoGroup
 )
 
 class ygPreviewFontMaker(QThread):
@@ -104,7 +105,11 @@ class ygFontGenerator(QThread):
 class MainWindow(QMainWindow):
     def __init__(self, app, win_list=None, prefs=None, parent=None):
         super(MainWindow,self).__init__(parent=parent)
-
+        self.undo_group = QUndoGroup()
+        # The undo registry should keep a record of undo stacks for each
+        # glyph that has been edited, and for the prep, cvar, fpgm, macros,
+        # and defaults.
+        self. undo_registry = {}
         if not win_list:
             self.win_list = [self]
         else:
@@ -150,7 +155,7 @@ class MainWindow(QMainWindow):
         self.zoom_factor = None
         self.show_off_curve_points = None
         self.show_point_numbers = None
-        self.current_axis = None
+        self.current_axis = "y"
         if prefs == None:
             self.get_preferences(ygPreferences())
         else:
@@ -197,6 +202,14 @@ class MainWindow(QMainWindow):
 
         self.edit_menu = self.menu.addMenu("&Edit")
 
+        self.undo_action = self.edit_menu.addAction("Undo")
+        self.undo_action.setShortcut(QKeySequence.StandardKey.Undo)
+        self.undo_action.setEnabled(False)
+
+        self.redo_action = self.edit_menu.addAction("Redo")
+        self.redo_action.setShortcut(QKeySequence.StandardKey.Redo)
+        self.redo_action.setEnabled(False)
+
         self.cut_action = self.edit_menu.addAction("Cut")
         self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
         self.cut_action.setEnabled(False)
@@ -212,6 +225,8 @@ class MainWindow(QMainWindow):
         self.goto_action = self.edit_menu.addAction("Go to...")
         self.goto_action.setShortcut(QKeySequence("Ctrl+G"))
         self.goto_action.setEnabled(False)
+
+        self.edit_menu.aboutToShow.connect(self.edit_menu_about_to_show)
 
         self.preview_menu = self.menu.addMenu("&Preview")
 
@@ -306,22 +321,30 @@ class MainWindow(QMainWindow):
 
         self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
 
+        self.view_menu.setEnabled(False)
+
         axis_action_group = QActionGroup(self.toolbar)
         axis_action_group.setExclusive(True)
 
-        self.view_menu.setEnabled(False)
-
         self.vertical_action = self.toolbar.addAction("Vertical hinting")
-        self.vertical_action.setIcon(QIcon(QPixmap(self.icon_path + "vertical.png")))
+        vertical_icon = QIcon()
+        vertical_icon.addPixmap(QPixmap(self.icon_path + "vertical-on.png"), state=QIcon.State.On)
+        vertical_icon.addPixmap(QPixmap(self.icon_path + "vertical-off.png"), state=QIcon.State.Off)
+        self.vertical_action.setIcon(vertical_icon)
         self.vertical_action.setCheckable(True)
 
         self.horizontal_action = self.toolbar.addAction("Horizontal hinting")
-        self.horizontal_action.setIcon(QIcon(QPixmap(self.icon_path + "horizontal.png")))
+        horizontal_icon = QIcon()
+        horizontal_icon.addPixmap(QPixmap(self.icon_path + "horizontal-on.png"), state=QIcon.State.On)
+        horizontal_icon.addPixmap(QPixmap(self.icon_path + "horizontal-off.png"), state=QIcon.State.Off)
+        self.horizontal_action.setIcon(horizontal_icon)
         self.horizontal_action.setCheckable(True)
 
         axis_action_group.addAction(self.vertical_action)
         axis_action_group.addAction(self.horizontal_action)
-        # self.vertical_action.setChecked(True)
+        self.vertical_action.setChecked(True)
+        self.vertical_action.setEnabled(False)
+        self.horizontal_action.setEnabled(False)
 
         cursor_action_group = QActionGroup(self.toolbar)
         cursor_action_group.setExclusive(True)
@@ -427,11 +450,13 @@ class MainWindow(QMainWindow):
 
         self.window_menu = self.menu.addMenu("&Window")
 
-        self.edit_cvt_action = self.window_menu.addAction("Edit cvt...")
-
         self.edit_names_action = self.window_menu.addAction("Edit point names...")
 
         self.edit_properties_action = self.window_menu.addAction("Edit glyph properties...")
+
+        self.window_menu.addSeparator()
+
+        self.edit_cvt_action = self.window_menu.addAction("Edit cvt...")
 
         self.edit_prep_action = self.window_menu.addAction("Edit prep...")
 
@@ -449,6 +474,8 @@ class MainWindow(QMainWindow):
         self.setup_file_connections()
 
         self.setup_edit_connections()
+
+        self.setup_undo_connections()
 
         self.mwe = mainWinEventFilter(self)
         self.installEventFilter(self.mwe)
@@ -480,6 +507,12 @@ class MainWindow(QMainWindow):
         emsg += "functions or macros and the prep program) and try again."
         self.show_error_message(["Error", "Error", emsg])
 
+    def check_axis_button(self):
+        if self.current_axis == "y":
+            self.vertical_action.setChecked(True)
+        else:
+            self.horizontal_action.setChecked(True)
+
     @pyqtSlot(object)
     def preview_ready(self, args):
         glyph_index = args["gindex"][self.preview_glyph_name]
@@ -499,14 +532,11 @@ class MainWindow(QMainWindow):
     def preview_current_glyph(self):
         try:
             if self.preview_maker != None and self.preview_maker.isRunning():
-                # print("Thread is still running!")
                 return
         except RuntimeError as e:
             # We get this RuntimeError when self.thread has been garbage collected.
             # It means that it's safe to run the rest of this function.
-            # print(e)
             pass
-        self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
         font = self.yg_font.preview_font
         self.preview_glyph_name = self.glyph_pane.viewer.yg_glyph.gname
@@ -639,6 +669,21 @@ class MainWindow(QMainWindow):
             self.pv_show_grid_action.setChecked(self.yg_preview.show_grid)
         self.toggle_auto_preview_action.setChecked(self.auto_preview_update)
 
+    @pyqtSlot()
+    def edit_menu_about_to_show(self):
+        if self.undo_group.canUndo():
+            self.undo_action.setEnabled(True)
+            self.undo_action.setText("Undo " + self.undo_group.undoText())
+        else:
+            self.undo_action.setText("Undo")
+            self.undo_action.setEnabled(False)
+        if self.undo_group.canRedo():
+            self.redo_action.setEnabled(True)
+            self.redo_action.setText("Redo " + self.undo_group.redoText())
+        else:
+            self.redo_action.setText("Redo")
+            self.redo_action.setEnabled(False)
+
     #
     # Connection setup
     #
@@ -670,8 +715,6 @@ class MainWindow(QMainWindow):
             a.triggered.disconnect(self.open_recent)
 
     def setup_hint_connections(self):
-        # The "viewer" connections get destroyed whenever we switch glyphs. Wouldn't it be
-        # better to move the slots to glyph_pane (QGraphicsView)?
         self.black_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.white_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.gray_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
@@ -682,10 +725,8 @@ class MainWindow(QMainWindow):
         self.make_set_action.triggered.connect(self.glyph_pane.make_set)
         self.make_cv_action.triggered.connect(self.glyph_pane.make_control_value)
         self.make_cv_guess_action.triggered.connect(self.glyph_pane.guess_cv)
-        # These two connections don't get destroyed when we switch glyphs.
-        # Make sure they're not created over and over.
-        self.vertical_action.triggered.connect(self.glyph_pane.switch_to_y)
-        self.horizontal_action.triggered.connect(self.glyph_pane.switch_to_x)
+        self.vertical_action.toggled.connect(self.glyph_pane.switch_to_y)
+        self.horizontal_action.toggled.connect(self.glyph_pane.switch_to_x)
 
     def setup_edit_connections(self):
         self.edit_cvt_action.triggered.connect(self.edit_cvt)
@@ -735,6 +776,10 @@ class MainWindow(QMainWindow):
         self.goto_action.triggered.connect(self.show_goto_dialog)
         self.glyph_pane.setup_goto_signal(self.show_goto_dialog)
         self.font_view_action.triggered.connect(self.show_font_view)
+
+    def setup_undo_connections(self):
+        self.undo_action.triggered.connect(self.undo_group.undo)
+        self.redo_action.triggered.connect(self.undo_group.redo)
 
     def setup_cursor_connections(self):
         self.hand_action.toggled.connect(self.set_mouse_panning)
@@ -812,6 +857,9 @@ class MainWindow(QMainWindow):
         self.vertical_action.setEnabled(False)
         self.horizontal_action.setEnabled(False)
 
+    def add_undo_stack(self, s):
+        self.undo_group.addStack(s)
+
     #
     # File operations
     #
@@ -822,22 +870,22 @@ class MainWindow(QMainWindow):
 
     def _save_yaml_file(self):
         if self.yg_font and (not self.yg_font.clean()):
-            self.glyph_pane.viewer.yg_glyph.save_source()
+            glyph = self.glyph_pane.viewer.yg_glyph
+            glyph_backup = copy.deepcopy(glyph.gsource)
+            glyph.cleanup_glyph()
             self.yg_font.source_file.save_source()
+            glyph.gsource = glyph_backup
             self.yg_font.set_clean()
 
     @pyqtSlot()
     def export_font(self):
         try:
             if self.font_generator != None and self.font_generator.isRunning():
-                # print("Thread is still running!")
                 return
         except RuntimeError as e:
             # We get this RuntimeError when self.thread has been garbage collected.
             # It means that it's safe to run the rest of this function.
-            # print(e)
             pass
-        self.glyph_pane.viewer.yg_glyph.save_source()
         source = self.yg_font.source
         new_file_name = self.yg_font.font_files.out_font()
         in_file_name = self.yg_font.font_files.in_font()
@@ -1053,7 +1101,7 @@ class MainWindow(QMainWindow):
     def set_statusbar_text(self, valid):
         status_text =  self.glyph_pane.viewer.yg_glyph.gname
         status_text += " - " + unicode_cat_names[self.glyph_pane.viewer.yg_glyph.get_category()]
-        status_text += " (" + self.glyph_pane.viewer.yg_glyph.current_axis() + ")"
+        status_text += " (" + self.current_axis + ")"
         if valid != None:
             status_text += " ("
             if valid:
@@ -1277,14 +1325,14 @@ class MainWindow(QMainWindow):
         self.zoom_factor = self.preferences.zoom_factor()
         self.show_off_curve_points = self.preferences.show_off_curve_points()
         self.show_point_numbers = self.preferences.show_point_numbers()
-        self.current_axis = self.preferences.current_axis()
+        # self.current_axis = self.preferences.current_axis()
 
     def set_preferences(self):
         self.preferences.set_points_as_coords(self.points_as_coords)
         self.preferences.set_zoom_factor(self.zoom_factor)
         self.preferences.set_show_off_curve_points(self.show_off_curve_points)
         self.preferences.set_show_point_numbers(self.show_point_numbers)
-        self.preferences.set_current_axis(self.current_axis)
+        # self.preferences.set_current_axis(self.current_axis)
 
 
 

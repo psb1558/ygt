@@ -10,6 +10,7 @@ class macfuncDialog(QDialog):
     def __init__(self, _hint):
         super(macfuncDialog,self).__init__(_hint.yg_hint.yg_glyph.preferences.top_window())
         self.yg_hint = _hint.yg_hint
+        self.result_dict = None
         self.setWindowTitle("Parameters for " + str(self.yg_hint.name))
         self.yg_font = self.yg_hint.yg_glyph.yg_font
         self.yg_callable = None
@@ -85,11 +86,13 @@ class macfuncDialog(QDialog):
         self.setLayout(self.layout)
 
     def accept(self):
-        param_list = {"nm": self.yg_hint.macfunc_name()}
+        self.result_dict = {"nm": self.yg_hint.macfunc_name()}
         for w in self.widgets:
             if w.itemAt(1).widget().text() != "None":
-                param_list[w.itemAt(0).widget().text()] = w.itemAt(1).widget().text()
-        self.yg_hint._source[self.yg_hint.hint_type()] = param_list
+                self.result_dict[w.itemAt(0).widget().text()] = w.itemAt(1).widget().text()
+        # So param_list is the answer from this dialog. Don't plug it into the
+        # hint here, but rather in a QUndoCommand.
+        # self.yg_hint._source[self.yg_hint.hint_type()] = param_list
         super().accept()
 
 

@@ -1,3 +1,4 @@
+import sys
 import uuid
 import copy
 from .macfuncDialog import macfuncDialog
@@ -55,7 +56,7 @@ from fontTools.pens.basePen import BasePen
 HINT_ARROW_WIDTH =               3
 HINT_ANCHOR_WIDTH =              3
 HINT_LINK_WIDTH =                1
-HINT_ARROWHEAD_WIDTH =                      2
+HINT_ARROWHEAD_WIDTH =           2
 HINT_COLLECTION_COLOR =          QColor(0,255,0,128)
 HINT_COLLECTION_SELECT_COLOR =   QColor(0,205,0,128)
 HINT_ANCHOR_COLOR =              QColor(255,0,255,128)
@@ -177,6 +178,7 @@ class QtPen(BasePen):
     def __init__(self, glyphSet, path=None):
         BasePen.__init__(self, glyphSet)
         if path is None:
+            # An import dropped here: otherwise this class is the same as in fontTools.
             path = QPainterPath()
         self.path = path
 
@@ -578,7 +580,6 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
 
     The connecting line with arrow represents a hint. There are different kinds,
     which will be represented by different colors.
-    (A (linked) set will be indicated by thinner lines without arrows.)
     """
     def __init__(self, p1, p2, axis, hint_type, id=None, parent=None):
         # "axis" param not used. Get rid of it.
@@ -692,11 +693,9 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             top_point_x = topPoint.x()
             bottom_point_x = bottomPoint.x()
             if self.shape == "y only":
-                flat_adjust = 10
-                if ydistance < 90:
-                    flat_adjust = 2
-                if ydistance < 50:
-                    flat_adjust = 0
+                flat_adjust = round(ydistance * 0.05)
+                if flat_adjust > 15:
+                    flat_adjust = 15
                 top_point_x -= flat_adjust
                 bottom_point_x -= flat_adjust
             handle1 = QPointF(top_point_x, topPoint.y() + partial_y_distance)
@@ -714,11 +713,9 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             left_point_y = leftPoint.y()
             right_point_y = rightPoint.y()
             if self.shape == "x only":
-                flat_adjust = 10
-                if xdistance < 90:
-                    flat_adjust = 2
-                if xdistance < 50:
-                    flat_adjust = 0
+                flat_adjust = round(xdistance * 0.05)
+                if flat_adjust > 15:
+                    flat_adjust = 15
                 left_point_y += flat_adjust
                 right_point_y += flat_adjust
             handle1 = QPointF(leftPoint.x() + partial_x_distance, left_point_y)
@@ -1566,7 +1563,8 @@ class ygGlyphViewer(QGraphicsScene):
         ed_dialog = macfuncDialog(hint)
         r = ed_dialog.exec()
         if r == QDialog.DialogCode.Accepted:
-            hint.yg_hint.hint_has_changed(hint.yg_hint)
+            hint.yg_hint.set_macfunc_other_args(ed_dialog.result_dict)
+            # hint.yg_hint.hint_has_changed(hint.yg_hint)
 
     @pyqtSlot()
     def toggle_off_curve_visibility(self):
@@ -1609,12 +1607,14 @@ class ygGlyphViewer(QGraphicsScene):
         new_list = []
         for p in selected_points:
             new_list.append(self._model_point(p))
-        sorter = ygPointSorter(self.current_axis())
-        sorter.sort(new_list)
-        set = ygSet(new_list)
-        set._main_point = touched_point.yg_point
-        hint_model.set_target(set.id_list())
-        hint._update_touches()
+        # params: ygModel.ygHint, list of ygModel.ygPoint, touched ygModel.ygPoint, callback func.
+        self.yg_glyph.make_set(hint_model, new_list, touched_point.yg_point, hint._update_touches)
+        #sorter = ygPointSorter(self.current_axis())
+        #sorter.sort(new_list)
+        #set = ygSet(new_list)
+        #set._main_point = touched_point.yg_point
+        #hint_model.set_target(set.id_list())
+        #hint._update_touches()
         self.yg_glyph.hint_changed(hint_model)
 
     def make_control_value(self):
@@ -2197,7 +2197,7 @@ class ygGlyphViewer(QGraphicsScene):
             we don't want.
 
             Checklist of features:
-                Toggle visibility of off-curve poihts: Done
+                Toggle visibility of off-curve points: Done
                 Toggle point numbers: Done
                 Round touched point: Done
                 Set control value: Done
@@ -2526,13 +2526,9 @@ class ygGlyphViewer(QGraphicsScene):
         if len(selected_points) > 1:
             msg += "s"
         name_action = cmenu.addAction(msg)
-        #if msg == None:
-        #    name_action.setEnabled(False)
-        #    name_action.setVisible(False)
-        # Disable this while I figure out why it is clobbering other label
-        # display signals.
-        name_action.setEnabled(False)
-        name_action.setVisible(False)
+        if msg == None:
+            name_action.setEnabled(False)
+            name_action.setVisible(False)
 
         action = cmenu.exec(event.screenPos())
 
@@ -2613,6 +2609,7 @@ class MyView(QGraphicsView):
         self.viewer = viewer
         self.yg_font = font
         self.preferences = preferences
+        self.visited_glyphs = {}
 
     @pyqtSlot()
     def make_control_value(self):
@@ -2660,9 +2657,20 @@ class MyView(QGraphicsView):
 
     def switch_to(self, gname):
         self.viewer.reset_scale()
-        self.viewer.yg_glyph.save_source()
-        new_glyph = ygGlyph(self.preferences, self.yg_font, gname)
-        self.viewer = ygGlyphViewer(self.preferences, new_glyph)
+        self.viewer.yg_glyph.cleanup_glyph()
+        # Store the current glyph if it has an undo_stack.
+        if self.viewer.yg_glyph.undo_stack.count() > 0:
+            self.visited_glyphs[self.viewer.yg_glyph.gname] = self.viewer
+        if gname in self.visited_glyphs:
+            self.viewer = self.visited_glyphs[gname]
+            new_glyph = self.viewer.yg_glyph
+            # If we're returning to a glyph, we have to undo the cleanup
+            # we did when we left it.
+            new_glyph.undo_stack.setActive()
+            new_glyph.restore_gsource()
+        else:
+            new_glyph = ygGlyph(self.preferences, self.yg_font, gname)
+            self.viewer = ygGlyphViewer(self.preferences, new_glyph)
         self.preferences.set_current_glyph(self.yg_font.full_name(), gname)
         self.setScene(self.viewer)
         self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
@@ -2677,19 +2685,21 @@ class MyView(QGraphicsView):
         except Exception:
             self.preferences.top_window().show_error_message(["Error", "Error", "Error while looking for a control value."])
 
-    @pyqtSlot()
-    def switch_to_x(self):
+    @pyqtSlot(bool)
+    def switch_to_x(self, checked):
         if self.viewer:
-            self.viewer.axis = "x"
-            self.viewer.yg_glyph.switch_to_axis("x")
-            self.parent().parent().set_window_title()
+            if checked and self.viewer.yg_glyph.current_axis() != "x":
+                self.viewer.axis = "x"
+                self.viewer.yg_glyph.switch_to_axis("x")
+                self.parent().parent().set_window_title()
 
-    @pyqtSlot()
-    def switch_to_y(self):
+    @pyqtSlot(bool)
+    def switch_to_y(self, checked):
         if self.viewer:
-            self.viewer.axis = "x"
-            self.viewer.yg_glyph.switch_to_axis("y")
-            self.parent().parent().set_window_title()
+            if checked and self.viewer.yg_glyph.current_axis() != "y":
+                self.viewer.axis = "y"
+                self.viewer.yg_glyph.switch_to_axis("y")
+                self.parent().parent().set_window_title()
 
     @pyqtSlot()
     def cleanup_yaml_code(self):

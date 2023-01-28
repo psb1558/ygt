@@ -208,7 +208,7 @@ class editorDialog(QDialog):
         else:
             err = True
         if err:
-            print("Couldn't save the Sourceable")
+            # print("Couldn't save the Sourceable")
             self.reject()
             return
         self.done(QDialog.DialogCode.Accepted)
