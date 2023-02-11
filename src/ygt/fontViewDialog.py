@@ -17,9 +17,13 @@ class fontViewDialog(QDialog):
 
     def __init__(self, filename, yg_font, glyph_list, top_window):
         super().__init__()
+        self.valid = True
         self.top_window = top_window
         self.setWindowTitle("Font View")
         self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
+        if not self.face.valid:
+            self.valid = False
+            return
         self.yg_font = yg_font
         self.glyph_list = glyph_list
 

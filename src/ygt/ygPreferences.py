@@ -51,7 +51,7 @@ class ygPreferences(dict):
         return self["recents"]
 
     def add_recent(self, f):
-        if os.path.splitext(f)[1] == ".yaml":
+        if os.path.splitext(f)[1] in [".yaml", ".ufo"]:
             fl = self["recents"]
             if not f in fl:
                 fl = [f] + fl

@@ -211,9 +211,7 @@ cvar_entry_struct = [
         "regions": [
             {
                 "tag":  tag_checker,
-                "bot":  float,
-                "peak": float,
-                "top":  float
+                "val": float
             }
         ],
         "vals": [

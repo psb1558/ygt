@@ -50,12 +50,18 @@ class freetypeFont:
           ftf.draw_char(painter)
     """
     def __init__(self, font, size=30, render_mode=RENDER_LCD_1, hinting_on=True, instance=None):
-        if type(font) is SpooledTemporaryFile:
-            font.seek(0)
-            self.face = ft.Face(font)
-            font.close()
-        else:
-            self.face = ft.Face(font)
+        self.valid = True
+        try:
+            if type(font) is SpooledTemporaryFile:
+                font.seek(0)
+                self.face = ft.Face(font)
+                font.close()
+            else:
+                print(font)
+                self.face = ft.Face(font)
+        except Exception:
+            self.valid = False
+            return
         self.char_size = size * 64
         self.size = 30
         self.ascender = 0

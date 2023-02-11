@@ -2,11 +2,12 @@
 import sys
 import os
 import copy
+import yaml
 from .ygModel import ygFont, ygGlyph, unicode_cat_names
 from .fontViewDialog import fontViewDialog
 from .ygPreview import ygPreview, ygStringPreview, ygPreviewContainer
 from .ygYAMLEditor import ygYAMLEditor, editorDialog
-from .ygHintEditor import ygGlyphViewer, MyView
+from .ygHintEditor import ygGlyphScene, ygGlyphView
 from .ygPreferences import ygPreferences, open_config
 from .ygSchema import (
     is_cvt_valid,
@@ -18,6 +19,7 @@ from .ygSchema import (
     are_names_valid,
     are_properties_valid)
 from xgridfit import compile_one, compile_all
+from fontTools import ufoLib
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
 from PyQt6.QtWidgets import (
     QWidget,
@@ -101,7 +103,6 @@ class ygFontGenerator(QThread):
             self.sig_font_gen_error.emit()
 
 
-
 class MainWindow(QMainWindow):
     def __init__(self, app, win_list=None, prefs=None, parent=None):
         super(MainWindow,self).__init__(parent=parent)
@@ -115,6 +116,7 @@ class MainWindow(QMainWindow):
         else:
             self.win_list = win_list
         self.filename = None
+        self.filename_extension = None
         self.cvt_editor = None
         self.cvar_editor = None
         self.function_editor = None
@@ -592,8 +594,11 @@ class MainWindow(QMainWindow):
             font_name = self.yg_font.font_files.in_font()
             glyph_list = self.yg_font.glyph_list
             self.font_viewer = fontViewDialog(font_name, self.yg_font, glyph_list, self)
-        self.font_viewer.show()
-        self.font_viewer.activateWindow()
+        if self.font_viewer.valid:
+            self.font_viewer.show()
+            self.font_viewer.activateWindow()
+        else:
+            self.show_error_message(["Error", "Error", "Can't create the font view dialog."])
 
     #
     # Indices vs. coordinates outline display
@@ -688,13 +693,13 @@ class MainWindow(QMainWindow):
     # Connection setup
     #
 
-    # In the hierarchy of major objects, MainWindow and MyView are always present, while
-    # ygGlyph and ygGlyphViewer are destroyed whenever we move from one glyph to another.
-    # To avoid complications, avoid connecting signals to ygGlyph and ygGlyphView; otherwise,
+    # In the hierarchy of major objects, MainWindow and ygGlyphView are always present, while
+    # ygGlyph and ygGlyphScene are destroyed whenever we move from one glyph to another.
+    # To avoid complications, avoid connecting signals to ygGlyph and ygGlyphScene; otherwise,
     # we've got to kill one connection and create another whenever we switch from one glyph
     # to another.
     #
-    # These connect menus and toolbar buttons; ygGlyph and ygGlyphViewer have their own
+    # These connect menus and toolbar buttons; ygGlyph and ygGlyphScene have their own
     # signals.
 
     def setup_editor_connections(self):
@@ -702,6 +707,7 @@ class MainWindow(QMainWindow):
 
     def setup_file_connections(self):
         self.save_action.triggered.connect(self.save_yaml_file)
+        self.save_as_action.triggered.connect(self.save_as)
         self.quit_action.triggered.connect(self.quit, type=Qt.ConnectionType.QueuedConnection)
         self.open_action.triggered.connect(self.open_file)
         self.save_font_action.triggered.connect(self.export_font)
@@ -838,7 +844,7 @@ class MainWindow(QMainWindow):
         self.qs.addWidget(self.source_editor)
 
     def add_glyph_pane(self, g):
-        # Must be a MyView(QGraphicsView) object.
+        # Must be a ygGlyphView(QGraphicsView) object.
         self.glyph_pane = g
         self.qs.addWidget(self.glyph_pane)
         self.setup_glyph_pane_connections()
@@ -874,9 +880,28 @@ class MainWindow(QMainWindow):
             glyph_backup = copy.deepcopy(glyph.gsource)
             glyph.cleanup_glyph()
             self.yg_font.source_file.save_source()
-            glyph.gsource = glyph_backup
+            glyph.gsource.clear()
+            for k in glyph_backup.keys():
+                glyph.gsource[k] = glyph_backup[k]
             self.yg_font.set_clean()
 
+    def save_as(self):
+        print("starting save as")
+        self.yg_font.source_file.filename = QFileDialog(parent=self).getSaveFileName()[0]
+        if not self.yg_font.source_file.filename:
+            print("not saving")
+            return
+        print("((" + self.yg_font.source_file.filename + "))")
+        self.preferences.add_recent(self.yg_font.source_file.filename)
+        glyph = self.glyph_pane.viewer.yg_glyph
+        glyph_backup = copy.deepcopy(glyph.gsource)
+        glyph.cleanup_glyph()
+        self.yg_font.source_file.save_source(top_window=self)
+        glyph.gsource.clear()
+        for k in glyph_backup.keys():
+            glyph.gsource[k] = glyph_backup[k]
+        self.yg_font.set_clean()
+    
     @pyqtSlot()
     def export_font(self):
         try:
@@ -957,7 +982,7 @@ class MainWindow(QMainWindow):
     def open_file(self):
         f = QFileDialog.getOpenFileName(self, "Open TrueType font or YAML file",
                                                "",
-                                               "Files (*.ttf *.yaml)")
+                                               "Files (*.ttf *.ufo *.yaml)")
         result = 1
         try:
             os.chdir(os.path.split(f[0])[0])
@@ -979,27 +1004,60 @@ class MainWindow(QMainWindow):
                 w.show()
                 self.win_list.append(w)
 
+    def _initialize_source(self, filename, fn_base, extension):
+        prep_code = """<code xmlns=\"http://xgridfit.sourceforge.net/Xgridfit2\">
+            <!-- Turn off hinting above 300 ppem -->
+            <if test="pixels-per-em &gt; 300">
+                <disable-instructions/>
+            </if>
+            <!-- Dropout control -->
+            <push>4 511</push>
+            <command name="SCANCTRL"/>
+            <command name="SCANTYPE"/>
+            </code>"""
+        yaml_source = {}
+        yaml_source["font"] = {}
+        yaml_source["font"]["in"] = copy.copy(filename)
+        if extension == ".ufo":
+            yaml_source["font"]["out"] = filename
+        else:
+            yaml_source["font"]["out"] = fn_base + "-hinted" + extension
+        yaml_source["defaults"] = {}
+        yaml_source["cvt"] = {}
+        yaml_source["prep"] = {}
+        yaml_source["prep"] = {"code": prep_code}
+        yaml_source["functions"] = {}
+        yaml_source["macros"] = {}
+        yaml_source["glyphs"] = {}
+        return yaml_source
+
     def _open(self, f):
         """ Returns 0 if file opened in this window
             Returns 1 if this window already has a file open
             Returns 2 if the file is already open (the window is activated and brought to top)
 
         """
+        # If this window already has content, return 1 as a signal that a new window
+        # has to be created.
         if self.glyph_pane:
             return 1
+        # A string with the filename if this was one of the recents. A tuple with the
+        # filenameat index [0] if from a dialog.
         if type(f) is str:
             filename = f
         else:
             filename = f[0]
+        # If the file is already open, raise its window.
         for w in self.win_list:
             if filename == w.filename:
                 w.activateWindow()
                 w.raise_()
                 return 2
         self.filename = filename
-        # self.open_action.setEnabled(False)
-        # self.recent_menu.setEnabled(False)
+        print("filename: " + self.filename)
+        # Set up menus and toolbar.
         self.save_action.setEnabled(True)
+        self.save_as_action.setEnabled(True)
         self.save_font_action.setEnabled(True)
         self.goto_action.setEnabled(True)
         self.black_action.setEnabled(True)
@@ -1020,39 +1078,28 @@ class MainWindow(QMainWindow):
         self.code_menu.setEnabled(True)
         self.view_menu.setEnabled(True)
 
-        if filename and len(filename) > 0:
+        # if filename and len(filename) > 0:
+        if filename:
             self.preferences.add_recent(filename)
             split_fn = os.path.splitext(filename)
             fn_base = split_fn[0]
-            extension = split_fn[1]
+            self.filename_extension = extension = split_fn[1]
             yaml_source = None
             if extension == ".ttf":
                 yaml_filename = fn_base + ".yaml"
                 self.preferences.add_recent(yaml_filename)
-                yaml_source = {}
-                yaml_source["font"] = {}
-                yaml_source["font"]["in"] = copy.copy(filename)
-                yaml_source["font"]["out"] = fn_base + "-hinted" + extension
-                yaml_source["defaults"] = {}
-                yaml_source["cvt"] = {}
-                yaml_source["prep"] = {}
-                prep_code = """<code xmlns=\"http://xgridfit.sourceforge.net/Xgridfit2\">
-                    <!-- Turn off hinting above 300 ppem -->
-                    <if test="pixels-per-em &gt; 300">
-                        <disable-instructions/>
-                    </if>
-                    <!-- Dropout control -->
-                    <push>4 511</push>
-                    <command name="SCANCTRL"/>
-                    <command name="SCANTYPE"/>
-                  </code>"""
-                yaml_source["prep"] = {"code": prep_code}
-                yaml_source["functions"] = {}
-                yaml_source["macros"] = {}
-                yaml_source["glyphs"] = {}
                 filename = yaml_filename
-            # Wrong. We should use familyname + stylename to index here.
-            # current_font appears not to be used!
+                yaml_source = self._initialize_source(filename, fn_base, extension)
+            if extension == ".ufo":
+                self.preferences.add_recent(filename)
+                try:
+                    u = ufoLib.UFOReader(filename)
+                    y = u.readData("org.ygthinter/source.yaml")
+                    u.close()
+                    yaml_source = yaml.safe_load(y.decode("utf-8"))
+                except Exception:
+                    yaml_source = self._initialize_source(filename, fn_base, extension)
+
             self.preferences["current_font"] = filename
 
             self.yg_preview = ygPreview(self)
@@ -1060,19 +1107,24 @@ class MainWindow(QMainWindow):
             self.yg_preview.set_up_signal(self.update_string_preview)
             self.source_editor = ygYAMLEditor(self.preferences)
             self.add_editor(self.source_editor)
+
             if yaml_source != None:
                 self.yg_font = ygFont(self, yaml_source, yaml_filename=filename)
             else:
                 self.yg_font = ygFont(self, filename)
+
             if ("current_glyph" in self.preferences and
                 self.yg_font.full_name() in self.preferences["current_glyph"]):
                 initGlyph = self.preferences["current_glyph"][self.yg_font.full_name()]
             else:
                 initGlyph = "A"
             modelGlyph = ygGlyph(self.preferences, self.yg_font, initGlyph)
+            # print("modelGlyph:")
+            # print(modelGlyph.gsource)
+            print("about to run set_yaml_editor")
             modelGlyph.set_yaml_editor(self.source_editor)
-            viewer = ygGlyphViewer(self.preferences, modelGlyph)
-            view = MyView(self.preferences, viewer, self.yg_font)
+            viewer = ygGlyphScene(self.preferences, modelGlyph)
+            view = ygGlyphView(self.preferences, viewer, self.yg_font)
             self.add_glyph_pane(view)
             view.centerOn(view.viewer.center_x, view.sceneRect().center().y())
             # self.set_background()
