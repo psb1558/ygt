@@ -886,12 +886,9 @@ class MainWindow(QMainWindow):
             self.yg_font.set_clean()
 
     def save_as(self):
-        print("starting save as")
         self.yg_font.source_file.filename = QFileDialog(parent=self).getSaveFileName()[0]
         if not self.yg_font.source_file.filename:
-            print("not saving")
             return
-        print("((" + self.yg_font.source_file.filename + "))")
         self.preferences.add_recent(self.yg_font.source_file.filename)
         glyph = self.glyph_pane.viewer.yg_glyph
         glyph_backup = copy.deepcopy(glyph.gsource)
@@ -1054,7 +1051,6 @@ class MainWindow(QMainWindow):
                 w.raise_()
                 return 2
         self.filename = filename
-        print("filename: " + self.filename)
         # Set up menus and toolbar.
         self.save_action.setEnabled(True)
         self.save_as_action.setEnabled(True)
@@ -1119,9 +1115,6 @@ class MainWindow(QMainWindow):
             else:
                 initGlyph = "A"
             modelGlyph = ygGlyph(self.preferences, self.yg_font, initGlyph)
-            # print("modelGlyph:")
-            # print(modelGlyph.gsource)
-            print("about to run set_yaml_editor")
             modelGlyph.set_yaml_editor(self.source_editor)
             viewer = ygGlyphScene(self.preferences, modelGlyph)
             view = ygGlyphView(self.preferences, viewer, self.yg_font)

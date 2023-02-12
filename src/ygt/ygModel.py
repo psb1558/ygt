@@ -399,10 +399,6 @@ class ygFont:
             g = self.ft_font['glyf'][gn]
             if not g.isComposite():
                 cc = g.getCoordinates(self.ft_font['glyf'])
-                # print("getcoordinates at 397:" + str(len(cc)))
-                # print(len(cc[0]))
-                # print(len(cc[1]))
-                # print(len(cc[2]))
                 if len(cc) > 0:
                     # u = self.get_unicode(gn)
                     self.glyph_list.append((self.get_unicode(gn), gn))
@@ -1188,13 +1184,9 @@ class updateSourceCommand(glyphEditCommand):
             self.redo_state.restore()
         else:
             try:
-                # print("gsource before:")
-                # print(self.yg_glyph.gsource)
                 self.yg_glyph.gsource[self.yg_glyph.current_axis()]["points"].clear()
                 for ss in self.s:
                     self.yg_glyph.gsource[self.yg_glyph.current_axis()]["points"].append(ss)
-                # print("gsource after:")
-                # print(self.yg_glyph.gsource)
                 self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block())
                 self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block())
             except Exception as e:
@@ -1486,13 +1478,11 @@ class deleteHintsCommand(glyphEditCommand):
                     try:
                         s["parent"]["points"].remove(s)
                     except Exception as e:
-                        # print("error 1")
                         pass
                 else:
                     try:
                         self.yg_glyph.current_block().remove(s)
                     except Exception as e:
-                        # print("error 2")
                         pass
                 if "points" in s:
                     for hh in s["points"]:
@@ -1500,7 +1490,6 @@ class deleteHintsCommand(glyphEditCommand):
                             if not "rel" in hh or hint_type_nums[hh["rel"]] == 4:
                                 self.add_hint(ygHint(self, hh))
                         except Exception as e:
-                            # print("error 3")
                             pass
             glyphSourceTester(self.yg_glyph, "deleteHintsCommand").test()
             self.redo_state = glyphSaver(self.yg_glyph)
@@ -1637,16 +1626,10 @@ class glyphSourceTester:
         self.caller = caller
 
     def test(self):
-        # print("Running test")
-        # passed = True
         if self.yg_glyph.gsource != self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]:
             print("Not equal in " + self.caller)
-            # passed = False
         if self.yg_glyph.gsource is not self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]:
             print("Not same in " + self.caller)
-            # passed = False
-        # if passed:
-        #    print("Pass")
 
 
 class ygGlyph(QObject):
@@ -2362,7 +2345,6 @@ class ygGlyph(QObject):
         elif type(ptid) is int:
             try:
                 result = self.point_list[ptid]
-                # print("type of: " + str(type(result)))
                 if self._is_pt_obj(result):
                     return result
             except IndexError:
@@ -2435,7 +2417,6 @@ class ygGlyph(QObject):
         self._hints_changed(hint_list)
 
     def _hints_changed(self, hint_list, dirty=True):
-        # print("running _hints_changed")
         if dirty:
             self.set_dirty()
         from .ygHintEditor import ygGlyphScene
