@@ -8,6 +8,7 @@ import yaml
 import re
 from yaml import Dumper
 import copy
+from schema import SchemaError
 from .ygSchema import is_valid, set_error_message, error_message
 
 # From https://stackoverflow.com/questions/8640959/
