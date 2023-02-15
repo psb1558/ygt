@@ -837,6 +837,21 @@ class MainWindow(QMainWindow):
     # GUI setup
     #
 
+    def set_size_and_position(self):
+        # Validity check!
+        if self.preferences.geometry_valid():
+            self.setGeometry(self.preferences["top_window_pos_x"],
+                             self.preferences["top_window_pos_y"],
+                             self.preferences["top_window_width"],
+                             self.preferences["top_window_height"])
+        else:
+            qg = self.screen().availableGeometry()
+            x = qg.x() + 20
+            y = qg.y() + 20
+            width = qg.width() * 0.66
+            height = qg.height() * 0.75
+            self.setGeometry(int(x), int(y), int(width), int(height))
+
     def add_preview(self, previewer: ygPreview) -> None:
         self.yg_preview = previewer
         self.yg_string_preview = ygStringPreview(self.yg_preview, self)
@@ -1371,6 +1386,12 @@ class MainWindow(QMainWindow):
                 self.preferences.save_config()
                 self.app.quit()
 
+    def resizeEvent(self, event):
+        self.preferences.set_top_window_size(event.size().width(), event.size().height())
+
+    def moveEvent(self, event):
+        self.preferences.set_top_window_pos(event.pos().x(), event.pos().y())
+
     def get_preferences(self, prefs: ygPreferences) -> None:
         self.preferences = prefs
         self.points_as_coords = self.preferences.points_as_coords()
@@ -1410,11 +1431,6 @@ def main():
     top_window = MainWindow(app)
     top_window.get_preferences(open_config(top_window))
     app.setWindowIcon(QIcon(top_window.icon_path + "program.png"))
-    qg = top_window.screen().availableGeometry()
-    x = qg.x() + 20
-    y = qg.y() + 20
-    width = qg.width() * 0.66
-    height = qg.height() * 0.75
-    top_window.setGeometry(int(x), int(y), int(width), int(height))
+    top_window.set_size_and_position()
     top_window.show()
     sys.exit(app.exec())

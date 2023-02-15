@@ -22,10 +22,34 @@ class ygPreferences(dict):
         self["zoom_factor"] = 1.0
         self["points_as_coords"] = False
         self["auto_preview"] = True
-        self["top_window_pos_x"]
-        self["top_window_pos_y"]
-        self["top_window_height"]
-        self["top_window_width"]
+        self["top_window_pos_x"] = None
+        self["top_window_pos_y"] = None
+        self["top_window_height"] = None
+        self["top_window_width"] = None
+
+    def set_top_window_size(self, x: int, y: int) -> None:
+        self["top_window_height"] = int(y)
+        self["top_window_width"] = int(x)
+
+    def set_top_window_pos(self, x: int, y: int) -> None:
+        self["top_window_pos_x"] = int(x)
+        self["top_window_pos_y"] = int(y)
+
+    def top_window_size(self, x: int, y: int) -> tuple:
+        return self["top_window_width"], self["top_window_height"]
+
+    def top_window_pos(self, x: int, y: int) -> tuple:
+        return self["top_window_pos_x"], self["top_window_pos_y"]
+
+    def geometry_valid(self) -> bool:
+        try:
+            int(self["top_window_pos_x"])
+            int(self["top_window_pos_y"])
+            int(self["top_window_height"])
+            int(self["top_window_height"])
+            return True
+        except Exception:
+            return False
 
     def current_axis(self):
         return self["current_axis"]
