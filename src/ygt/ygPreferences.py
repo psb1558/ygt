@@ -22,6 +22,10 @@ class ygPreferences(dict):
         self["zoom_factor"] = 1.0
         self["points_as_coords"] = False
         self["auto_preview"] = True
+        self["top_window_pos_x"]
+        self["top_window_pos_y"]
+        self["top_window_height"]
+        self["top_window_width"]
 
     def current_axis(self):
         return self["current_axis"]
