@@ -678,7 +678,7 @@ class ygPoint:
 
     def preferred_label(self,
                         normalized: bool = False,
-                        name_allowed: bool = True) -> str:
+                        name_allowed: bool = True) -> Union[int, str]:
         if name_allowed:
             if len(self.preferred_name) > 0 and len(self.preferred_name) > 0:
                 return self.preferred_name
@@ -690,7 +690,8 @@ class ygPoint:
                 return t
             else:
                 return self.coord
-        return str(self.index)
+        return self.index
+        # return str(self.index)
 
     def __eq__(self, other) -> bool:
         try:
@@ -2063,6 +2064,11 @@ class ygGlyph(QObject):
             call.
 
         """
+        if type(ptid) is str:
+            try:
+                ptid = int(ptid)
+            except Exception:
+                pass
         result = ptid
         if self._is_pt_obj(ptid):
             return result
