@@ -35,12 +35,6 @@ class ygPreferences(dict):
         self["top_window_pos_x"] = int(x)
         self["top_window_pos_y"] = int(y)
 
-    def top_window_size(self, x: int, y: int) -> tuple:
-        return self["top_window_width"], self["top_window_height"]
-
-    def top_window_pos(self, x: int, y: int) -> tuple:
-        return self["top_window_pos_x"], self["top_window_pos_y"]
-
     def geometry_valid(self) -> bool:
         try:
             int(self["top_window_pos_x"])
@@ -186,6 +180,10 @@ def read_win_registry(top_window):
         p["points_as_coords"] = bool(winreg.QueryValueEx(key, "points_as_coords")[0])
         p["auto_preview"] = bool(winreg.QueryValueEx(key, "auto_preview")[0])
         p["recents"] = winreg.QueryValueEx(key, "recents")[0]
+        p["top_window_pos_x"] = int(winreg.QueryValueEx(key, "top_window_pos_x")[0])
+        p["top_window_pos_y"] = int(winreg.QueryValueEx(key, "top_window_pos_y")[0])
+        p["top_window_height"] = int(winreg.QueryValueEx(key, "top_window_height")[0])
+        p["top_window_width"] = int(winreg.QueryValueEx(key, "top_window_width")[0])
     except Exception as e:
         print(e)
     # Also need "current_glyph" (dict) and "recents" (list)
@@ -220,8 +218,14 @@ def write_win_registry(prefs):
                           int(prefs["points_as_coords"]))
         winreg.SetValueEx(yg_key, "auto_preview", 0, winreg.REG_DWORD,
                           int(prefs["auto_preview"]))
-        winreg.SetValueEx(yg_key, "recents", 0, winreg.REG_MULTI_SZ,
-                          prefs["recents"])
+        winreg.SetValueEx(yg_key, "top_window_pos_x", 0, winreg.REG_DWORD,
+                          prefs["top_window_pos_x"])
+        winreg.SetValueEx(yg_key, "top_window_pos_y", 0, winreg.REG_DWORD,
+                          prefs["top_window_pos_y"])
+        winreg.SetValueEx(yg_key, "top_window_height", 0, winreg.REG_DWORD,
+                          prefs["top_window_height"])
+        winreg.SetValueEx(yg_key, "top_window_width", 0, winreg.REG_DWORD,
+                          prefs["top_window_width"])
         if yg_key:
             winreg.CloseKey(yg_key)
         return True
