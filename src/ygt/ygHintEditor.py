@@ -24,7 +24,8 @@ from PyQt6.QtCore import (
     pyqtSignal,
     QLine,
     QLineF,
-    pyqtSlot
+    pyqtSlot,
+    QObject
 )
 from PyQt6.QtGui import (
     QPainterPath,
@@ -140,7 +141,7 @@ SELECTED_HINT_COLOR = {"anchor":      HINT_ANCHOR_SELECT_COLOR,
 #                    Visible representation of a collection of points.
 # ygSetView(QGraphicsItem, ygGraphicalHintComponent):
 #                    Visible representation of a set (of points).
-# ygSelection: Keeps track of selected objects.
+# ygSelection(QObject): Keeps track of selected objects.
 # ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
 #                    Visual representation of a point.
 # SelectionRect(QGraphicsRectItem): For making marquee selections.
@@ -409,7 +410,6 @@ class ygHintView(QGraphicsItem, ygSelectable):
         self._touch_untouch(self._target_list(), False)
 
     def _process_click_on_hint(self, obj, with_shift, is_left):
-        # Not yet doing different things for shift. Need to take care of that.
         if is_left:
             if with_shift:
                 self.yg_glyph_view.yg_selection._toggle_object(self)
@@ -1075,19 +1075,29 @@ class ygSetView(ygPointCollectionView):
         self.hint_type = hint_type
 
 
-class ygSelection:
+class ygSelection(QObject):
     """ A list of selected objects (points, hints, or both).
 
         The class has functions for manipulating the list.
     """
+
+    sig_selection_changed = pyqtSignal(object)
+
     def __init__(self, viewer):
+        super().__init__()
         self.selected_objects = []
         self.viewer = viewer
+
+    def setup_selection_signal(self, f):
+        self.sig_selection_changed.connect(f)
 
     def get_scene(self):
         return self.viewer
 
-    def _cancel_selection(self):
+    def send_signal(self):
+        self.sig_selection_changed.emit(self.viewer.selection_profile())
+
+    def _cancel_selection(self, emit_signal: bool = True):
         for p in self.selected_objects:
             if p._is_yg_selected:
                 p.yg_unselect()
@@ -1095,21 +1105,26 @@ class ygSelection:
                 p.update()
         self.selected_objects = []
         self.viewer.update()
+        if emit_signal:
+            self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _add_object(self, obj, add_to_selection):
         if not add_to_selection:
-            self._cancel_selection()
+            self._cancel_selection(emit_signal=False)
         if obj.isVisible():
             obj.yg_select()
             self.selected_objects.append(obj)
             obj._prepare_graphics()
             obj.update()
+        self.sig_selection_changed.emit(self.viewer.selection_profile())
 
-    def _cancel_object(self, obj):
-        obj.yg_unselect()
-        self.selected_objects.remove(obj)
-        obj._prepare_graphics()
-        obj.update()
+    # This is never called.
+    # def _cancel_object(self, obj):
+    #     obj.yg_unselect()
+    #     self.selected_objects.remove(obj)
+    #     obj._prepare_graphics()
+    #     obj.update()
+    #     self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _toggle_object(self, obj):
         if not obj.isVisible():
@@ -1122,6 +1137,7 @@ class ygSelection:
             self.selected_objects.append(obj)
         obj._prepare_graphics()
         obj.update()
+        self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _add_rect(self, rect, add_to_selection):
         """ This method of selecting doesn't work on hints.
@@ -1134,6 +1150,7 @@ class ygSelection:
                 self.selected_objects.append(ptv)
                 ptv._prepare_graphics()
                 ptv.update()
+        self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _toggle_rect(self, rect):
         """ This method of selecting doesn't work on hints.
@@ -1150,6 +1167,7 @@ class ygSelection:
                     self.selected_objects.remove(ptv)
                 ptv._prepare_graphics()
                 ptv.update()
+        self.sig_selection_changed.emit(self.viewer.selection_profile())
 
 
 
@@ -1343,6 +1361,7 @@ class ygGlyphScene(QGraphicsScene):
         self.selectionRect = None          # The rubber band. None when no selection is underway.
         self.dragBeginPoint = QPointF(0,0) # Set whenever left mouse button is pressed, in case of rubber band selection
         self.yg_selection = ygSelection(self)
+        self.yg_selection.setup_selection_signal(self.preferences.top_window().selection_changed)
 
         # Add the points and manage their visibility.
 
@@ -1750,6 +1769,7 @@ class ygGlyphScene(QGraphicsScene):
             vh = self._make_visible_hint(h)
             self.yg_hint_view_list.append(vh)
         self.update()
+        self.yg_selection.send_signal()
 
     def delete_selected_hints(self):
         oo = self.selected_objects(False)
@@ -1829,6 +1849,24 @@ class ygGlyphScene(QGraphicsScene):
         else:
             qr.setCoords(origin_x, origin_y, origin_x, origin_y)
         return qr
+
+    def selection_profile(self) -> tuple:
+        s = self.selected_objects(True)
+        touched_point_count = untouched_point_count = 0
+        owner_types = []
+        for ss in s:
+            if ss.touched:
+                touched_point_count += 1
+                for h in ss.owners:
+                    owner_types.append(hint_type_nums[h.yg_hint.hint_type()])
+            else:
+                untouched_point_count += 1
+        selected_hint_types = []
+        s = self.selected_objects(False)
+        for ss in s:
+            if type(ss) is ygHintView:
+                selected_hint_types.append(hint_type_nums[ss.yg_hint.hint_type()])
+        return touched_point_count, untouched_point_count, owner_types, selected_hint_types
 
     def selected_objects(self, points_only):
         """ Get a list of objects (points and hints) selected by the user.
@@ -1941,6 +1979,7 @@ class ygGlyphScene(QGraphicsScene):
             if hint.ref() == None:
                 print("Warning: ref is None (target is " + str(target.index) + ")")
             ref = self.resolve_point_identifier(hint.ref())
+            print("ref.id: " + str(type(ref)) + " / " + str(ref.id))
             gref = self.yg_point_view_index[ref.id]
             ha = ygHintStem(gref, gtarget, 0, hint_type, parent=self)
             hb = ygHintButton(self, ha.center_point(), hint)
