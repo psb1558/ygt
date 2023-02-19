@@ -113,7 +113,6 @@ unicode_cat_names = {"Lu":   "Letter, uppercase",
 # ygHintSorter: Sorts hints into their proper order.
 # ygPointSorter: Utility for sorting points on the x or y axis.
 
-Filename = Union[str, os.PathLike[str]]
 
 class SourceFile:
     """ The yaml source read from and written to by this program.
@@ -128,23 +127,38 @@ class SourceFile:
             y_doc. If yaml_source is a dict, it is the skeleton yaml source
             generated for a new program. Otherwise, yaml_source will be a
             filename.
+
+            yaml_source can be either a dict (containing newly initialized ygt code) or
+            the name of either a .yaml file or a ufo.
         """
-        self.source_type = "yaml"
+        # Determine the filename
+        if type(yaml_source) is str:
+            self.filename = yaml_source
+        elif len(yaml_filename) > 0:
+            self.filename = yaml_filename
+        else:
+            self.filename = "NewFile.yaml"
+
+        # Determine the type of file: yaml or ufo (with yaml inside)
+        suff = pathlib.Path(self.filename).suffix
+        if suff == ".yaml":
+            self.source_type = "yaml"
+        elif suff == ".ufo":
+            self.source_type = "ufo"
+        else:
+            # This shouldn't happen.
+            raise Exception("Bad filename " + str(self.filename))
+
+        # Read the yaml source. Either the skeleton created earlier (but shouldn't
+        # it be here?), a yaml file, or a yaml file in a ufo.
         if type(yaml_source) is dict:
             self.y_doc = copy.deepcopy(yaml_source)
-            if yaml_filename:
-                self.filename = yaml_filename
-            else:
-                self.filename = "NewFile.yaml"
         else:
-            self.filename = str(yaml_source)
-            suff = pathlib.Path(self.filename).suffix
-            if suff == ".yaml":
+            if self.source_type == "yaml":
                 y_stream = open(self.filename, 'r')
                 self.y_doc = yaml.safe_load(y_stream)
                 y_stream.close()
-            elif suff == ".ufo":
-                self.source_type = "ufo"
+            else:
                 ufo = ufoLib.UFOReader(self.filename)
                 if ufo.formatVersionTuple[0] == 3:
                     doc = ufo.readData("org.ygthinting/source.yaml")
@@ -154,13 +168,12 @@ class SourceFile:
         return self.y_doc
 
     def save_source(self, top_window: Any = None) -> None:
-        suff = pathlib.Path(self.filename).suffix
         yy = yaml.dump(self.y_doc, sort_keys=False, width=float("inf"), Dumper=Dumper)
-        if suff == ".yaml":
+        if self.source_type == "yaml":
             f = open(self.filename, "w")
             f.write(yy)
             f.close()
-        elif suff == ".ufo":
+        else:
             if os.path.exists(self.filename):
                 f = ufoLib.UFOWriter(self.filename)
                 f.writeData("org.ygthinter/source.yaml", yy.encode())
@@ -169,7 +182,6 @@ class SourceFile:
                 if top_window:
                     msg = "To save to a UFO, you must select an existing UFO."
                     top_window.show_error_message(["Error", "Error", msg])
-
 
 
 
@@ -204,19 +216,22 @@ class ygFont:
         Call this directly to open a font for the first time. After that,
         you only have to open the yaml file.
     """
-    def __init__(self, main_window: Any, source_file: Union[str, dict], yaml_filename: str = "") -> None:
+    def __init__(self, main_window: Any, source_file: Union[str, dict], ygt_filename: str = "") -> None:
         self.main_window = main_window
         #
         # Open the font
         #
-        self.source_file = SourceFile(source_file, yaml_filename=yaml_filename)
+        self.source_file = SourceFile(source_file, yaml_filename=ygt_filename)
+
+        # Fix directory (change to directory where source file is located)
         d = None
         if isinstance(source_file, str) and source_file:
             d = os.path.dirname(source_file)
-        elif yaml_filename:
-            d = os.path.dirname(yaml_filename)
+        elif ygt_filename:
+            d = os.path.dirname(ygt_filename)
         if d and os.path.isdir(d) and d != os.getcwd():
             os.chdir(d)
+
         self.source      = self.source_file.get_source()
         self.font_files  = FontFiles(self.source)
         fontfile = self.font_files.in_font()
@@ -230,7 +245,7 @@ class ygFont:
         if extension == ".ttf":
             try:
                 self.ft_font = ttLib.TTFont(fontfile)
-            except FileNotFoundError:
+            except FileNotFoundError as ferr:
                 ft_open_error = True
         elif extension == ".ufo":
             try:
@@ -673,6 +688,7 @@ class ygPoint:
         self.font_y = y
         self.coord = "{" + str(self.font_x - _xoffset) + ";" + str(self.font_y - _yoffset) + "}"
         self.on_curve = on_curve
+        self.end_of_contour = False
         self.label_pref = label_pref
         self.preferred_name = ""
 
@@ -1871,8 +1887,10 @@ class ygGlyph(QObject):
                          self.yoffset(),
                          is_on_curve,
                          label_pref=lpref)
+            if point_index in gl[1]:
+                pt.end_of_contour = True
             pt_list.append(pt)
-        return(pt_list)
+        return pt_list
 
     #
     # Navigation

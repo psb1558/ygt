@@ -89,6 +89,9 @@ class ygPreviewFontMaker(QThread):
 
 
 class ygFontGenerator(QThread):
+    """ For generating whole fonts.
+
+    """
 
     sig_font_gen_done  = pyqtSignal(object)
     sig_font_gen_error = pyqtSignal()
@@ -838,7 +841,6 @@ class MainWindow(QMainWindow):
     #
 
     def set_size_and_position(self):
-        # Validity check!
         if self.preferences.geometry_valid():
             self.setGeometry(self.preferences["top_window_pos_x"],
                              self.preferences["top_window_pos_y"],
@@ -1055,6 +1057,10 @@ class MainWindow(QMainWindow):
             Returns 1 if this window already has a file open
             Returns 2 if the file is already open (the window is activated and brought to top)
 
+            f param can be:
+            - the name of a .yaml file
+            - the name of a .ttf font
+            - the name of a .ufo font (treated differently if it contains ygt source)
         """
         # If this window already has content, return 1 as a signal that a new window
         # has to be created.
@@ -1072,22 +1078,24 @@ class MainWindow(QMainWindow):
                 w.activateWindow()
                 w.raise_()
                 return 2
+        # If still here, we've got the name of a .ttf, .ufo, or .yaml.
         self.filename = filename
+
         # Set up menus and toolbar.
         self.save_action.setEnabled(True)
         self.save_as_action.setEnabled(True)
         self.save_font_action.setEnabled(True)
         self.goto_action.setEnabled(True)
-        self.black_action.setEnabled(True)
-        self.white_action.setEnabled(True)
-        self.gray_action.setEnabled(True)
-        self.shift_action.setEnabled(True)
-        self.align_action.setEnabled(True)
-        self.interpolate_action.setEnabled(True)
-        self.anchor_action.setEnabled(True)
-        self.make_cv_action.setEnabled(True)
-        self.make_cv_guess_action.setEnabled(True)
-        self.make_set_action.setEnabled(True)
+        # self.black_action.setEnabled(True)
+        # self.white_action.setEnabled(True)
+        # self.gray_action.setEnabled(True)
+        # self.shift_action.setEnabled(True)
+        # self.align_action.setEnabled(True)
+        # self.interpolate_action.setEnabled(True)
+        # self.anchor_action.setEnabled(True)
+        # self.make_cv_action.setEnabled(True)
+        # self.make_cv_guess_action.setEnabled(True)
+        # self.make_set_action.setEnabled(True)
         self.vertical_action.setEnabled(True)
         self.horizontal_action.setEnabled(True)
         self.cursor_action.setEnabled(True)
@@ -1103,13 +1111,16 @@ class MainWindow(QMainWindow):
             fn_base = split_fn[0]
             self.filename_extension = extension = split_fn[1]
             yaml_source = {}
+            # If file is .ttf, create a skeleton yaml_source and a ygt_filename.
+            # If file is .ufo, read yaml source if possible, or if not create skeleton.
             if extension == ".ttf":
-                yaml_filename = fn_base + ".yaml"
-                self.preferences.add_recent(yaml_filename)
-                filename = yaml_filename
+                ygt_filename = fn_base + ".yaml"
+                self.preferences.add_recent(ygt_filename)
+                # filename = yaml_filename
                 yaml_source = self._initialize_source(filename, fn_base, extension)
             if extension == ".ufo":
                 self.preferences.add_recent(filename)
+                ygt_filename = filename
                 try:
                     u = ufoLib.UFOReader(filename)
                     y = u.readData("org.ygthinter/source.yaml")
@@ -1126,8 +1137,11 @@ class MainWindow(QMainWindow):
             self.source_editor = ygYAMLEditor(self.preferences)
             self.add_editor(self.source_editor)
 
+            # If opening ttf, we have both yaml_source and ygt_filename
+            # If opening ufo, ygt_filename is the same as the font name
+            # If opening yaml, we just pass the filename (since font is identified in the file)
             if len(yaml_source) > 0:
-                self.yg_font = ygFont(self, yaml_source, yaml_filename=filename)
+                self.yg_font = ygFont(self, yaml_source, ygt_filename=ygt_filename)
             else:
                 self.yg_font = ygFont(self, filename)
 
@@ -1153,6 +1167,69 @@ class MainWindow(QMainWindow):
     #
     # GUI management
     #
+
+    def selection_changed(self, selection_profile):
+        total_selected = selection_profile[0] + selection_profile[1]
+        # fix up make cv button
+        if total_selected >= 1 and total_selected <= 2:
+            self.make_cv_action.setEnabled(True)
+        else:
+            self.make_cv_action.setEnabled(False)
+        if 0 in selection_profile[3] or 3 in selection_profile[3]:
+            self.make_cv_guess_action.setEnabled(True)
+        else:
+            self.make_cv_guess_action.setEnabled(False)
+        if selection_profile[0] == 0 and selection_profile[1] == 1:
+            # enable anchor button
+            self.anchor_action.setEnabled(True)
+            self.black_action.setEnabled(False)
+            self.white_action.setEnabled(False)
+            self.gray_action.setEnabled(False)
+            self.shift_action.setEnabled(False)
+            self.align_action.setEnabled(False)
+            self.interpolate_action.setEnabled(False)
+            self.make_set_action.setEnabled(False)
+        elif selection_profile[0] == 1 and selection_profile[1] >= 1:
+            # Enable make set button
+            if  1 in selection_profile[2] or 2 in selection_profile[2]:
+                self.make_set_action.setEnabled(True)
+            else:
+                self.make_set_action.setEnabled(False)
+            if selection_profile[1] == 1:
+                # Enable link buttons
+                self.black_action.setEnabled(True)
+                self.white_action.setEnabled(True)
+                self.gray_action.setEnabled(True)
+                self.shift_action.setEnabled(True)
+                self.align_action.setEnabled(True)
+            else:
+                self.black_action.setEnabled(False)
+                self.white_action.setEnabled(False)
+                self.gray_action.setEnabled(False)
+                self.shift_action.setEnabled(False)
+                self.align_action.setEnabled(False)
+            self.interpolate_action.setEnabled(False)
+            self.anchor_action.setEnabled(False)
+        elif selection_profile[0] == 2 and selection_profile[1] == 1:
+            # Enable interpolation button
+            self.interpolate_action.setEnabled(True)
+            self.black_action.setEnabled(False)
+            self.white_action.setEnabled(False)
+            self.gray_action.setEnabled(False)
+            self.shift_action.setEnabled(False)
+            self.align_action.setEnabled(False)
+            self.anchor_action.setEnabled(False)
+            self.make_set_action.setEnabled(False)
+        else:
+            # "Disable all hint editing buttons
+            self.black_action.setEnabled(False)
+            self.white_action.setEnabled(False)
+            self.gray_action.setEnabled(False)
+            self.shift_action.setEnabled(False)
+            self.align_action.setEnabled(False)
+            self.interpolate_action.setEnabled(False)
+            self.anchor_action.setEnabled(False)
+            self.make_set_action.setEnabled(False)
 
     def set_window_title(self) -> None:
         """ And also the status bar
