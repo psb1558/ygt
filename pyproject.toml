@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ygt"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
     { name="Peter S. Baker", email="b.tarde@mail.com" },
 ]
 description = "A graphical hint editor for TrueType fonts"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10.4"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache License, Version 2.0",
@@ -20,7 +20,7 @@ dependencies = [
     "PyQt6 >= 6.4.0",
     "fonttools >= 4.38.0",
     "freetype-py >= 2.3.0",
-    "xgridfit >= 3.2.12",
+    "xgridfit >= 3.2.13",
     "setuptools >= 65.3.0",
     "PyYAML >= 6.0",
     "schema >= 0.7.5",
