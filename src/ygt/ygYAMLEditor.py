@@ -131,36 +131,19 @@ class ygYAMLEditor(QPlainTextEdit):
 
 
 
-class editorDialog(QDialog):
-    def __init__(self, preferences, sourceable, title, validator, top_structure="dict"):
+class editorPane(QPlainTextEdit):
+    def __init__(self, owner, sourceable, validator):
         super().__init__()
-        self.title = title
-        self.set_dialog_title(self.title, True)
-        self.is_valid = validator
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.preferences = preferences
-        self.sourceable = sourceable
-        if top_structure == "dict":
-            self._empty_string = "{}\n"
-        else:
-            self._empty_string = "[]\n"
-        self.setMinimumSize(500, 500)
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-        self.edit_pane = QPlainTextEdit()
-        self.edit_pane.textChanged.connect(self.text_changed)
-        self.edit_pane.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; }")
-        self.install_yaml(copy.copy(self.sourceable.source()))
-        self.layout.addWidget(self.edit_pane)
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        self.buttonBox = QDialogButtonBox(QBtn)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-        self.layout.addWidget(self.buttonBox)
+        self.owner = owner
+        self.textChanged.connect(self.text_changed)
+        self.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; }")
         self.watching_for_changes = False
+        self.is_valid = validator
+        self.sourceable = sourceable
+        self.install_yaml(copy.copy(self.sourceable.source()))
 
     def install_text(self, text):
-        self.edit_pane.setPlainText(text)
+        self.setPlainText(text)
         self.watching_for_changes = True
 
     def install_yaml(self, y):
@@ -173,47 +156,70 @@ class editorDialog(QDialog):
 
     def yaml_source(self):
         try:
-            return(yaml.safe_load(self.edit_pane.toPlainText()))
+            return(yaml.safe_load(self.toPlainText()))
         except Exception as e:
             self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
-    def set_dialog_title(self, t, is_valid):
-        v  = " (Invalid)"
-        if is_valid:
-            v = " (Valid)"
-        self.setWindowTitle(t + v)
-
     def text_changed(self):
         self.sourceable.set_clean(False)
-        if len(self.edit_pane.toPlainText()) == 0:
-            self.edit_pane.setPlainText(self._empty_string)
+        if len(self.toPlainText()) == 0:
+            self.setPlainText(self._empty_string)
         try:
-            v = self.is_valid(yaml.safe_load(self.edit_pane.toPlainText()))
+            v = self.is_valid(yaml.safe_load(self.toPlainText()))
         except Exception as e:
             print("Error on load:")
             print(e)
             v = False
-        self.set_dialog_title(self.title, v)
+        if self.owner:
+            self.owner.set_dialog_title(v)
+
+
+class editorDialog(QDialog):
+    def __init__(self, preferences, sourceable, title, validator, top_structure="dict"):
+        super().__init__()
+        self.title = title
+        self.set_dialog_title(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.preferences = preferences
+        self.sourceable = sourceable
+        if top_structure == "dict":
+            self._empty_string = "{}\n"
+        else:
+            self._empty_string = "[]\n"
+        self.setMinimumSize(500, 500)
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.edit_pane = editorPane(self, sourceable, validator)
+        self.layout.addWidget(self.edit_pane)
+        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.layout.addWidget(self.buttonBox)
+
+    def set_dialog_title(self, is_valid):
+        v  = " (Invalid)"
+        if is_valid:
+            v = " (Valid)"
+        self.setWindowTitle(self.title + v)
 
     def reject(self):
         self.done(QDialog.DialogCode.Rejected)
 
     def accept(self):
         err = False
-        c = self.yaml_source()
+        c = self.edit_pane.yaml_source()
         if c != None:
-            if self.is_valid(c):
+            if self.edit_pane.is_valid(c):
                 self.sourceable.save(c)
             else:
                 err = True
         else:
             err = True
         if err:
-            # print("Couldn't save the Sourceable")
             self.reject()
             return
         self.done(QDialog.DialogCode.Accepted)
-        # super().accept()
 
 
 

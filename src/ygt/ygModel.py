@@ -2190,7 +2190,10 @@ class ygGlyphs:
 
     """
     def __init__(self, source: dict) -> None:
-        self.data = source["glyphs"]
+        try:
+            self.data = source["glyphs"]
+        except KeyError:
+            self.data = {}
 
     def get_glyph(self, gname: str) -> dict:
         if gname in self.data:
