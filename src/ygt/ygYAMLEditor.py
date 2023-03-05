@@ -32,7 +32,7 @@ class ygYAMLEditor(QPlainTextEdit):
     def __init__(self, preferences, parent=None):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
-        self.setStyleSheet("ygYAMLEditor {font-family: Source Code Pro, monospace; }")
+        self.setStyleSheet("ygYAMLEditor {font-family: Source Code Pro, monospace; background-color: white; }")
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.preferences = preferences
         self.textChanged.connect(self.text_changed)
@@ -132,15 +132,19 @@ class ygYAMLEditor(QPlainTextEdit):
 
 
 class editorPane(QPlainTextEdit):
-    def __init__(self, owner, sourceable, validator):
+
+    def __init__(self, owner, sourceable, validator, save_on_focus_out=False):
         super().__init__()
+        self.save_on_focus_out = save_on_focus_out
         self.owner = owner
         self.textChanged.connect(self.text_changed)
-        self.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; }")
+        self.error_state = False
+        self.set_style()
         self.watching_for_changes = False
         self.is_valid = validator
         self.sourceable = sourceable
         self.install_yaml(copy.copy(self.sourceable.source()))
+        self.dirty = False
 
     def install_text(self, text):
         self.setPlainText(text)
@@ -154,24 +158,62 @@ class editorPane(QPlainTextEdit):
             t = self._empty_string
         self.install_text(t)
 
+    def set_style(self):
+        if self.error_state:
+            self.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: rgb(252,227,242);  }")
+        else:
+            self.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: white;  }")
+
+    def set_error_state(self, b):
+        if self.error_state != b:
+            self.error_state = b
+            self.set_style()
+
     def yaml_source(self):
         try:
-            return(yaml.safe_load(self.toPlainText()))
+            t = yaml.safe_load(self.toPlainText())
+            self.set_error_state(False)
+            return t
         except Exception as e:
+            self.set_error_state(True)
             self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
     def text_changed(self):
+        if not self.watching_for_changes:
+            return
         self.sourceable.set_clean(False)
         if len(self.toPlainText()) == 0:
             self.setPlainText(self._empty_string)
+        v = False
         try:
             v = self.is_valid(yaml.safe_load(self.toPlainText()))
+            # self.set_error_state(False)
         except Exception as e:
+            # self.set_error_state(True)
             print("Error on load:")
             print(e)
-            v = False
-        if self.owner:
-            self.owner.set_dialog_title(v)
+        self.set_error_state(not v)
+        self.dirty = True
+
+    def focusOutEvent(self, event):
+        if self.save_on_focus_out and self.dirty:
+            c = self.yaml_source()
+            if c != None:
+                if self.is_valid(c):
+                    self.sourceable.save(c)
+                    self.set_error_state(False)
+                else:
+                    self.set_error_state(True)
+            else:
+                self.set_error_state(True)
+            if self.error_state:
+                self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+
+    def showEvent(self, event):
+        self.install_yaml(copy.copy(self.sourceable.source()))
+
+
+
 
 
 class editorDialog(QDialog):

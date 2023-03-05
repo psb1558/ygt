@@ -138,6 +138,10 @@ cv_same_as_struct = {
     Optional("below"): cv_ppem_struct
 }
 
+cv_var_struct = {
+    str: int
+}
+
 cvt_entry_struct = {
     "val": int,
     "type": Or("pos", "dist"),
@@ -149,7 +153,8 @@ cvt_entry_struct = {
                         "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
                         "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
                         "Cn", "C"),
-    Optional("same-as"): cv_same_as_struct
+    Optional("same-as"): cv_same_as_struct,
+    Optional("var"): cv_var_struct
 }
 
 function_entry_struct = {

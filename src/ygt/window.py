@@ -19,6 +19,7 @@ from .ygSchema import (
     are_defaults_valid,
     are_names_valid,
     are_properties_valid)
+from .makeCVDialog import cvtWindow
 from xgridfit import compile_list, compile_all
 from fontTools import ufoLib
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
@@ -1287,12 +1288,14 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def edit_cvt(self) -> None:
-        self.cvt_editor = editorDialog(self.preferences,
-                                        self.yg_font.cvt,
-                                        "cvt",
-                                        is_cvt_valid)
+        if not self.cvt_editor:
+            self.cvt_editor = cvtWindow(self.yg_font, self.preferences)
+        #self.cvt_editor = editorDialog(self.preferences,
+        #                                self.yg_font.cvt,
+        #                                "cvt",
+        #                                is_cvt_valid)
         self.cvt_editor.show()
-        # self.cvt_editor.raise()
+        self.cvt_editor.raise_()
         self.cvt_editor.activateWindow()
 
     @pyqtSlot()
@@ -1501,7 +1504,7 @@ class mainWinEventFilter(QObject):
 
 def main():
 
-    # print(dir(freetype.Face.get_glyph_name))
+    # print(dir(Qt))
     # print(inspect.getargspec(freetype.Face.get_glyph_name))
 
     app = QApplication([])
