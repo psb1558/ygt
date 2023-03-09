@@ -28,7 +28,7 @@ NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 # have got their own pointers to CVs. Instead, give them a pointer to an ancestor
 # object that has access functions for the things they need (chiefly the current CV).
 #
-# Here is the structure of the CVT edit window (that for mastersWidget is projected):
+# Here is the structure of the CVT edit window:
 #
 # cvtWindow ---|
 #              |--- cvEditPane ---|
@@ -100,7 +100,6 @@ class cvEditPane(QWidget, cvSource):
         add_button.clicked.connect(self.add_cv)
         del_button.clicked.connect(self.del_cv)
         self.cv_list_layout.addLayout(self.button_layout)
-        # self.layout.addWidget(self.cv_list)
         self.layout.addLayout(self.cv_list_layout)
         self.layout.addWidget(self.edit_pane)
         self.setLayout(self.layout)
@@ -243,7 +242,9 @@ class cvtWindow(QWidget):
         self.tabs = QTabWidget()
         self.cv_tab = cvEditPane(self.yg_font, self.preferences)
         self.source_tab = editorPane(self, self.cvt, is_cvt_valid, save_on_focus_out=True)
-        self.masters_tab = mastersWidget(self.yg_font)
+        self.masters_tab = None
+        if self.yg_font.is_variable_font:
+            self.masters_tab = mastersWidget(self.yg_font)
         self.tabs.addTab(self.cv_tab, "Control Values")
         self.tabs.addTab(self.source_tab, "Source")
         if self.yg_font.is_variable_font:
@@ -291,7 +292,6 @@ class mastersWidget(QWidget):
         add_button.clicked.connect(self.add_master)
         del_button.clicked.connect(self.del_master)
         self.master_list_layout.addLayout(self.button_layout)
-        # self.layout.addWidget(self.master_list)
         self.layout.addLayout(self.master_list_layout)
         self.layout.addWidget(self.edit_pane)
         self.setLayout(self.layout)
@@ -324,11 +324,9 @@ class mastersWidget(QWidget):
             self.new_item(self.current_list_item, forced=True)
 
     def del_master(self):
-        # step 1
         self.yg_font.masters.del_by_name(self._current_master_name)
         self.master_list.clear()
         try:
-            # Name correctly set in mastersWidget.del_master
             self._current_master_name = self.yg_font.masters.names()[0]
             self._current_master = self.masters.master_by_name(self._current_master_name)
         except IndexError:
@@ -520,8 +518,6 @@ class cvWidget(QWidget):
             master_keys = self.masters.keys()
             for k in master_keys:
                 self.var_layouts.append(QHBoxLayout())
-                # master = self.masters.master(k)
-                # self.var_layouts[-1].addWidget(QLabel(master["name"]))
                 self.var_layouts[-1].addWidget(QLabel(self.masters.master(k).get_name()))
                 self.var_widgets.append(cvVarWidget(k, self.cv_source))
                 self.var_layouts[-1].addWidget(self.var_widgets[-1])
@@ -718,7 +714,6 @@ class cvNameWidget(QLineEdit):
 
     def refresh(self, cv_source):
         self.cv_source = cv_source
-        # if self.isEnabled():
         self.setText(self.cv_source.current_cv_name())
         self.set_clean()
 
@@ -1124,7 +1119,6 @@ class masterValWidget(QLineEdit):
         self.m_id = m_id
         self.axis = axis
         self.init_val = self.master().get_val(self.axis)
-        # self.init_val = self.master.get_val(self.axis)
         if self.init_val == None:
             self.init_val = 0.0
         self.setText(str(self.init_val))
