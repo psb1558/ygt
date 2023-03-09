@@ -11,11 +11,18 @@ from PyQt6.QtWidgets import (QDialog,
                              QListWidget,
                              QPushButton)
 from PyQt6.QtCore import Qt
-from .ygModel import unicode_categories, unicode_cat_names, reverse_unicode_cat_names
+from PyQt6.QtGui import QIntValidator, QDoubleValidator
+from .ygModel import (unicode_categories,
+                      unicode_cat_names,
+                      reverse_unicode_cat_names,
+                      ygMasters,
+                      ygMaster,
+                      random_id)
 from .ygYAMLEditor import editorPane
 from .ygSchema import is_cvt_valid
 
-NEW_CV_NAME = "New_Control_Value"
+NEW_CV_NAME    = "New_Control_Value"
+NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 
 # The problem in this file is keeping model and view in sync when individual widgets
 # have got their own pointers to CVs. Instead, give them a pointer to an ancestor
@@ -100,7 +107,7 @@ class cvEditPane(QWidget, cvSource):
 
     def add_cv(self):
         self._current_cv_name = NEW_CV_NAME
-        self._cvt.add_cv(self._current_cv_name, {"val": 0, "axis": "y", "type": "pos"})
+        self._cvt.add_cv(self._current_cv_name, NEW_CV_CONTENT)
         self.cv_list.addItem(self._current_cv_name)
         matches = self.cv_list.findItems(self._current_cv_name, Qt.MatchFlag.MatchExactly)
         if len(matches) > 0:
@@ -125,18 +132,22 @@ class cvEditPane(QWidget, cvSource):
             or masters have been changed: if not, we don't have to
             go through all this.
         """
+        if not len(self._cvt):
+            self.add_cv()
         self._current_cv = self._cvt.get_cv(self._current_cv_name)
         self.cv_list.clear()
-        print(list(self._cvt.keys()))
         self.cv_list.addItems(self._cvt.keys())
         matches = self.cv_list.findItems(self._current_cv_name, Qt.MatchFlag.MatchExactly)
         if len(matches) > 0:
             self.cv_list.setCurrentItem(matches[0])
         else:
-            current_item = self.cv_list.item(0)
-            self.cv_list.setCurrentItem(current_item)
-            self._current_cv_name = current_item.text()
-            self._current_cv = self._cvt.get_cv(self._current_cv_name)
+            try:
+                current_item = self.cv_list.item(0)
+                self.cv_list.setCurrentItem(current_item)
+                self._current_cv_name = current_item.text()
+                self._current_cv = self._cvt.get_cv(self._current_cv_name)
+            except Exception:
+                pass
         self.edit_pane.refresh(self)
 
     def fixup(self):
@@ -249,25 +260,128 @@ class cvtWindow(QWidget):
 class mastersWidget(QWidget):
     def __init__(self, yg_font):
         super().__init__()
-        self.masters = yg_font.masters
+        self.yg_font = yg_font
+        self.masters = self.yg_font.masters
         self.master_source = []
         m_keys = self.masters.keys()
         for m in m_keys:
             self.master_source.append((m, self.masters.master(m)))
 
-        self.master_widgets = []
+        self.layout = QHBoxLayout()
+        self.master_list_layout = QVBoxLayout()
+        self.button_layout = QHBoxLayout()
 
-        for mm in self.master_source:
-            self.master_widgets.append(QHBoxLayout())
-            self.master_widgets[-1].addWidget(QLabel(mm[0]))
-            self.master_widgets[-1].addWidget(QLabel(mm[1]["name"]))
-            self.master_widgets[-1].addWidget(QLabel(str(mm[1]["val"])))
+        self.master_list = QListWidget()
+        self.master_list.addItems(self.masters.names())
+        self.current_list_item = self.master_list.item(0)
+        self.master_list.setCurrentItem(self.current_list_item)
+        self._current_master_name = self.current_list_item.text()
+        self.master_list.itemActivated.connect(self.new_item)
 
-        self.layout = QVBoxLayout()
-        for mmm in self.master_widgets:
-            self.layout.addLayout(mmm)
+        # And the edit pane.
 
+        self._current_master = self.masters.master_by_name(self._current_master_name)
+        self.edit_pane = masterWidget(self.masters, self._current_master.m_id, self.yg_font)
+
+        self.master_list_layout.addWidget(self.master_list)
+        add_button = QPushButton("Add")
+        del_button = QPushButton("Delete")
+        self.button_layout.addWidget(add_button)
+        self.button_layout.addWidget(del_button)
+        add_button.clicked.connect(self.add_master)
+        del_button.clicked.connect(self.del_master)
+        self.master_list_layout.addLayout(self.button_layout)
+        # self.layout.addWidget(self.master_list)
+        self.layout.addLayout(self.master_list_layout)
+        self.layout.addWidget(self.edit_pane)
         self.setLayout(self.layout)
+
+    def new_item(self, list_item, forced=False):
+        new_master_name = list_item.text()
+        new_master = self.masters.master_by_name(new_master_name)
+        if forced or new_master_name != self._current_master_name:
+            old_pane = self.layout.itemAt(1)
+            self.layout.removeItem(old_pane)
+            old_pane.widget().deleteLater()
+            self._current_master_name = new_master_name
+            self._current_master = new_master
+            self.edit_pane = masterWidget(self.masters, self._current_master.m_id, self.yg_font)
+            self.layout.addWidget(self.edit_pane)
+
+    def add_master(self):
+        master_dict = {}
+        axis_tags = self.yg_font.axis_tags()
+        for a in axis_tags:
+            master_dict[a] = 0.0
+        master_id = random_id("master")
+        new_master = ygMaster(master_id, {"name": master_id, "vals": master_dict})
+        self.yg_font.masters.add_master(new_master)
+        self.master_list.addItem(master_id)
+        matches = self.master_list.findItems(master_id, Qt.MatchFlag.MatchExactly)
+        if len(matches) > 0:
+            self.current_list_item = matches[0]
+            self.master_list.setCurrentItem(self.current_list_item)
+            self.new_item(self.current_list_item, forced=True)
+
+    def del_master(self):
+        # step 1
+        self.yg_font.masters.del_by_name(self._current_master_name)
+        self.master_list.clear()
+        try:
+            # Name correctly set in mastersWidget.del_master
+            self._current_master_name = self.yg_font.masters.names()[0]
+            self._current_master = self.masters.master_by_name(self._current_master_name)
+        except IndexError:
+            return
+        self.refresh(self._current_master)
+
+    def refresh(self, m):
+        if not len(self.yg_font.masters):
+            return
+        self.master_list.clear()
+        self.master_list.addItems(self.yg_font.masters.names())
+        matches = self.master_list.findItems(self._current_master_name, Qt.MatchFlag.MatchExactly)
+        if len(matches) > 0:
+            self.master_list.setCurrentItem(matches[0])
+        else:
+            try:
+                current_item = self.master_list.item(0)
+                self.master_list.setCurrentItem(current_item)
+                self._current_master_name = current_item.text()
+                self._current_master = self.yg_font.masters.master_by_name(self._current_master_name)
+            except Exception:
+                pass
+        self.edit_pane.refresh(m)
+
+
+
+class masterWidget(QWidget):
+    def __init__(self, masters, m_id, yg_font):
+        super().__init__()
+        self.masters = masters
+        self.m_id = m_id
+        self.master_layout = QVBoxLayout()
+        self.name_layout = QHBoxLayout()
+        self.name_layout.addWidget(QLabel("Name"))
+        self.master_name_widget = masterNameWidget(self.masters, self.m_id)
+        self.name_layout.addWidget(self.master_name_widget)
+        self.master_layout.addLayout(self.name_layout)
+        self.names = []
+        axis_tags = yg_font.axis_tags()
+        for axis_name in axis_tags:
+            axis_val_layout = QHBoxLayout()
+            axis_val_layout.addWidget(QLabel(axis_name))
+            n = masterValWidget(self.masters, self.m_id, axis_name)
+            self.names.append(n)
+            axis_val_layout.addWidget(n)
+            self.master_layout.addLayout(axis_val_layout)
+        self.setLayout(self.master_layout)
+
+    def refresh(self, m):
+        self.m_id = m.m_id
+        self.master_name_widget.refresh(m)
+        for n in self.names:
+            n.refresh(m)
 
 
 
@@ -406,8 +520,9 @@ class cvWidget(QWidget):
             master_keys = self.masters.keys()
             for k in master_keys:
                 self.var_layouts.append(QHBoxLayout())
-                master = self.masters.master(k)
-                self.var_layouts[-1].addWidget(QLabel(master["name"]))
+                # master = self.masters.master(k)
+                # self.var_layouts[-1].addWidget(QLabel(master["name"]))
+                self.var_layouts[-1].addWidget(QLabel(self.masters.master(k).get_name()))
                 self.var_widgets.append(cvVarWidget(k, self.cv_source))
                 self.var_layouts[-1].addWidget(self.var_widgets[-1])
 
@@ -501,7 +616,7 @@ class makeCVDialog(QDialog, cvSource):
 
         self.layout = QVBoxLayout()
 
-        self.pane = cvWidget(self, self.yg_font)
+        self.pane = cvWidget(self, self.yg_font, None)
 
         # Set up buttons
 
@@ -552,6 +667,7 @@ class makeCVDialog(QDialog, cvSource):
             pass
 
     def accept(self):
+        self.pane.fixup()
         if self.cv_name and len(self.cv) > 0:
             self._cvt.add_cv(name=self.cv_name, props=self.cv)
         super().accept()
@@ -602,9 +718,9 @@ class cvNameWidget(QLineEdit):
 
     def refresh(self, cv_source):
         self.cv_source = cv_source
-        if self.isEnabled():
-            self.setText(self.cv_source.current_cv_name())
-            self.set_clean()
+        # if self.isEnabled():
+        self.setText(self.cv_source.current_cv_name())
+        self.set_clean()
 
 
 
@@ -778,7 +894,7 @@ class cvVarWidget(QLineEdit):
         if v and self.var_id in v:
             k = v[self.var_id]
         self.setText(str(k))
-        self.setInputMask("9000")
+        self.setValidator(QIntValidator(-9999, 9999))
         self.editingFinished.connect(self.text_changed)
         self.textChanged.connect(self.set_dirty)
 
@@ -825,7 +941,7 @@ class cvValueWidget(QLineEdit):
         self.cv_source = cv_source
         self.dirty = False
         self.setText(str(self.cv_source.from_current_cv("val")))
-        self.setInputMask("9000")
+        self.setValidator(QIntValidator(-9999, 9999))
         self.editingFinished.connect(self.text_changed)
         self.textChanged.connect(self.set_dirty)
 
@@ -871,7 +987,7 @@ class cvPPEMWidget(QLineEdit):
                 self.setText(s[self.above_below])
             except Exception:
                 self.setText("40")
-        self.setInputMask("9000")
+        self.setValidator(QIntValidator(0, 500))
         self.editingFinished.connect(self.text_changed)
         self.textChanged.connect(self.set_dirty)
 
@@ -959,6 +1075,99 @@ class cvNamesWidget(QComboBox):
             if self.above_below in s:
                 n = s[self.above_below]["cv"]
         self.setCurrentText(n)
+
+
+
+class masterNameWidget(QLineEdit):
+    def __init__(self, masters: ygMasters, m_id: str):
+        super().__init__()
+        self.masters = masters
+        self.m_id = m_id
+        self.setText(self.current_master().get_name())
+        self.dirty = False
+        self.editingFinished.connect(self.text_changed)
+        self.textChanged.connect(self.set_dirty)
+
+    def current_master(self):
+        return self.masters.master(self.m_id)
+
+    def set_dirty(self):
+        self.dirty = True
+
+    def set_clean(self):
+        self.dirty = False
+
+    def refresh(self, m):
+        """ refresh is for updating editing widgets from the model.
+        """
+        self.m_id = m.m_id
+        self.setText(self.current_master().get_name())
+        self.set_clean()
+
+    def fixup(self):
+        """ fixup is for changing the model based on what's in the editing
+            widgets.
+        """
+        self.current_master().set_name(self.text())
+        self.set_clean()
+
+    def text_changed(self):
+        if self.dirty:
+            self.fixup()
+
+
+
+class masterValWidget(QLineEdit):
+    def __init__(self, masters: ygMasters, m_id: str, axis):
+        super().__init__()
+        self.masters = masters
+        self.m_id = m_id
+        self.axis = axis
+        self.init_val = self.master().get_val(self.axis)
+        # self.init_val = self.master.get_val(self.axis)
+        if self.init_val == None:
+            self.init_val = 0.0
+        self.setText(str(self.init_val))
+        self.setValidator(QDoubleValidator(-1.0, 1.0, 4))
+        self.dirty = False
+        self.editingFinished.connect(self.text_changed)
+        self.textChanged.connect(self.set_dirty)
+
+    def master(self):
+        return self.masters.master(self.m_id)
+
+    def set_dirty(self):
+        self.dirty = True
+
+    def set_clean(self):
+        self.dirty = False
+
+    def refresh(self, m):
+        """ refresh is for updating editing widgets from the model.
+        """
+        self.m_id = m.m_id
+        self.setText(str(self.master().get_val(self.axis)))
+        self.set_clean()
+
+    def fixup(self):
+        """ fixup is for changing the model based on what's in the editing
+            widgets.
+        """
+        try:
+            v = self.text()
+            if v == "" or v == "None" or v == 0.0:
+                self.master().del_val(self.axis)
+            else:
+                self.master().set_val(self.axis, float(self.text()))
+            self.set_clean()
+        except Exception as e:
+            print(e)
+            pass
+
+    def text_changed(self):
+        if self.dirty:
+            self.fixup()
+
 
 
 #class cvOverUnderWidget(QComboBox):

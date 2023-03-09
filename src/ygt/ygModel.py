@@ -7,6 +7,7 @@ from yaml import Dumper
 import os
 import pathlib
 import uuid
+import random
 import copy
 import unicodedata
 import abc
@@ -63,6 +64,13 @@ unicode_cat_names = {"Lu":   "Letter, uppercase",
                      "Cn":   "Other, not assigned",
                      "C":    "Other"}
 
+reverse_unicode_cat_names = {v: k for k, v in unicode_cat_names.items()}
+
+def random_id(s):
+    random.seed()
+    i = str(random.randint(100000, 999999))
+    return s + i
+
 # Classes in this file:
 
 # SourceFile: The yaml source read from and written to by this program.
@@ -70,6 +78,8 @@ unicode_cat_names = {"Lu":   "Letter, uppercase",
 # ygSourceable: Superclass for various chunks of ygt source code.
 # ygFont: Keeps the fontTools representation of a font and provides an
 #                     interface for the YAML code.
+# ygMasters: A list of ygMaster objects
+# ygMaster: A master--not a font master, but a CVAR master.
 # ygprep(ygSourceable): Holds the cvt program/pre-program.
 # ygDefaults(ygSourceable): Keeps defaults for this font's hints.
 # ygcvt(ygSourceable): Keeps the control values for this font.
@@ -272,6 +282,8 @@ class ygFont:
             self.is_variable_font = True
         except Exception as e:
             self.is_variable_font = False
+        if self.is_variable_font:
+            self.masters = ygMasters(self, self.source)
         #
         # Set up access to YAML font data (if there is no cvt table yet, get some
         # values from the font).
@@ -426,6 +438,12 @@ class ygFont:
                 def_inst = k
                 break
         return def_inst
+    
+    def axis_tags(self):
+        result = []
+        for a in self.axes:
+            result.append(a.axisTag)
+        return result
 
     def get_unicode(self, glyph_name: str, extended: bool = False) -> int:
         u: Optional[Union[set, int]] = None
@@ -1952,9 +1970,11 @@ class ygGlyph(QObject):
     #
 
     def set_category(self, c: str) -> None:
-        rev_cat = {v: k for k, v in unicode_cat_names.items()}
+        # rev_cat = {v: k for k, v in unicode_cat_names.items()}
         # Called function will use QUndoCommand.
-        self.props.add_property("category", rev_cat[c])
+        reverse_unicode_cat_names
+        self.props.add_property("category", reverse_unicode_cat_names[c])
+        # self.props.add_property("category", rev_cat[c])
 
     def combine_point_blocks(self, block: dict) -> Union[list, None]:
         if len(block) > 0:
@@ -2592,8 +2612,6 @@ class ygHint(QObject):
 
 
 
-
-
 class ygSourceable:
     """ Superclass for a number of ygt classes that represent chunks
         of source code.
@@ -2615,9 +2633,164 @@ class ygSourceable:
         return self.data
 
     def save(self, c: dict) -> None:
-        self.data = c
+        k = c.keys()
+        for kk in k:
+            self.data[kk] = c[kk]
+        # self.data = c
         self.set_clean(True)
 
+
+# overload
+class ygMaster:
+    """ Access to data for a master in a variable font. The master has this
+        structure:
+
+        --|-- name
+          |-- vars --|
+                     |-- tag: val
+                     |-- tag: val
+
+        params:
+
+        m_id (str): an id for this master. Ygt constructs this when
+        it creates the master, e.g. "wght-min," "opsz-max". Or if it's ""
+        (a zero-length string), generate a random id.
+
+        vars (dict): a dictionary of all tag:val entries beloning to nis
+        font.
+
+        name (str): A friendly name for this master. Initially the same as
+        m_id, but can be changed anytime.
+
+    """
+
+    def __init__(self, m_id: str, data: dict, name: str = None) -> None:
+        if len(m_id) > 0:
+            self.m_id = m_id
+        else:
+            self.m_id = random_id("master")
+        # self.data = {"name": self.m_id, "vars": vars}
+        self.data = data
+        if name:
+            self.data["name"] = name
+
+    def get_name(self) -> str:
+        return self.data["name"]
+    
+    def get_val(self, tag: str) -> float:
+        try:
+            return self.data["vars"][tag]
+        except Exception:
+            return None
+    
+    def get_tags(self) -> list:
+        result = []
+        if "vars" in self.data:
+            k = self.data["vars"].keys()
+            for kk in k:
+                result.append(kk)
+        return result
+    
+    def tag_count(self):
+        i = 0
+        if "vars" in self.data:
+            i = len(self.data["vars"])
+        return i
+    
+    def get_id(self) -> str:
+        return self.m_id
+    
+    def set_name(self, n: str) -> None:
+        self.data["name"] = n
+
+    def set_val(self, m_id: str, v: float) -> None:
+        if not "vars" in self.data:
+            self.data["vars"] = {}
+        self.data["vars"][m_id] = v
+
+    def del_val(self, axis):
+        if "vars"in self.data:
+            if axis in self.data["vars"]:
+                del self.data["vars"][axis]
+            if len(self.data["vars"]) == 0:
+                del self.data["vars"]
+
+
+
+class ygMasters:
+    def __init__(self, yg_font, source):
+        self.yg_font = yg_font
+        self.source = source
+        if not "masters" in self.source:
+            self.source["masters"] = {}
+        if len(self.source["masters"]) == 0:
+            self.build_master_list()
+
+    def add_master(self, m):
+        self.source["masters"][m.m_id] = m.data
+
+    def create_master(self):
+        master_id = random_id("master")
+        d = {"name": master_id, "vars": {}}
+        at = self.yg_font.axis_tags()
+        for a in at:
+            d["vars"][a] = 0.0
+        return ygMaster(master_id, d)
+
+    def keys(self):
+        return self.source["masters"].keys()
+    
+    def names(self):
+        n_list = []
+        k = self.source["masters"].keys()
+        for kk in k:
+            n_list.append(self.source["masters"][kk]["name"])
+        return n_list
+    
+    def master_by_name(self, n):
+        k = self.source["masters"].keys()
+        # raise Exception("Just ending the proggy")
+        for kk in k:
+            if self.source["masters"][kk]["name"] == n:
+                return ygMaster(kk,
+                                self.source["masters"][kk])
+        return None
+
+    def master(self, m_id):
+        try:
+            return ygMaster(m_id, self.source["masters"][m_id])
+        except KeyError:
+            return self.create_master()
+        
+    def del_by_name(self, name):
+        m = self.master_by_name(name)
+        d = self.source["masters"]
+        if m:
+            self.del_by_id(m.get_id())
+
+    def del_by_id(self, id):
+        try:
+            del self.source["masters"][id]
+        except KeyError as e:
+            print(e)
+            # pass
+
+    def build_master_list(self):
+        # Get an easy lookup for axis defaults.
+        # Construct a list of all the masters we COULD have. Each item
+        # is a tuple (name, tag, val)
+        for a in self.yg_font.axes:
+            if a.minValue != a.defaultValue:
+                t = str(a.axisTag) + "-min"
+                d = {"name": t, "vals": {a.axisTag: -1.0}}
+                self.add_master(ygMaster(t, d))
+            if a.maxValue != a.defaultValue:
+                t = str(a.axisTag) + "-max"
+                d = {"name": t, "vals": {a.axisTag: 1.0}}
+                self.add_master(ygMaster(t, d))
+
+    def __len__(self):
+        return len(self.source["masters"])
 
 
 class ygprep(ygSourceable):
@@ -2661,16 +2834,24 @@ class ygDefaults(ygSourceable):
 
 class ygcvt(ygSourceable):
     def __init__(self, font: ygFont, source: dict) -> None:
-        if "cvt" in source:
-            data = source["cvt"]
-        else:
-            data = {}
-        super().__init__(font, data)
+        self.font_source = source
+        if not "cvt" in self.font_source:
+            self.font_source["cvt"] = {}
+        self.data = self.font_source["cvt"]
+        super().__init__(font, source["cvt"])
+
+    def source(self):
+        return self.font_source["cvt"]
 
     def save(self, c: dict) -> None:
-        self.data = c
-        self.font.source["cvt"] = c
+        self.font_source["cvt"].clear()
+        k = c.keys()
+        for kk in k:
+            self.font_source["cvt"][kk] = c[kk]
         self.set_clean(True)
+
+    def keys(self):
+        return self.font_source["cvt"].keys()
 
     def get_cvs(self, glyph: ygGlyph, filters: dict) -> dict:
         """ Get a list of control values filtered to match a particular
@@ -2688,9 +2869,9 @@ class ygcvt(ygSourceable):
         """
         result = {}
         # Get the complete list of control values
-        keys = self.data.keys()
+        keys = self.font_source["cvt"].keys()
         for key in keys:
-            entry = self.data[key]
+            entry = self.font_source["cvt"][key]
             include_this = True
             if glyph != None and type(entry) is dict:
                 if "type" in entry:
@@ -2789,12 +2970,27 @@ class ygcvt(ygSourceable):
             rather than just a number.
 
         """
-        if name in self.data:
-            return self.data[name]
+        if name in self.font_source["cvt"]:
+            return self.font_source["cvt"][name]
         return None
-
+    
     def add_cv(self, name: str, props: Union[int, dict]) -> None:
-        self.data[name] = props
+        self.font_source["cvt"][name] = props
+
+    def del_cv(self, name):
+        try:
+            del self.font_source["cvt"][name]
+        except Exception as e:
+            print("Error in del_cv:")
+            print(e)
+
+    def rename(self, old_name, new_name):
+        c = self.get_cv(old_name)
+        self.del_cv(old_name)
+        self.add_cv(new_name, c)
+
+    def __len__(self):
+        return len(self.font_source["cvt"])
 
 
 

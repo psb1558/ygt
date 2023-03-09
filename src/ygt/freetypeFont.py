@@ -57,7 +57,6 @@ class freetypeFont:
                 self.face = ft.Face(font)
                 font.close()
             else:
-                print(font)
                 self.face = ft.Face(font)
         except Exception:
             self.valid = False
@@ -322,7 +321,6 @@ class freetypeFont:
             self.set_char(i)
             if self.last_glyph_index != None:
                 k = self.face.get_kerning(self.last_glyph_index, i, ft.FT_KERNING_DEFAULT)
-                # print("kerning: " + str(k.x))
                 xpos += k.x
             xpos += self.draw_char(painter, xpos, ypos)
             if xpos >= x_limit:

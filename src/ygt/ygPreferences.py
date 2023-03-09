@@ -135,7 +135,6 @@ class ygPreferences(dict):
         for kk in k:
             if not kk in ["top_window", "current_font"]:
                 save_dict[kk] = self[kk]
-        # print(save_dict)
         with open(config_file, "w") as f:
             f.write(yaml.dump(save_dict, sort_keys=False, Dumper=Dumper))
 

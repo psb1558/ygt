@@ -1979,7 +1979,6 @@ class ygGlyphScene(QGraphicsScene):
             if hint.ref() == None:
                 print("Warning: ref is None (target is " + str(target.index) + ")")
             ref = self.resolve_point_identifier(hint.ref())
-            # print("ref.id: " + str(type(ref)) + " / " + str(ref.id))
             gref = self.yg_point_view_index[ref.id]
             ha = ygHintStem(gref, gtarget, 0, hint_type, parent=self)
             hb = ygHintButton(self, ha.center_point(), hint)
