@@ -31,6 +31,7 @@ class ygYAMLEditor(QPlainTextEdit):
 
     def __init__(self, preferences, parent=None):
         super().__init__()
+        # self.setUndoRedoEnabled(False)
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setStyleSheet("ygYAMLEditor {font-family: Source Code Pro, monospace; background-color: white; }")
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
