@@ -864,7 +864,7 @@ class ygSet:
 # Edit fpgm
 # Edit cvar
 # Edit macros
-# 
+# Edit defaults
 #
 
 class glyphSaver:
