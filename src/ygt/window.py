@@ -119,6 +119,7 @@ class MainWindow(QMainWindow):
     def __init__(self, app, win_list=None, prefs=None, parent=None):
         super(MainWindow,self).__init__(parent=parent)
         self.undo_group = QUndoGroup()
+        self.undo_group.cleanChanged.connect(self.clean_changed)
         # The undo registry should keep a record of undo stacks for each
         # glyph that has been edited, and for the prep, cvar, fpgm, macros,
         # and defaults.
@@ -892,6 +893,11 @@ class MainWindow(QMainWindow):
     def add_undo_stack(self, s: QUndoStack) -> None:
         self.undo_group.addStack(s)
 
+    def set_all_clean(self):
+        s = self.undo_group.stacks()
+        for ss in s:
+            ss.setClean()
+
     #
     # File operations
     #
@@ -901,7 +907,8 @@ class MainWindow(QMainWindow):
         self._save_yaml_file()
 
     def _save_yaml_file(self) -> None:
-        if self.yg_font and (not self.yg_font.clean()):
+        # if self.yg_font and (not self.yg_font.clean()):
+        if self.yg_font and (not self.undo_group.isClean()):
             glyph = self.glyph_pane.viewer.yg_glyph
             glyph_backup = copy.deepcopy(glyph.gsource)
             glyph.cleanup_glyph()
@@ -910,7 +917,8 @@ class MainWindow(QMainWindow):
             glyph.gsource.clear()
             for k in glyph_backup.keys():
                 glyph.gsource[k] = glyph_backup[k]
-            self.yg_font.set_clean()
+            self.set_all_clean()
+            # self.yg_font.set_clean()
 
     def save_as(self) -> None:
         self.yg_font.source_file.filename = QFileDialog(parent=self).getSaveFileName()[0]
@@ -924,7 +932,8 @@ class MainWindow(QMainWindow):
         glyph.gsource.clear()
         for k in glyph_backup.keys():
             glyph.gsource[k] = glyph_backup[k]
-        self.yg_font.set_clean()
+        self.undo_group.set_all_clean()
+        # self.yg_font.set_clean()
     
     @pyqtSlot()
     def export_font(self) -> None:
@@ -1233,16 +1242,22 @@ class MainWindow(QMainWindow):
             self.anchor_action.setEnabled(False)
             self.make_set_action.setEnabled(False)
 
+    @pyqtSlot()
+    def clean_changed(self):
+        self.set_window_title()
+
     def set_window_title(self) -> None:
         """ And also the status bar
         """
         base = "YGT"
         if self.yg_font:
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
-            if not self.yg_font.clean():
-                base += "*"
+            # if not self.yg_font.clean():
+            if not self.undo_group.isClean():
+                base += "●"
         self.setWindowTitle(base)
-        self.set_statusbar_text(None)
+        if self.glyph_pane:
+            self.set_statusbar_text(None)
 
     def set_statusbar_text(self, valid: Union[bool, None]) -> None:
         status_text =  self.glyph_pane.viewer.yg_glyph.gname
@@ -1425,7 +1440,8 @@ class MainWindow(QMainWindow):
         if self.yg_font == None:
             self.del_from_win_list(self)
             event.accept()
-        elif self.yg_font.clean():
+        # elif self.yg_font.clean():
+        elif self.undo_group.isClean():
             self.del_from_win_list(self)
             self.set_preferences()
             event.accept()
@@ -1439,7 +1455,8 @@ class MainWindow(QMainWindow):
 
     def all_clean(self) -> bool:
         for w in self.win_list:
-            if not w.yg_font.clean():
+            # if not w.yg_font.clean():
+            if not w.undo_group.isClean():
                 return False
         return True
 
@@ -1454,11 +1471,13 @@ class MainWindow(QMainWindow):
             exiting = True
             del_list = []
             for w in self.win_list:
-                if not w.yg_font.clean():
+                # if not w.yg_font.clean():
+                if not w.undo_group.isClean():
                     r = w.save_query()
                     if r in [0, 2]:
                         if r == 2:
-                            w.yg_font.set_clean()
+                            # w.yg_font.set_clean()
+                            w.set_all_clean()
                         del_list.append(w)
                     else:
                         exiting = False
