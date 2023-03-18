@@ -1,3 +1,4 @@
+# import traceback
 from typing import Any, TypeVar, Union, Optional, List, Callable, overload
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QUndoCommand, QUndoStack, QAction
@@ -66,6 +67,12 @@ unicode_cat_names = {"Lu":   "Letter, uppercase",
 
 reverse_unicode_cat_names = {v: k for k, v in unicode_cat_names.items()}
 
+# Error flags. These are set in the current ygGlyph when something has gone
+# wrong in the processing of point data.
+
+POINT_OUT_OF_RANGE   = 1
+POINT_UNIDENTIFIABLE = 2
+
 def random_id(s):
     random.seed()
     i = str(random.randint(100000, 999999))
@@ -76,8 +83,8 @@ def random_id(s):
 # SourceFile: The yaml source read from and written to by this program.
 # FontFiles: Input and output font files.
 # ygSourceable: Superclass for various chunks of ygt source code.
-# ygFont: Keeps the fontTools representation of a font and provides an
-#                     interface for the YAML code.
+# ygFont(QObject): Keeps the fontTools representation of a font and provides
+#                  an interface for the YAML code.
 # ygMasters: A list of ygMaster objects
 # ygMaster: A master--not a font master, but a CVAR master.
 # ygprep(ygSourceable): Holds the cvt program/pre-program.
@@ -217,7 +224,7 @@ class FontFiles:
 
 
 
-class ygFont:
+class ygFont(QObject):
     """ Keeps all the font's data, including a fontTools representation of the
         font, the "source" structure built from the yaml file, and a structure
         for each section of the yaml file. All of the font data can be accessed
@@ -226,7 +233,11 @@ class ygFont:
         Call this directly to open a font for the first time. After that,
         you only have to open the yaml file.
     """
+
+    sig_cvt_changed = pyqtSignal()
+
     def __init__(self, main_window: Any, source_file: Union[str, dict], ygt_filename: str = "") -> None:
+        super().__init__()
         self.main_window = main_window
         #
         # Open the font
@@ -249,7 +260,6 @@ class ygFont:
             raise Exception("Need the name of an existing font")
             # Need to let user try again.
         split_fn = os.path.splitext(str(fontfile))
-        # fn_base = split_fn[0]
         extension = split_fn[1]
         ft_open_error = False
         if extension == ".ttf":
@@ -371,7 +381,7 @@ class ygFont:
                                                   "cat": "Nd"}
             except Exception:
                 pass
-        self.cvt         = ygcvt(self,  self.source)
+        self.cvt         = ygcvt(self.main_window, self, self.source)
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
         if "functions" in self.source:
@@ -425,6 +435,9 @@ class ygFont:
         for glyph_counter, g in enumerate(self.glyph_list):
             self.glyph_index[g[1]] = glyph_counter
 
+        # Track whether signal is connected
+        self.signal_connected = False
+
     def default_instance(self) -> Optional[str]:
         if not self.is_variable_font:
             return None
@@ -457,7 +470,6 @@ class ygFont:
                 except Exception:
                     pass
         if type(u) is set:
-            # u = next(iter(u))
             return int(list(u)[0])
         elif type(u) is int:
             return u
@@ -561,7 +573,6 @@ class ygFont:
                 result.append(gn)
         return result
 
-
     def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
         """ Save a y or x block to the in-memory source.
         """
@@ -569,6 +580,9 @@ class ygFont:
             self.glyphs[gname] = {}
         self.glyphs[gname][axis] = source
 
+    def setup_signal(self, func) -> None:
+        self.sig_cvt_changed.connect(func)
+        self.signal_connected = True
 
 
 
@@ -714,7 +728,7 @@ class ygPoint:
                         normalized: bool = False,
                         name_allowed: bool = True) -> Union[int, str]:
         if name_allowed:
-            if len(self.preferred_name) > 0 and len(self.preferred_name) > 0:
+            if len(self.preferred_name) > 0:
                 return self.preferred_name
         if self.label_pref == "coord":
             if normalized:
@@ -725,7 +739,9 @@ class ygPoint:
             else:
                 return self.coord
         return self.index
-        # return str(self.index)
+    
+    def set_preferred_name(self, n: str) -> None:
+        self.preferred_name = n
 
     def __eq__(self, other) -> bool:
         try:
@@ -868,6 +884,8 @@ class ygSet:
 #
 
 class glyphSaver:
+    """ Helper for many glyph commands.
+    """
     def __init__(self, g: "ygGlyph") -> None:
         self.yg_glyph = g
         self.gsource = copy.deepcopy(self.yg_glyph.gsource)
@@ -878,6 +896,239 @@ class glyphSaver:
         self.yg_glyph.gsource.clear()
         for k in self.gsource.keys():
             self.yg_glyph.gsource[k] = self.gsource[k]
+
+
+
+class cvtSaver:
+    """ Helper for cvt and master commands.
+    """
+    def __init__(self, yg_font: ygFont) -> None:
+        self.yg_font = yg_font
+        self.msource = None
+        if self.yg_font.masters:
+            self.msource = copy.deepcopy(self.yg_font.source["masters"])
+        self.csource = copy.deepcopy(self.yg_font.source["cvt"])
+
+    def restore(self) -> None:
+        if self.yg_font.masters and self.msource:
+            self.yg_font.source["masters"].clear()
+            for k in self.msource.keys():
+                self.yg_font.source["masters"][k] = self.msource[k]
+        self.yg_font.source["cvt"].clear()
+        if len(self.csource) > 0:
+            for k in self.csource.keys():
+                self.yg_font.source["cvt"][k] = self.csource[k]
+
+
+
+class cvtEditCommand(QUndoCommand):
+    """ Superclass for editing the cvt. If we can get a reference to the current
+        glyph, we'll be able to send it a signal when there's a change in the CVT.
+    """
+    def __init__(self, yg_font: ygFont) -> None:
+        super().__init__()
+        self.yg_font = yg_font
+        self.yg_glyph = self.yg_font.main_window.current_glyph()
+        self.undo_state = cvtSaver(self.yg_font)
+        self.redo_state: Union[cvtSaver, None] = None
+
+    def send_signal(self) -> None:
+        if self.yg_font.signal_connected:
+            self.yg_font.sig_cvt_changed.emit()
+            self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints())
+
+    def redo(self) -> None:
+        pass
+
+    def undo(self) -> None:
+        self.undo_state.restore()
+        self.send_signal()
+
+
+
+class addMasterCommand(cvtEditCommand):
+    def __init__(self, yg_font, id, data):
+        self.id = id
+        self.data = data
+        super().__init__(yg_font)
+        self.setText("Add Master")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["masters"][self.id] = self.data
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class deleteMasterCommand(cvtEditCommand):
+    def __init__(self, yg_font, id):
+        self.id = id
+        super().__init__(yg_font)
+        self.setText("Delete Master")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["masters"][id]
+            except Exception:
+                pass
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class setMasterNameCommand(cvtEditCommand):
+    def __init__(self, yg_font, m_id, name):
+        self.m_id = m_id
+        self.name = name
+        super().__init__(yg_font)
+        self.setText("Set Master Name")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            if not self.m_id in self.yg_font.source["masters"]:
+                self.yg_font.source["masters"][self.m_id] = {}
+            self.yg_font.source["masters"][self.m_id]["name"] = self.name
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class setMasterAxisValueCommand(cvtEditCommand):
+    def __init__(self, yg_font, m_id, axis, val):
+        self.m_id = m_id
+        self.axis = axis
+        self.val = val
+        super().__init__(yg_font)
+        self.setText("Set Master Axis Value")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            if not "vals" in self.yg_font.source["masters"][self.m_id]:
+                self.yg_font.source["masters"][self.m_id]["vals"] = {}
+            self.yg_font.source["masters"][self.m_id]["vals"][self.axis] = self.val
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class deleteMasterAxisCommand(cvtEditCommand):
+    def __init__(self, yg_font, m_id, axis):
+        self.m_id = m_id
+        self.axis = axis
+        super().__init__(yg_font)
+        self.setText("Delete Master Axis")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["masters"][self.m_id]["vals"][self.axis]
+                if len(self.yg_font.source["masters"][self.m_id]["vals"]) == 0:
+                    del self.yg_font.source["masters"][self.m_id]["vals"]
+            except KeyError:
+                pass
+        self.send_signal()
+
+
+
+class addCVCommand(cvtEditCommand):
+    def __init__(self, yg_font: ygFont, name: str, props: Union[int, dict]) -> None:
+        super().__init__(yg_font)
+        self.name = name
+        self.props = props
+        self.setText("Add Control Value")
+
+    def redo(self) -> None:
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["cvt"][self.name] = self.props
+            self.redo_state = cvtSaver(self.font)
+        self.send_signal()
+
+
+class setCVPropertyCommand(cvtEditCommand):
+    def __init__(self, yg_font: ygFont, cv_name: str, prop_name: str, val: Any) -> None:
+        super().__init__(yg_font)
+        self.name = cv_name
+        self.val = val
+        self.prop = prop_name
+        self.setText("Set Control Value Property")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["cvt"][self.name][self.prop] = self.val
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class delCVPropertyCommand(cvtEditCommand):
+    def __init__(self, yg_font: ygFont, name: str, prop: str):
+        self.name = name
+        self.prop = prop
+        super().__init__(yg_font)
+        self.setText("Delete Control Value Property")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["cvt"][self.name][self.prop]
+            except Exception:
+                pass
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class deleteCVCommand(cvtEditCommand):
+    def __init__(self, yg_font: ygFont, name: str) -> None:
+        super().__init__(yg_font)
+        self.name = name
+        self.setText("Delete Control Value")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["cvt"][self.name]
+            except KeyError:
+                pass
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class renameCVCommand(cvtEditCommand):
+    def __init__(self, yg_font: ygFont, old_name: str, new_name: str) -> None:
+        self.old_name = old_name
+        self.new_name = new_name
+        super().__init__(yg_font)
+        self.setText("Rename Control Value")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["cvt"][self.new_name] = self.yg_font.source["cvt"].pop(self.old_name)
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
 
 
 
@@ -1018,14 +1269,17 @@ class addPointSetNameCommand(glyphEditCommand):
     def redo(self) -> None:
         if self.redo_state:
             self.redo_state.restore()
+            self.yg_glyph.names.update_point_names()
         else:
             if not "names" in self.yg_glyph.gsource:
                 self.yg_glyph.gsource["names"] = {}
             if type(self.pt) is not list:
                 self.yg_glyph.gsource["names"][self.name] = self.yg_glyph.resolve_point_identifier(self.pt).preferred_label(name_allowed=False)
+                self.yg_glyph.names.update_point_names()
             else:
                 if len(self.pt) == 1:
                     self.yg_glyph.gsource["names"][self.name] = self.pt[0].preferred_label(name_allowed=False)
+                    self.yg_glyph.names.update_point_names()
                 elif len(self.pt) > 1:
                     pt_list = []
                     for p in self.pt:
@@ -1033,6 +1287,11 @@ class addPointSetNameCommand(glyphEditCommand):
                     self.yg_glyph.gsource["names"][self.name] = pt_list
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "addPointSetNameCommand").test()
+        self.send_signal()
+
+    def undo(self) -> None:
+        self.undo_state.restore()
+        self.yg_glyph.names.update_point_names()
         self.send_signal()
 
 
@@ -1422,8 +1681,8 @@ class ygGlyph(QObject):
         self.yg_font = yg_font
         self.gsource = yg_font.get_glyph(gname)
         self.gname = gname
-        self.names = ygGlyphNames(self)
         self.props = ygGlyphProperties(self)
+        self.error = 0
 
         # Initialize:
 
@@ -1449,6 +1708,10 @@ class ygGlyph(QObject):
 
         # Extract points from the fontTools Glyph object and store them in a list.
         self.point_list = self._make_point_list()
+
+        # Get the named glyphs (we need self.point_list to do this)
+        self.names = ygGlyphNames(self)
+
 
         # Dict for looking up points with uuid-generated id.
         self.point_id_dict = {}
@@ -1564,7 +1827,7 @@ class ygGlyph(QObject):
     def rebuild_current_block(self) -> None:
         self.undo_stack.push(cleanupGlyphCommand(self))
 
-    def _yaml_mk_hint_list(self, source: list) -> list:
+    def _yaml_mk_hint_list(self, source: list, validate: bool = False) -> list:
         """ 'source' is a yaml "points" block.
 
         """
@@ -1671,10 +1934,8 @@ class ygGlyph(QObject):
 
     def current_block(self) -> list:
         if self._current_axis == "y":
-            # return self.y_block
             return self.gsource["y"]["points"]
         else:
-            # return self.x_block
             return self.gsource["x"]["points"]
 
     def hints(self) -> list:
@@ -1682,7 +1943,7 @@ class ygGlyph(QObject):
             objects.
 
         """
-        return self._yaml_mk_hint_list(self.current_block())
+        return self._yaml_mk_hint_list(self.current_block(), validate=True)
 
     def points(self) -> list:
         return self.point_list
@@ -1950,9 +2211,9 @@ class ygGlyph(QObject):
             s = self.gsource
         have_y = True
         have_x = True
-        if len(s["y"]["points"]) == 0:
+        if "y" in s and len(s["y"]["points"]) == 0:
             have_y = False
-        if len(s["x"]["points"]) == 0:
+        if "x" in s and len(s["x"]["points"]) == 0:
             have_x = False
         if have_y:
             self.yaml_strip_extraneous_nodes(s["y"]["points"])
@@ -1970,11 +2231,9 @@ class ygGlyph(QObject):
     #
 
     def set_category(self, c: str) -> None:
-        # rev_cat = {v: k for k, v in unicode_cat_names.items()}
         # Called function will use QUndoCommand.
         reverse_unicode_cat_names
         self.props.add_property("category", reverse_unicode_cat_names[c])
-        # self.props.add_property("category", rev_cat[c])
 
     def combine_point_blocks(self, block: dict) -> Union[list, None]:
         if len(block) > 0:
@@ -2102,6 +2361,8 @@ class ygGlyph(QObject):
             call.
 
         """
+        if depth == 0:
+            self.error = 0
         if type(ptid) is str:
             try:
                 ptid = int(ptid)
@@ -2128,10 +2389,14 @@ class ygGlyph(QObject):
                 if self._is_pt_obj(result):
                     return result
             except IndexError:
-                m =  "A point index is out of range. This glyph may have been "
-                m += "edited since its hints were written, and if so, they "
-                m += "will have to be redone."
-                self.preferences.top_window().show_error_message(["Error", "Error", m])
+                if self.error == 0:
+                    self.error |= POINT_OUT_OF_RANGE
+                    m =  "Point index "
+                    m += str(ptid)
+                    m += " is out of range. This glyph may have been "
+                    m += "edited since its hints were written, and if so, they "
+                    m += "will have to be redone."
+                    self.preferences.top_window().show_error_message(["Error", "Error", m])
                 # Return an erroneous but safe number (it shouldn't make the
                 # program crash).
                 return self.point_list[0]
@@ -2144,17 +2409,19 @@ class ygGlyph(QObject):
             if self._is_pt_obj(result):
                 return result
         if result == None or depth > 20:
-            m =  "Failed to resolve point identifier "
-            m += str(ptid)
-            m += " in glyph "
-            m += self.gname
-            m += ". Substituting zero."
-            self.preferences.top_window().show_error_message(["Error", "Error", m])
-            return 0
+            if self.error == 0:
+                self.error |= POINT_UNIDENTIFIABLE
+                m =  "Failed to resolve point identifier "
+                m += str(ptid)
+                m += " in glyph "
+                m += self.gname
+                m += ". Substituting zero."
+                self.preferences.top_window().show_error_message(["Error", "Error", m])
+            return self.point_list[0]
         result = self.resolve_point_identifier(result, depth=depth+1)
         if self._is_pt_obj(result):
             return result
-
+        
     #
     # Signals and slots
     #
@@ -2459,15 +2726,11 @@ class ygHint(QObject):
         else:
             return self.round_is_default()
 
-    # def has_min_dist(self):
-    #     return "min-dist" in self._source
-
     # Should make "min" handle a value.
     def min_dist(self) -> bool:
         try:
             m = self._source["min"]
             return m
-            # return self._source["min"]
         except Exception:
             return self.min_dist_is_default()
 
@@ -2636,84 +2899,7 @@ class ygSourceable:
         k = c.keys()
         for kk in k:
             self.data[kk] = c[kk]
-        # self.data = c
         self.set_clean(True)
-
-
-# overload
-class ygMaster:
-    """ Access to data for a master in a variable font. The master has this
-        structure:
-
-        --|-- name
-          |-- vars --|
-                     |-- tag: val
-                     |-- tag: val
-
-        params:
-
-        m_id (str): an id for this master. Ygt constructs this when
-        it creates the master, e.g. "wght-min," "opsz-max". Or if it's ""
-        (a zero-length string), generate a random id.
-
-        vars (dict): a dictionary of all tag:val entries beloning to nis
-        font.
-
-        name (str): A friendly name for this master. Initially the same as
-        m_id, but can be changed anytime.
-
-    """
-
-    def __init__(self, m_id: str, data: dict, name: str = None) -> None:
-        if len(m_id) > 0:
-            self.m_id = m_id
-        else:
-            self.m_id = random_id("master")
-        # self.data = {"name": self.m_id, "vars": vars}
-        self.data = data
-        if name:
-            self.data["name"] = name
-
-    def get_name(self) -> str:
-        return self.data["name"]
-    
-    def get_val(self, tag: str) -> float:
-        try:
-            return self.data["vars"][tag]
-        except Exception:
-            return None
-    
-    def get_tags(self) -> list:
-        result = []
-        if "vars" in self.data:
-            k = self.data["vars"].keys()
-            for kk in k:
-                result.append(kk)
-        return result
-    
-    def tag_count(self):
-        i = 0
-        if "vars" in self.data:
-            i = len(self.data["vars"])
-        return i
-    
-    def get_id(self) -> str:
-        return self.m_id
-    
-    def set_name(self, n: str) -> None:
-        self.data["name"] = n
-
-    def set_val(self, m_id: str, v: float) -> None:
-        if not "vars" in self.data:
-            self.data["vars"] = {}
-        self.data["vars"][m_id] = v
-
-    def del_val(self, axis):
-        if "vars"in self.data:
-            if axis in self.data["vars"]:
-                del self.data["vars"][axis]
-            if len(self.data["vars"]) == 0:
-                del self.data["vars"]
 
 
 
@@ -2726,16 +2912,13 @@ class ygMasters:
         if len(self.source["masters"]) == 0:
             self.build_master_list()
 
-    def add_master(self, m):
-        self.source["masters"][m.m_id] = m.data
-
     def create_master(self):
         master_id = random_id("master")
         d = {"name": master_id, "vars": {}}
         at = self.yg_font.axis_tags()
         for a in at:
             d["vars"][a] = 0.0
-        return ygMaster(master_id, d)
+        return master_id, d
 
     def keys(self):
         return self.source["masters"].keys()
@@ -2752,45 +2935,66 @@ class ygMasters:
         # raise Exception("Just ending the proggy")
         for kk in k:
             if self.source["masters"][kk]["name"] == n:
-                return ygMaster(kk,
-                                self.source["masters"][kk])
+                return kk, self.source["masters"][kk]
         return None
 
     def master(self, m_id):
         try:
-            return ygMaster(m_id, self.source["masters"][m_id])
+            return m_id, self.source["masters"][m_id]
         except KeyError:
             return self.create_master()
         
+    def add_master(self, id, data):
+        self.yg_font.cvt.undo_stack.push(addMasterCommand(self.yg_font, id, data))
+
     def del_by_name(self, name):
         m = self.master_by_name(name)
-        d = self.source["masters"]
-        if m:
-            self.del_by_id(m.get_id())
+        if m != None:
+            self.del_by_id(m[0])
 
     def del_by_id(self, id):
+        self.yg_font.cvt.undo_stack.push(deleteMasterCommand(self.yg_font, id))
+
+    def set_master_name(self, m_id, name):
+        """ Assumes that a master already exists
+        """
+        self.yg_font.cvt.undo_stack.push(setMasterNameCommand(self.yg_font, m_id, name))
+
+    def get_master_name(self, m_id):
         try:
-            del self.source["masters"][id]
+            return self.source["masters"][m_id]["name"]
+        except KeyError:
+            return m_id
+        
+    def get_axis_value(self, m_id, axis):
+        try:
+            return self.source["masters"][m_id]["vals"][axis]
         except KeyError as e:
-            print(e)
-            # pass
+            return 0.0
+        
+    def set_axis_value(self, m_id, axis, val):
+        self.yg_font.cvt.undo_stack.push(setMasterAxisValueCommand(self.yg_font, m_id, axis, val))
+
+    def del_axis(self, m_id, axis):
+        self.yg_font.cvt.undo_stack.push(deleteMasterAxisCommand(self.yg_font, m_id, axis))
 
     def build_master_list(self):
-        # Get an easy lookup for axis defaults.
-        # Construct a list of all the masters we COULD have. Each item
-        # is a tuple (name, tag, val)
+        # Build initial list of masters; install in source
+        if not "masters" in self.yg_font.source:
+            self.yg_font.source["masters"] = {}
         for a in self.yg_font.axes:
             if a.minValue != a.defaultValue:
                 t = str(a.axisTag) + "-min"
                 d = {"name": t, "vals": {a.axisTag: -1.0}}
-                self.add_master(ygMaster(t, d))
+                self.yg_font.source["masters"][t] = d
             if a.maxValue != a.defaultValue:
                 t = str(a.axisTag) + "-max"
                 d = {"name": t, "vals": {a.axisTag: 1.0}}
-                self.add_master(ygMaster(t, d))
+                self.yg_font.source["masters"][t] = d
 
     def __len__(self):
         return len(self.source["masters"])
+
 
 
 class ygprep(ygSourceable):
@@ -2833,12 +3037,17 @@ class ygDefaults(ygSourceable):
 
 
 class ygcvt(ygSourceable):
-    def __init__(self, font: ygFont, source: dict) -> None:
+    def __init__(self, top_window: Any, font: ygFont, source: dict) -> None:
+        self.yg_font = font
         self.font_source = source
+        self.top_window = top_window
         if not "cvt" in self.font_source:
             self.font_source["cvt"] = {}
         self.data = self.font_source["cvt"]
-        super().__init__(font, source["cvt"])
+        if top_window:
+            self.undo_stack = QUndoStack()
+            self.top_window.add_undo_stack(self.undo_stack)
+        super().__init__(self.yg_font, source["cvt"])
 
     def source(self):
         return self.font_source["cvt"]
@@ -2975,19 +3184,19 @@ class ygcvt(ygSourceable):
         return None
     
     def add_cv(self, name: str, props: Union[int, dict]) -> None:
-        self.font_source["cvt"][name] = props
+        self.undo_stack.push(addCVCommand(self.yg_font, name, props))
+
+    def set_cv_property(self, cv_name, prop_name, val):
+        self.undo_stack.push(setCVPropertyCommand(self.yg_font, cv_name, prop_name, val))
+
+    def del_cv_property(self, cv_name, prop_name):
+        self.undo_stack.push(delCVPropertyCommand(self.yg_font, cv_name, prop_name))
 
     def del_cv(self, name):
-        try:
-            del self.font_source["cvt"][name]
-        except Exception as e:
-            print("Error in del_cv:")
-            print(e)
+        self.undo_stack.push(deleteCVCommand(self.yg_font, name))
 
     def rename(self, old_name, new_name):
-        c = self.get_cv(old_name)
-        self.del_cv(old_name)
-        self.add_cv(new_name, c)
+        self.undo_stack.push(renameCVCommand(self.yg_font, old_name, new_name))
 
     def __len__(self):
         return len(self.font_source["cvt"])
@@ -3034,7 +3243,7 @@ class ygcvar(ygSourceable):
 
 class ygGlyphProperties(ygSourceable):
     def __init__(self, glyph: ygGlyph) -> None:
-        super().__init__(glyph.yg_font, glyph.gsource) # *** A change here: glyph.gsource was None
+        super().__init__(glyph.yg_font, glyph.gsource)
         self.yg_glyph = glyph
 
     def add_property(self, k: str, v: Any) -> None:
@@ -3060,7 +3269,6 @@ class ygGlyphProperties(ygSourceable):
         try:
             self.yg_glyph.undo_stack.push(glyphDeletePropertyCommand(self.yg_glyph, k))
             self.set_clean(False)
-        #except KeyError as k:
         except Exception as e:
             pass
 
@@ -3074,6 +3282,18 @@ class ygGlyphNames(ygSourceable):
     def __init__(self, glyph: ygGlyph) -> None:
         self.yg_glyph = glyph
         super().__init__(glyph.yg_font, self.yg_glyph.gsource)
+        self.inverse_dict = {}
+        self.update_point_names()
+
+    def update_inverse_dict(self):
+        if "names" in self.yg_glyph.gsource:
+            new_dict = {}
+            original_dict = self.yg_glyph.gsource["names"]
+            for key, value in original_dict.items():
+                if (type(value) is str or type(value) is int) and not value in new_dict:
+                    new_dict[value] = key
+            return new_dict
+        return {}
 
     def add(self, pt: list, name: str) -> None:
         self.yg_glyph.undo_stack.push(addPointSetNameCommand(self.yg_glyph, pt, name))
@@ -3082,6 +3302,21 @@ class ygGlyphNames(ygSourceable):
     def set_clean(self, b: bool) -> None:
         if not b:
             self.yg_glyph.set_dirty()
+
+    def get_point_name(self, yg_point: ygPoint) -> str:
+        try:
+            return self.inverse_dict[yg_point.index]
+        except Exception:
+            pass
+        try:
+            return self.inverse_dict[yg_point.coord]
+        except Exception:
+            return ""
+        
+    def update_point_names(self):
+        self.inverse_dict = self.update_inverse_dict()
+        for p in self.yg_glyph.point_list:
+            p.preferred_name = self.get_point_name(p)
 
     def has_name(self, n: str) -> bool:
         if "names" in self.yg_glyph.gsource:

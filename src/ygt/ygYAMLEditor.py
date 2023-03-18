@@ -208,12 +208,13 @@ class editorPane(QPlainTextEdit):
             else:
                 self.set_error_state(True)
             if self.error_state:
-                self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+                self.owner.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
     def showEvent(self, event):
         self.install_yaml(copy.copy(self.sourceable.source()))
 
-
+    def refresh(self):
+        self.install_yaml(copy.copy(self.sourceable.source()))
 
 
 

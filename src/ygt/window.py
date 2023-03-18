@@ -1259,6 +1259,10 @@ class MainWindow(QMainWindow):
         self.set_statusbar_text(bool(t))
 
     def show_error_message(self, msg_list: list) -> None:
+        print(msg_list[0])
+        print(msg_list[1])
+        print(msg_list[2])
+        return
         msg = QMessageBox(self)
         if msg_list[0] == "Warning":
             msg.setIcon(QMessageBox.Icon.Warning)
@@ -1294,6 +1298,7 @@ class MainWindow(QMainWindow):
         #                                self.yg_font.cvt,
         #                                "cvt",
         #                                is_cvt_valid)
+        self.yg_font.setup_signal(self.cvt_editor.refresh)
         self.cvt_editor.show()
         self.cvt_editor.raise_()
         self.cvt_editor.activateWindow()
@@ -1486,6 +1491,9 @@ class MainWindow(QMainWindow):
         self.preferences.set_show_off_curve_points(self.show_off_curve_points)
         self.preferences.set_show_point_numbers(self.show_point_numbers)
         # self.preferences.set_current_axis(self.current_axis)
+
+    def current_glyph(self):
+        return self.glyph_pane.viewer.yg_glyph
 
 
 

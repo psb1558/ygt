@@ -91,6 +91,7 @@ def is_round_valid(r):
 nested_point_struct = {
     "ptid":               is_point_valid_2,
     Optional("ref"):      is_point_valid_2,
+    Optional("valid"):    bool,
     Optional("dist"):     str,
     Optional("pos"):      str,
     Optional("round"):    is_round_valid,
@@ -110,6 +111,7 @@ point_struct = {
         {
             "ptid":               is_point_valid_1,
             Optional("ref"):      is_point_valid_2,
+            Optional("valid"):    bool,
             Optional("dist"):     str,
             Optional("pos"):      str,
             Optional("round"):    is_round_valid,
@@ -257,8 +259,8 @@ def is_cvt_valid(t):
         set_error_message(standard_okay)
         return True
     except SchemaError as s:
-        # print("Schema Error")
-        # print(s)
+        print("Schema Error")
+        print(s)
         set_error_message(standard_error)
     return False
 

@@ -1661,6 +1661,7 @@ class ygGlyphScene(QGraphicsScene):
             for p in pts:
                 mpts.append(self._model_point(p))
             self.yg_glyph.names.add(mpts, text)
+            self.set_point_display((lambda : "coord" if self.preferences.top_window().points_as_coords else "index")())
 
     @pyqtSlot(object)
     def change_hint_color(self, _params):
@@ -1696,6 +1697,7 @@ class ygGlyphScene(QGraphicsScene):
             self.yg_glyph.set_category(c)
 
     def set_point_display(self, pv):
+        print("label preference: " + pv)
         for p in self.yg_point_view_list:
             p.yg_point.label_pref = pv
             if self.point_numbers_showing:
@@ -2766,3 +2768,6 @@ class ygGlyphView(QGraphicsView):
     def keyPressEvent(self, event):
         if event.key() in [16777219, 16777223]:
             self.viewer.delete_selected_hints()
+
+    def focusInEvent(self, event):
+        self.viewer.yg_glyph.undo_stack.setActive(True)
