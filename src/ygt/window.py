@@ -905,6 +905,7 @@ class MainWindow(QMainWindow):
             glyph = self.glyph_pane.viewer.yg_glyph
             glyph_backup = copy.deepcopy(glyph.gsource)
             glyph.cleanup_glyph()
+            self.yg_font.cleanup_font()
             self.yg_font.source_file.save_source()
             glyph.gsource.clear()
             for k in glyph_backup.keys():

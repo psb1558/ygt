@@ -518,6 +518,19 @@ class ygFont(QObject):
 
     def clean(self) -> bool:
         return self._clean
+    
+    def cleanup_font(self):
+        try:
+            no_hints = []
+            glist = self.source["glyphs"]
+            k = glist.keys()
+            for kk in k:
+                if not self.has_hints(kk):
+                    no_hints.append(kk)
+            for g in no_hints:
+                del self.source["glyphs"][g]
+        except Exception as e:
+            print("Error in cleanup_font: " + str(e))
 
     def has_hints(self, gname: str) -> bool:
         if not gname in self.glyphs:
@@ -3279,6 +3292,8 @@ class ygGlyphProperties(ygSourceable):
 
 
 class ygGlyphNames(ygSourceable):
+    """ The collection of glyph and set names.
+    """
     def __init__(self, glyph: ygGlyph) -> None:
         self.yg_glyph = glyph
         super().__init__(glyph.yg_font, self.yg_glyph.gsource)
