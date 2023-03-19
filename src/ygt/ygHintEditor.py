@@ -1697,7 +1697,6 @@ class ygGlyphScene(QGraphicsScene):
             self.yg_glyph.set_category(c)
 
     def set_point_display(self, pv):
-        print("label preference: " + pv)
         for p in self.yg_point_view_list:
             p.yg_point.label_pref = pv
             if self.point_numbers_showing:
@@ -2676,8 +2675,8 @@ class ygGlyphView(QGraphicsView):
     def switch_to(self, gname):
         self.viewer.reset_scale()
         self.viewer.yg_glyph.cleanup_glyph()
-        # Store the current glyph if it has an undo_stack.
-        if self.viewer.yg_glyph.undo_stack.count() > 0:
+        # Store the current glyph if it is changed.
+        if not self.viewer.yg_glyph.undo_stack.isClean():
             self.visited_glyphs[self.viewer.yg_glyph.gname] = self.viewer
         if gname in self.visited_glyphs:
             self.viewer = self.visited_glyphs[gname]
