@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QWidget, QDialog, QGridLayout, QVBoxLayout, QScroll
 from PyQt6.QtGui import (QPainter, QBrush, QPen, QColor)
 import numpy
 
-class fontViewDialog(QDialog):
+class fontViewDialog(QWidget):
     """ This dialog presents a grid showing all the glyphs in glyph_list--
         that is, those glyphs that are not made of composites. This display
         indicates which characters are hinted (their cells have blue backgrounds).
