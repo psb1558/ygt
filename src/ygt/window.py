@@ -898,6 +898,13 @@ class MainWindow(QMainWindow):
         for ss in s:
             ss.setClean()
 
+    def is_file_clean(self):
+        s = self.undo_group.stacks()
+        for ss in s:
+            if not ss.isClean():
+                return False
+        return True
+
     #
     # File operations
     #
@@ -908,7 +915,7 @@ class MainWindow(QMainWindow):
 
     def _save_yaml_file(self) -> None:
         # if self.yg_font and (not self.yg_font.clean()):
-        if self.yg_font and (not self.undo_group.isClean()):
+        if self.yg_font and (not self.is_file_clean()):
             glyph = self.glyph_pane.viewer.yg_glyph
             glyph_backup = copy.deepcopy(glyph.gsource)
             glyph.cleanup_glyph()
@@ -1253,7 +1260,7 @@ class MainWindow(QMainWindow):
         if self.yg_font:
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
             # if not self.yg_font.clean():
-            if not self.undo_group.isClean():
+            if not self.is_file_clean():
                 base += "●"
         self.setWindowTitle(base)
         if self.glyph_pane:
@@ -1441,7 +1448,7 @@ class MainWindow(QMainWindow):
             self.del_from_win_list(self)
             event.accept()
         # elif self.yg_font.clean():
-        elif self.undo_group.isClean():
+        elif self.is_file_clean():
             self.del_from_win_list(self)
             self.set_preferences()
             event.accept()
@@ -1456,7 +1463,7 @@ class MainWindow(QMainWindow):
     def all_clean(self) -> bool:
         for w in self.win_list:
             # if not w.yg_font.clean():
-            if not w.undo_group.isClean():
+            if not w.is_file_clean():
                 return False
         return True
 
@@ -1472,7 +1479,7 @@ class MainWindow(QMainWindow):
             del_list = []
             for w in self.win_list:
                 # if not w.yg_font.clean():
-                if not w.undo_group.isClean():
+                if not w.is_file_clean():
                     r = w.save_query()
                     if r in [0, 2]:
                         if r == 2:
