@@ -1689,10 +1689,13 @@ class glyphSourceTester:
         self.caller = caller
 
     def test(self) -> None:
-        if self.yg_glyph.gsource != self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]:
-            print("Not equal in " + self.caller)
-        if self.yg_glyph.gsource is not self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]:
-            print("Not same in " + self.caller)
+        try:
+            if self.yg_glyph.gsource != self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]:
+                print("Not equal in " + self.caller)
+            if self.yg_glyph.gsource is not self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]:
+                print("Not same in " + self.caller)
+        except Exception as e:
+            print("Error in glyphSourceTester.test: " + str(e))
 
 
 class ygGlyph(QObject):

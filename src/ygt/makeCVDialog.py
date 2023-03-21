@@ -656,6 +656,7 @@ class makeCVDialog(QDialog, cvSource):
         self.layout.addWidget(self.pane)
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
+        self.setWindowTitle("Make Control Value")
 
     def cvt(self):
         return self._cvt
