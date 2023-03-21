@@ -23,7 +23,9 @@ class instanceChecker:
         for kk in k:
             cv = self.cvt.get_cv(kk)
             try:
-                del cv["var"]
+                # if there's no "origin" in the cv, we can't replace the vars.
+                if "origin" in cv:
+                    del cv["var"]
             except Exception:
                 pass
 

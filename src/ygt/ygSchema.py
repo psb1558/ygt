@@ -193,7 +193,8 @@ defaults_struct = {
     Optional("assume-always-y"): bool,
     Optional("cleartype"): bool,
     Optional("round"): hint_types,
-    Optional("no-round"): hint_types
+    Optional("no-round"): hint_types,
+    Optional("cv_vars_generated"): bool
 }
 
 properties_struct = {

@@ -400,8 +400,9 @@ class ygFont(QObject):
             except Exception:
                 pass
         self.cvt         = ygcvt(self.main_window, self, self.source)
-        if self.is_variable_font:
+        if self.is_variable_font and not self.defaults.get_default("cv_vars_generated"):
             instanceChecker(self.ft_font, self.cvt, self.masters).refresh()
+            self.defaults.set_default(cv_vars_generated=True)
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
         if "functions" in self.source:
