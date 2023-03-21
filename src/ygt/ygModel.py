@@ -13,6 +13,7 @@ import copy
 import unicodedata
 import abc
 from .ygPreferences import ygPreferences
+from .cvGuesser import instanceChecker
 import defcon
 from ufo2ft import compileTTF
 
@@ -306,82 +307,101 @@ class ygFont(QObject):
             cvt = self.source["cvt"]
             cvt["baseline"] = {"val": 0, "type": "pos", "axis": "y"}
             try:
-                os2 = self.ft_font['OS/2']
-                cvt["cap-height"] =              {"val": os2.sCapHeight,
-                                                  "type": "pos",
-                                                  "axis": "y",
-                                                  "cat": "Lu"}
-            except Exception:
-                pass
-            try:
-                os2 = self.ft_font['OS/2']
-                cvt["xheight"] =                 {"val": os2.sxHeight,
-                                                  "type": "pos",
-                                                  "axis": "y",
-                                                  "cat": "Ll"}
-            except Exception:
-                pass
-            try:
-                cvt["cap-height-overshoot"] =    {"val": self.extreme_points("O")[0],
+                p = self.extreme_points("H")[0]
+                cvt["cap-height"] =              {"val": p[1],
                                                   "type": "pos",
                                                   "axis": "y",
                                                   "cat": "Lu",
-                                                  "same-as": {"below": {"ppem": 40, "cv": "cap-height"}}}
-                cvt["cap-baseline-undershoot"] = {"val": self.extreme_points("O")[1],
+                                                  "origin": {"glyph": "H", "ptnum": [p[0]]}}
+            except Exception:
+                pass
+            try:
+                p = self.extreme_points("x")[0]
+                cvt["xheight"] =                 {"val": p[1],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Ll",
+                                                  "origin": {"glyph": "x", "ptnum": [p[0]]}}
+            except Exception:
+                pass
+            try:
+                p = self.extreme_points("O")
+                cvt["cap-height-overshoot"] =    {"val": p[0][1],
                                                   "type": "pos",
                                                   "axis": "y",
                                                   "cat": "Lu",
-                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}}}
+                                                  "same-as": {"below": {"ppem": 40, "cv": "cap-height"}},
+                                                  "origin": {"glyph": "O", "ptnum": [p[0][0]]}}
+                cvt["cap-baseline-undershoot"] = {"val": p[1][1],
+                                                  "type": "pos",
+                                                  "axis": "y",
+                                                  "cat": "Lu",
+                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}},
+                                                  "origin": {"glyph": "O", "ptnum": [p[1][0]]}}
             except Exception:
                 pass
             try:
-                cvt["xheight-overshoot"] =       {"val": self.extreme_points("o")[0],
+                p = self.extreme_points("o")
+                cvt["xheight-overshoot"] =       {"val": p[0][1],
                                                   "type": "pos",
                                                   "axis": "y",
                                                   "cat": "Ll",
-                                                  "same-as": {"below": {"ppem": 40, "cv": "xheight"}}}
-                cvt["lc-baseline-undershoot"] =  {"val": self.extreme_points("o")[1],
+                                                  "same-as": {"below": {"ppem": 40, "cv": "xheight"}},
+                                                  "origin": {"glyph": "o", "ptnum": [p[0][0]]}}
+                cvt["lc-baseline-undershoot"] =  {"val": p[1][1],
                                                   "type": "pos",
                                                   "axis": "y",
                                                   "cat": "Ll",
-                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}}}
+                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}},
+                                                  "origin": {"glyph": "o", "ptnum": [p[1][0]]}}
             except Exception:
                 pass
             try:
-                cvt["lc-ascender"] =             {"val": self.extreme_points("b")[0],
+                p = self.extreme_points("b")[0]
+                cvt["lc-ascender"] =             {"val": p[1],
                                                   "type": "pos",
                                                   "axis": "y",
-                                                  "cat": "Ll"}
+                                                  "cat": "Ll",
+                                                  "origin": {"glyph": "b", "ptnum": [p[0]]}}
             except Exception:
                 pass
             try:
-                cvt["lc-descender"] =            {"val": self.extreme_points("p")[1],
+                p = self.extreme_points("p")[1]
+                cvt["lc-descender"] =            {"val": p[1],
                                                   "type": "pos",
                                                   "axis": "y",
-                                                  "cat": "Ll"}
+                                                  "cat": "Ll",
+                                                  "origin": {"glyph": "p", "ptnum": [p[0]]}}
             except Exception:
                 pass
             try:
-                cvt["num-round-top"] =           {"val": self.extreme_points("eight")[0],
+                p = self.extreme_points("eight")
+                cvt["num-round-top"] =           {"val": p[0][1],
                                                   "type": "pos",
                                                   "axis": "y",
                                                   "cat": "Nd",
-                                                  "same-as": {"below": {"ppem": 40, "cv": "num-flat-top"}}}
-                cvt["num-baseline-undershoot"] = {"val": self.extreme_points("eight")[1],
+                                                  "same-as": {"below": {"ppem": 40, "cv": "num-flat-top"}},
+                                                  "origin": {"glyph": "eight", "ptnum": [p[0][0]]}}
+                cvt["num-baseline-undershoot"] = {"val": p[1][1],
                                                   "type": "pos",
                                                   "axis": "y",
                                                   "cat": "Nd",
-                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}}}
+                                                  "same-as": {"below": {"ppem": 40, "cv": "baseline"}},
+                                                  "origin": {"glyph": "eight", "ptnum": [p[1][0]]}}
             except Exception:
                 pass
             try:
-                cvt["num-flat-top"] =            {"val": self.extreme_points("five")[0],
+                p = self.extreme_points("five")[0]
+                cvt["num-flat-top"] =            {"val": p[1],
                                                   "type": "pos",
                                                   "axis": "y",
-                                                  "cat": "Nd"}
+                                                  "cat": "Nd",
+                                                  "origin": {"glyph": "five", "ptnum": [p[0]]}}
             except Exception:
                 pass
         self.cvt         = ygcvt(self.main_window, self, self.source)
+        if self.is_variable_font:
+            instanceChecker(self.ft_font, self.cvt, self.masters).refresh()
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
         if "functions" in self.source:
@@ -438,6 +458,11 @@ class ygFont(QObject):
         # Track whether signal is connected
         self.signal_connected = False
 
+    @pyqtSlot()
+    def refresh_variant_cvs(self):
+        if self.is_variable_font:
+            instanceChecker(self.preview_font, self.cvt, self.masters).refresh()
+
     def default_instance(self) -> Optional[str]:
         if not self.is_variable_font:
             return None
@@ -491,13 +516,21 @@ class ygFont(QObject):
 
         """
         g = ygGlyph(ygPreferences(), self, glyph_name)
-        highest = -10000
-        lowest = 10000
+        last_highest = highest = -10000
+        last_lowest = lowest = 10000
+        highest_point = -1
+        lowest_point = -1
         plist = g.point_list
-        for p in plist:
+        for i, p in enumerate(plist):
             highest = max(highest, p.font_y)
+            if highest != last_highest:
+                last_highest = highest
+                highest_point = i
             lowest = min(lowest, p.font_y)
-        return highest, lowest
+            if lowest != last_lowest:
+                last_lowest = lowest
+                lowest_point = i
+        return (highest_point, highest), (lowest_point, lowest)
 
     def family_name(self) -> str:
         return self.ft_font['name'].getName(1,3,1,0x409)
@@ -1067,7 +1100,7 @@ class addCVCommand(cvtEditCommand):
             self.redo_state.restore()
         else:
             self.yg_font.source["cvt"][self.name] = self.props
-            self.redo_state = cvtSaver(self.font)
+            self.redo_state = cvtSaver(self.yg_font)
         self.send_signal()
 
 
@@ -2924,6 +2957,10 @@ class ygMasters:
             self.source["masters"] = {}
         if len(self.source["masters"]) == 0:
             self.build_master_list()
+        #k = self.keys()
+        #for kk in k:
+        #    print("master for " + str(kk))
+        #    print(self.get_master_coords(kk))
 
     def create_master(self):
         master_id = random_id("master")
@@ -2978,6 +3015,23 @@ class ygMasters:
             return self.source["masters"][m_id]["name"]
         except KeyError:
             return m_id
+        
+    def get_master_coords(self, master_id):
+        axis_vals = self.master(master_id)[1]["vals"]
+        axes = self.yg_font.axes
+        result = {}
+        for a in axes:
+            if a.axisTag in axis_vals:
+                if axis_vals[a.axisTag] == 0:
+                    result[a.axisTag] = a.defaultValue
+                elif axis_vals[a.axisTag] > 0:
+                    result[a.axisTag] = a.defaultValue + (axis_vals[a.axisTag] * (a.maxValue - a.defaultValue))
+                else:
+                    result[a.axisTag] = a.defaultValue - (abs(axis_vals[a.axisTag]) * (a.defaultValue - a.minValue))
+            else:
+                result[a.axisTag] = a.defaultValue
+        return result
+        
         
     def get_axis_value(self, m_id, axis):
         try:

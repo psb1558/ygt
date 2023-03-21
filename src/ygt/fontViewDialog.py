@@ -40,6 +40,7 @@ class fontViewDialog(QWidget):
         self.sig_switch_to_glyph.emit(g)
 
 
+
 class fontViewPanel(QWidget):
     def __init__(self, dialog):
         super().__init__()
@@ -64,6 +65,8 @@ class fontViewPanel(QWidget):
                 self.layout.setRowMinimumHeight(row, 36)
                 col = 0
         self.setStyleSheet("background-color: white;")
+
+
 
 class fontViewCell(QWidget):
     def __init__(self, dialog, glyph):

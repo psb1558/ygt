@@ -144,6 +144,11 @@ cv_var_struct = {
     str: int
 }
 
+cv_origin_struct = {
+    "glyph": str,
+    "ptnum": [int]
+}
+
 cvt_entry_struct = {
     "val": int,
     "type": Or("pos", "dist"),
@@ -156,7 +161,8 @@ cvt_entry_struct = {
                         "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
                         "Cn", "C"),
     Optional("same-as"): cv_same_as_struct,
-    Optional("var"): cv_var_struct
+    Optional("var"): cv_var_struct,
+    Optional("origin"): cv_origin_struct
 }
 
 function_entry_struct = {

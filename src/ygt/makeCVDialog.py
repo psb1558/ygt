@@ -311,7 +311,12 @@ class mastersWidget(QWidget):
         del_button.clicked.connect(self.del_master)
         self.master_list_layout.addLayout(self.button_layout)
         self.layout.addLayout(self.master_list_layout)
-        self.layout.addWidget(self.edit_pane)
+        self.edit_pane_layout = QVBoxLayout()
+        self.edit_pane_layout.addWidget(self.edit_pane)
+        self.refresh_variants_button = QPushButton("Generate Variant Control Values")
+        self.edit_pane_layout.addWidget(self.refresh_variants_button)
+        self.refresh_variants_button.clicked.connect(self.yg_font.refresh_variant_cvs)
+        self.layout.addLayout(self.edit_pane_layout)
         self.setLayout(self.layout)
 
     def current_master_name(self):
@@ -607,10 +612,10 @@ class makeCVDialog(QDialog, cvSource):
         directly, but instead works on a fragment of cv code to be
         added when the accept() function is called.
     """
-    def __init__(self, p1, p2, yg_font, preferences):
+    def __init__(self, p1, p2, yg_glyph, preferences):
         super().__init__()
         self.top_window = preferences.top_window()
-        self.yg_font = yg_font
+        self.yg_font = yg_glyph.yg_font
         self._cvt = self.yg_font.cvt
         self.cv = {}
         self.cv_name = ""
@@ -618,8 +623,10 @@ class makeCVDialog(QDialog, cvSource):
         self.cv["axis"] = self.axis
         if p2 != None:
             init_type = "dist"
+            origin_indices = [p1.index, p2.index]
         else:
             init_type = "pos"
+            origin_indices = [p1.index]
         self.cv["type"] = init_type
         val = 0
         if self.axis == "y":
@@ -633,6 +640,7 @@ class makeCVDialog(QDialog, cvSource):
             else:
                 val = abs(p1.font_x - p2.font_x)
         self.cv["val"] = val
+        self.cv["origin"] = {"glyph": yg_glyph.gname, "ptnum": origin_indices}
 
         self.layout = QVBoxLayout()
 

@@ -1644,7 +1644,7 @@ class ygGlyphScene(QGraphicsScene):
         p2 = None
         if len(sel) >= 2:
             p2 = self._model_point(sel[1])
-        cv_dialog = makeCVDialog(p1, p2, self.yg_glyph.yg_font, self.preferences)
+        cv_dialog = makeCVDialog(p1, p2, self.yg_glyph, self.preferences)
         r = cv_dialog.exec()
         if r == QDialog.DialogCode.Accepted:
             self.yg_glyph.yg_font.cvt.set_clean(False)

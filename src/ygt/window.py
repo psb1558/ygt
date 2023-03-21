@@ -609,6 +609,7 @@ class MainWindow(QMainWindow):
             self.font_viewer = fontViewDialog(font_name, self.yg_font, glyph_list, self)
         if self.font_viewer.valid:
             self.font_viewer.show()
+            self.font_viewer.raise_()
             self.font_viewer.activateWindow()
         else:
             self.show_error_message(["Error", "Error", "Can't create the font view dialog."])
@@ -1317,10 +1318,6 @@ class MainWindow(QMainWindow):
     def edit_cvt(self) -> None:
         if not self.cvt_editor:
             self.cvt_editor = cvtWindow(self.yg_font, self.preferences)
-        #self.cvt_editor = editorDialog(self.preferences,
-        #                                self.yg_font.cvt,
-        #                                "cvt",
-        #                                is_cvt_valid)
         self.yg_font.setup_signal(self.cvt_editor.refresh)
         self.cvt_editor.show()
         self.cvt_editor.raise_()
