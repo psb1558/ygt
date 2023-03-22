@@ -553,13 +553,13 @@ class ygFont(QObject):
     def clean(self) -> bool:
         return self._clean
     
-    def cleanup_font(self):
+    def cleanup_font(self, current_glyph_name):
         try:
             no_hints = []
             glist = self.source["glyphs"]
             k = glist.keys()
             for kk in k:
-                if not self.has_hints(kk):
+                if kk != current_glyph_name and not self.has_hints(kk):
                     no_hints.append(kk)
             for g in no_hints:
                 del self.source["glyphs"][g]

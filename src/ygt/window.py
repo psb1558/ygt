@@ -920,12 +920,13 @@ class MainWindow(QMainWindow):
             glyph = self.glyph_pane.viewer.yg_glyph
             glyph_backup = copy.deepcopy(glyph.gsource)
             glyph.cleanup_glyph()
-            self.yg_font.cleanup_font()
+            self.yg_font.cleanup_font(glyph.glyph_name())
             self.yg_font.source_file.save_source()
             glyph.gsource.clear()
             for k in glyph_backup.keys():
                 glyph.gsource[k] = glyph_backup[k]
             self.set_all_clean()
+            self.set_window_title()
             # self.yg_font.set_clean()
 
     def save_as(self) -> None:
