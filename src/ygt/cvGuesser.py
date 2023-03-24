@@ -56,9 +56,9 @@ class instanceChecker:
                     cv["var"][dkk] = d[dkk][ckk]
 
     def get_cvs_for_master(self, master_id):
-        # Get the glyph name and point index from the "origin" field.
-        # Get the list of y values (function below) and grab the
-        #     value at the appropriate index.
+        # Get the glyph name and point index (or indices) from the
+        # "origin" field. Get the list of y values (function below) and
+        # use those to figure out the value of the cv for this glyph.
         # Compare the new position with that of the default cv.
         # If different, store. If the same, discard.
         result = {}
@@ -77,12 +77,8 @@ class instanceChecker:
                 elif cv["type"] == "dist":
                     glyph_name = cv["origin"]["glyph"]
                     ptnum =      cv["origin"]["ptnum"]
-                    # print(ptnum)
                     yl = self.y_list(glyph_name)
-                    # print(yl)
-                    y_pos_a = yl[ptnum[0]]
-                    y_pos_b = yl[ptnum[1]]
-                    y_diff = abs(y_pos_a - y_pos_b)
+                    y_diff = abs(yl[ptnum[0]] - yl[ptnum[1]])
                     if cv["val"] != y_diff:
                         result[kk] = y_diff
         return result
