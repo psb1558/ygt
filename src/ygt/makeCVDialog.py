@@ -490,7 +490,7 @@ class cvWidget(QWidget):
         self.gen_widgets[-1].addWidget(self.cv_suffix_widget)
 
         self.gen_widgets.append(QHBoxLayout())
-        self.gen_widgets[-1].addWidget(QLabel("color"))
+        self.gen_widgets[-1].addWidget(QLabel("distance type"))
         self.gen_widgets[-1].addWidget(self.cv_color_widget)
 
         # Set up link tab
