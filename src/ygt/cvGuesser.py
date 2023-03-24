@@ -67,13 +67,24 @@ class instanceChecker:
         k = self.cvt.keys()
         for kk in k:
             cv = self.cvt.get_cv(kk)
-            if type(cv) is dict and cv["type"] == "pos" and "origin" in cv:
-                glyph_name = cv["origin"]["glyph"]
-                ptnum =      cv["origin"]["ptnum"]
-                y_pos = self.y_list(glyph_name)[ptnum[0]]
-                if cv["val"] != y_pos:
-                    result[kk] = y_pos
-                pass
+            if type(cv) is dict and "origin" in cv:
+                if cv["type"] == "pos":
+                    glyph_name = cv["origin"]["glyph"]
+                    ptnum =      cv["origin"]["ptnum"]
+                    y_pos = self.y_list(glyph_name)[ptnum[0]]
+                    if cv["val"] != y_pos:
+                        result[kk] = y_pos
+                elif cv["type"] == "dist":
+                    glyph_name = cv["origin"]["glyph"]
+                    ptnum =      cv["origin"]["ptnum"]
+                    # print(ptnum)
+                    yl = self.y_list(glyph_name)
+                    # print(yl)
+                    y_pos_a = yl[ptnum[0]]
+                    y_pos_b = yl[ptnum[1]]
+                    y_diff = abs(y_pos_a - y_pos_b)
+                    if cv["val"] != y_diff:
+                        result[kk] = y_diff
         return result
 
     def y_list(self, glyph_name):
