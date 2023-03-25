@@ -1,0 +1,35 @@
+@font-face {
+  font-family: Elstob;
+  src: url('./Elstob.woff2');
+  font-weight: 300 700;
+  font-style: normal;
+}
+
+body {
+    width: 95%;
+    padding: 20px;
+}
+
+.headerbox {
+    background-color: lightgray;
+    padding: 50px;
+}
+
+.smcp {
+    font-feature-settings: "smcp" on;
+}
+
+h1 {
+    font-family: Elstob;
+    font-variation-settings: "wght" 600;
+    font-size: 3em;
+}
+
+p {
+    font-family: Elstob;
+    font-size: 1.5em;
+}
+
+div {
+    font-family: Elstob;
+}
