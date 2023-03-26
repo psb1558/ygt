@@ -32,7 +32,7 @@ When you first open a font, Ygt generates a small collection of control values a
 
 In due course, similar windows will be available for editing other aspects of the font: for now, Ygt offers an interface for editing its source code directly: all editing windows are validated, making it hard to go badly wrong, and the simple file format used by Ygt is documented in the file [YGT-intro.pdf](docs/YGT-intro.pdf).
 
-Ygt must be installed and run from the command line. Download the zip file (the project is not yet on PyPi), unzip, make sure you're in an environment where Python 3.7 or higher is available, navigate to the directory with the file `pyproject.toml`, and type:
+Ygt must be installed and run from the command line. Download the zip file (the project is not yet on PyPi), unzip, make sure you're in an environment where Python 3.10 or higher is available, navigate to the directory with the file `pyproject.toml`, and type:
 ```
 pip install .
 ```
