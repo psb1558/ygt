@@ -12,8 +12,9 @@ body {
 
 iframe {
     display: block;
-    width: 80%;
-    margin: 20px auto
+    margin: 20px auto;
+    resize: both;
+    overflow: auto;
 }
 
 .headerbox {
