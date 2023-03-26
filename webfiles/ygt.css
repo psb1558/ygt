@@ -10,6 +10,12 @@ body {
     padding: 20px;
 }
 
+iframe {
+    display: block;
+    width: 80%;
+    margin: 20px auto
+}
+
 .headerbox {
     background-color: lightgray;
     padding: 50px;
