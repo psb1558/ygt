@@ -17,7 +17,7 @@ body {
     height: 0;
 }
 
-.videowrapper iframe {
+.videoWrapper iframe {
     position: absolute;
     top: 0;
     left: 0;
