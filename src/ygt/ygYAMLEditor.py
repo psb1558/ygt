@@ -1,4 +1,4 @@
-from PyQt6.QtCore import (pyqtSignal, Qt, pyqtSlot)
+from PyQt6.QtCore import (pyqtSignal, Qt, QTimer, pyqtSlot)
 from PyQt6.QtWidgets import (QDialog,
                              QVBoxLayout,
                              QPlainTextEdit,
@@ -25,9 +25,16 @@ yaml.add_representer(str, str_presenter)
 yaml.representer.SafeRepresenter.add_representer(str, str_presenter)
 
 class ygYAMLEditor(QPlainTextEdit):
+    """ An editor for source code for the current axis of the current glyph.
+
+        Params:
+
+        preferences (ygPreferences): The preferences object for the current file.
+    """
 
     sig_source_from_editor = pyqtSignal(object)
     sig_status = pyqtSignal(object)
+    sig_error = pyqtSignal(object)
 
     def __init__(self, preferences, parent=None):
         super().__init__()
@@ -38,7 +45,13 @@ class ygYAMLEditor(QPlainTextEdit):
         self.preferences = preferences
         self.textChanged.connect(self.text_changed)
         self._highlighter = ygGlyphHighlighter()
+        self._timer = QTimer()
+        self._timer.timeout.connect(self.check_valid)
+        self.code_valid = True
         self.setup_editor()
+
+    def setup_error_signal(self, f):
+        self.sig_error.connect(f)
 
     @pyqtSlot(object)
     def install_source(self, text):
@@ -47,17 +60,24 @@ class ygYAMLEditor(QPlainTextEdit):
     @pyqtSlot()
     def yaml_source(self):
         err = False
+        msg = ""
         try:
             s = yaml.safe_load(self.toPlainText())
         except Exception as e:
             err = True
+            msg = str(e)
         if not err:
             try:
                 err = not is_valid({"points": s})
-            except SchemaError:
+                if err:
+                    msg = error_message()
+            except SchemaError as s:
                 err = True
+                msg = str(s)
         if err:
-            self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+            self.sig_error.emit({"msg": "Invalid source: " + msg, "mode": "console"})
+            # self.sig_error.emit({"msg": "YAML source code is invalid.", "mode": "console"})
+            # self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
         else:
             self.sig_source_from_editor.emit(s)
 
@@ -71,8 +91,14 @@ class ygYAMLEditor(QPlainTextEdit):
         self.sig_source_from_editor.disconnect(f)
 
     @pyqtSlot()
+    def check_valid(self):
+        if not self.code_valid:
+            self.sig_error.emit({"msg": error_message(), "mode": "console"})
+            self.sig_status.emit(self.code_valid)
+
+    @pyqtSlot()
     def text_changed(self):
-        valid = True
+        self.code_valid = True
         y = self.toPlainText()
         if len(y) == 0:
             self.setPlainText("[]\n")
@@ -80,15 +106,24 @@ class ygYAMLEditor(QPlainTextEdit):
             try:
                 y = yaml.safe_load(y)
             except Exception as e:
-                valid = False
-            if valid:
-                valid = is_valid({"points": y})
-            if valid:
+                self.code_valid = False
+            if self.code_valid:
+                self.code_valid = is_valid({"points": y})
+            if self.code_valid:
                 set_error_message(None)
             else:
                 if not error_message():
                     set_error_message("error")
-        self.sig_status.emit(valid)
+        # If code is not valid, start timer. Any time user presses a key,
+        # the timer will restart if code is not (yet) valid. The effect is
+        # that user has two seconds after any keypress to achieve validity
+        # before any message is displayed.
+        if self.code_valid:
+            self._timer.stop()
+            self.sig_status.emit(self.code_valid)
+        else:
+            self._timer.start(2000)
+        
 
     def setup_editor(self):
         tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round|min)\:'
@@ -133,12 +168,34 @@ class ygYAMLEditor(QPlainTextEdit):
 
 
 class editorPane(QPlainTextEdit):
+    """ An editor for any chunk of code from current file, e.g. functions.
+        This validates as the user types, but it only emits an error two
+        seconds after user has stopped typing. This cuts back on unnecessary
+        messages when (for example) a user is typing "true"--which is not
+        valid until the word is complete.
+
+        Params:
+
+        owner: The dialog or window that owns this pane.
+
+        sourceable: Object of type Sourceable: the thing to edit.
+
+        validator: function that will throw an exception if text is not valid.
+
+        save_on_focus_out (bool): Whether to auto-save if user leaves this
+        editor.
+
+
+    """
+
+    sig_error = pyqtSignal(object)
 
     def __init__(self, owner, sourceable, validator, save_on_focus_out=False):
         super().__init__()
         self.save_on_focus_out = save_on_focus_out
         self.owner = owner
         self.textChanged.connect(self.text_changed)
+        # error_state is true if the code in this editor is invalid.
         self.error_state = False
         self.set_style()
         self.watching_for_changes = False
@@ -146,6 +203,11 @@ class editorPane(QPlainTextEdit):
         self.sourceable = sourceable
         self.install_yaml(copy.copy(self.sourceable.source()))
         self.dirty = False
+        self._timer = QTimer()
+        self._timer.timeout.connect(self.check_valid)
+
+    def setup_error_signal(self, f):
+        self.sig_error.connect(f)
 
     def install_text(self, text):
         self.setPlainText(text)
@@ -177,8 +239,15 @@ class editorPane(QPlainTextEdit):
             return t
         except Exception as e:
             self.set_error_state(True)
-            self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+            self.sig_error.emit({"msg": "YAML source code is invalid.", "mode": "console"})
+            # self.owner.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
+    @pyqtSlot()
+    def check_valid(self):
+        self.set_error_state(True)
+        self.sig_error.emit({"msg": error_message(), "mode": "console"})
+
+    @pyqtSlot()
     def text_changed(self):
         if not self.watching_for_changes:
             return
@@ -188,12 +257,14 @@ class editorPane(QPlainTextEdit):
         v = False
         try:
             v = self.is_valid(yaml.safe_load(self.toPlainText()))
-            # self.set_error_state(False)
         except Exception as e:
-            # self.set_error_state(True)
             print("Error on load:")
             print(e)
-        self.set_error_state(not v)
+        if v:
+            self._timer.stop()
+            self.set_error_state(not v)
+        else:
+            self._timer.start(2000)
         self.dirty = True
 
     def focusOutEvent(self, event):
@@ -208,7 +279,8 @@ class editorPane(QPlainTextEdit):
             else:
                 self.set_error_state(True)
             if self.error_state:
-                self.owner.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+                self.sig_error.emit({"msg": "YAML source code is invalid.", "mode": "console"})
+                # self.owner.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
     def showEvent(self, event):
         self.install_yaml(copy.copy(self.sourceable.source()))
@@ -234,6 +306,7 @@ class editorDialog(QDialog):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         self.edit_pane = editorPane(self, sourceable, validator)
+        self.edit_pane.setup_error_signal(self.preferences.top_window().error_manager.new_message)
         self.layout.addWidget(self.edit_pane)
         QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         self.buttonBox = QDialogButtonBox(QBtn)

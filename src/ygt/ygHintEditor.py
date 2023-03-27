@@ -2565,7 +2565,8 @@ class ygGlyphScene(QGraphicsScene):
                                                                              self._model_hint(hint))
                 self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
             except Exception:
-                self.preferences.top_window().show_error_message(["Error", "Error", self.cv_error_msg])
+                self.yg_glyph.send_error_message({"msg": self.cv_error_msg, "mode": "console"})
+                # self.preferences.top_window().show_error_message(["Error", "Error", self.cv_error_msg])
         if hint and action in cv_stem_action_list:
             try:
                 if action.text() == "Guess":
@@ -2573,7 +2574,8 @@ class ygGlyphScene(QGraphicsScene):
                                                                              self._model_hint(hint))
                 self.sig_change_cv.emit({"hint": hint, "cv": action.text()})
             except Exception:
-                self.preferences.top_window().show_error_message(["Error", "Error", self.cv_error_msg])
+                self.yg_glyph.send_error_message({"msg": self.cv_error_msg, "mode": "console"})
+                # self.preferences.top_window().show_error_message(["Error", "Error", self.cv_error_msg])
         if hint and ntype == 3 and (action == black_space):
             self.sig_change_hint_color.emit({"hint":  hint, "color": "blackspace"})
         if hint and ntype == 3 and (action == white_space):
@@ -2645,7 +2647,8 @@ class ygGlyphView(QGraphicsView):
             self.switch_to(g)
         except Exception as e:
             # print(e)
-            self.preferences.top_window().show_error_message(["Warning", "Warning", "Can't load requested glyph."])
+            self.yg_font.send_error_message({"msg": "Can't load requested glyph.", "mode": "dialog"})
+            # self.preferences.top_window().show_error_message(["Warning", "Warning", "Can't load requested glyph."])
         self.preferences['top_window'].connect_editor_signals()
 
     # sender returns None when we use the decorator. Rethink these signals?
@@ -2700,7 +2703,8 @@ class ygGlyphView(QGraphicsView):
         try:
             self.viewer.guess_cv()
         except Exception:
-            self.preferences.top_window().show_error_message(["Error", "Error", "Error while looking for a control value."])
+            self.yg_font.send_error_message({"msg": "Error while looking for a control value.", "mode": "console"})
+            # self.preferences.top_window().show_error_message(["Error", "Error", "Error while looking for a control value."])
 
     @pyqtSlot(bool)
     def switch_to_x(self, checked):

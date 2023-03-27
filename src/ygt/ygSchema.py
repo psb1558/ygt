@@ -1,4 +1,4 @@
-from schema import Or, Optional, Schema, SchemaError
+from schema import Or, Optional, Schema, SchemaError, Use
 from .ygModel import unicode_categories
 import re
 
@@ -48,7 +48,8 @@ def is_point_valid_1(pt):
         if not err:
             return True
     set_error_message("point " + str(pt) + " is not valid")
-    return False
+    raise SchemaError("point " + str(pt) + " is not valid")
+    # return False
 
 def is_point_valid_2(pt):
 
@@ -69,7 +70,8 @@ def is_point_valid_2(pt):
         if not err:
             return True
     set_error_message("point " + str(pt) + " is not valid")
-    return False
+    raise SchemaError("point " + str(pt) + " is not valid")
+    # return False
 
 def validate_points(pt):
 
@@ -247,7 +249,7 @@ def is_valid(t):
         set_error_message(standard_okay)
         return True
     except SchemaError as s:
-        set_error_message(standard_error)
+        set_error_message("Error in YAML source: " + str(s))
     return False
 
 cvt_schema =      Schema(cvt_entry_struct)
@@ -266,9 +268,10 @@ def is_cvt_valid(t):
         set_error_message(standard_okay)
         return True
     except SchemaError as s:
-        print("Schema Error")
-        print(s)
-        set_error_message(standard_error)
+        set_error_message("Error in Control Value Table: " + str(s))
+        # print("Schema Error")
+        # print(s)
+        # set_error_message(standard_error)
     return False
 
 def is_cvar_valid(t):
@@ -276,8 +279,9 @@ def is_cvar_valid(t):
         cvar_schema.validate(t)
         return True
     except SchemaError as s:
-        print("Error in is_cvar_valid:")
-        print(s)
+        set_error_message("Error in cvar: " + str(s))
+        # print("Error in is_cvar_valid:")
+        # print(s)
     return False
 
 def is_prep_valid(t):
@@ -285,8 +289,9 @@ def is_prep_valid(t):
         prep_schema.validate(t)
         return True
     except SchemaError as s:
-        print("Error in is_prep_valid:")
-        print(s)
+        set_error_message("Error in prep: " + str(s))
+        #print("Error in is_prep_valid:")
+        #print(s)
     return False
 
 def are_functions_valid(t):
@@ -295,8 +300,9 @@ def are_functions_valid(t):
             function_schema.validate(t[k])
         return True
     except SchemaError as s:
-        print("Error in are_functions_valid:")
-        print(s)
+        set_error_message("Error in functions: " + str(s))
+        #print("Error in are_functions_valid:")
+        #print(s)
     return False
 
 def are_macros_valid(t):
@@ -305,8 +311,9 @@ def are_macros_valid(t):
             macro_schema.validate(t[k])
         return True
     except SchemaError as s:
-        print("Error in are_macros_valid:")
-        print(s)
+        set_error_message("Error in macros: " + str(s))
+        # print("Error in are_macros_valid:")
+        # print(s)
     return False
 
 def are_defaults_valid(t):
@@ -314,8 +321,9 @@ def are_defaults_valid(t):
         defaults_schema.validate(t)
         return True
     except SchemaError as s:
-        print("Error in are_defaults_valid:")
-        print(s)
+        set_error_message("Error in defaults: " + str(s))
+        #print("Error in are_defaults_valid:")
+        #print(s)
     return False
 
 def are_names_valid(t):
@@ -323,16 +331,19 @@ def are_names_valid(t):
         names_schema.validate(t)
         return True
     except SchemaError as s:
-        print("Error in are_names_valid:")
-        print(s)
+        set_error_message("Error in point names: " + str(s))
+        # print("Error in are_names_valid:")
+        # print(s)
+    return False
 
 def are_properties_valid(t):
     try:
         props_schema.validate(t)
         return True
     except SchemaError as s:
-        print("Error in are_properties_valid:")
-        print(s)
+        set_error_message("Error in glyph properties: " + str(s))
+        # print("Error in are_properties_valid:")
+        # print(s)
 
 def always_valid(t):
     return True

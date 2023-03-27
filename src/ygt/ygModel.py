@@ -21,10 +21,10 @@ hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
                    "stem": 3, "whitespace": 3, "blackspace": 3, "grayspace": 3,
                    "move": 3, "macro": 4, "function": 4}
 
-unicode_categories = ["Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
-                      "Me", "M", "Nd", "Nl", "No", "N", "Pc", "Pd", "Ps",
-                      "Pe", "Pi", "Pf", "Po", "P", "Sm", "Sc", "Sk", "So",
-                      "S", "Zs", "Zl", "Zp", "Z", "Cc", "Cf", "Cs", "Co",
+unicode_categories = ["Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L",  "Mn", "Mc",
+                      "Me", "M",  "Nd", "Nl", "No", "N",  "Pc", "Pd", "Ps",
+                      "Pe", "Pi", "Pf", "Po", "P",  "Sm", "Sc", "Sk", "So",
+                      "S",  "Zs", "Zl", "Zp", "Z",  "Cc", "Cf", "Cs", "Co",
                       "Cn", "C"]
 
 unicode_cat_names = {"Lu":   "Letter, uppercase",
@@ -236,6 +236,7 @@ class ygFont(QObject):
     """
 
     sig_cvt_changed = pyqtSignal()
+    sig_error = pyqtSignal(object)
 
     def __init__(self, main_window: Any, source_file: Union[str, dict], ygt_filename: str = "") -> None:
         super().__init__()
@@ -459,6 +460,12 @@ class ygFont(QObject):
         # Track whether signal is connected
         self.signal_connected = False
 
+    def setup_error_signal(self, f):
+        self.sig_error.connect(f)
+
+    def send_error_message(self, d: dict):
+        self.sig_error.emit(d)
+
     @pyqtSlot()
     def refresh_variant_cvs(self):
         if self.is_variable_font:
@@ -564,7 +571,8 @@ class ygFont(QObject):
             for g in no_hints:
                 del self.source["glyphs"][g]
         except Exception as e:
-            print("Error in cleanup_font: " + str(e))
+            self.send_error_message({"msg": "Error in cleanup_font: " + str(e), "mode": "console"})
+            # print("Error in cleanup_font: " + str(e))
 
     def has_hints(self, gname: str) -> bool:
         if not gname in self.glyphs:
@@ -1800,6 +1808,10 @@ class ygGlyph(QObject):
         print("Current block:")
         print(self.current_block())
 
+    def send_error_message(self, d: dict):
+        if self.yg_font:
+            self.yg_font.send_error_message(d)
+
     #
     # Ordering and structuring YAML source
     #
@@ -2249,7 +2261,8 @@ class ygGlyph(QObject):
         self.undo_stack.push(new_cmd)
         if not new_cmd.valid:
             new_cmd.setObsolete(True)
-            self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+            self.send_error_message({"msg": "YAML source code is invalid.", "mode": "console"})
+            # self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
 
     def cleanup_glyph(self, source: Union[dict, None] = None) -> None:
         """ Call before saving YAML file.
@@ -2446,7 +2459,8 @@ class ygGlyph(QObject):
                     m += " is out of range. This glyph may have been "
                     m += "edited since its hints were written, and if so, they "
                     m += "will have to be redone."
-                    self.preferences.top_window().show_error_message(["Error", "Error", m])
+                    self.send_error_message({"msg": m, "mode": "console"})
+                    # self.preferences.top_window().show_error_message(["Error", "Error", m])
                 # Return an erroneous but safe number (it shouldn't make the
                 # program crash).
                 return self.point_list[0]
@@ -2466,7 +2480,8 @@ class ygGlyph(QObject):
                 m += " in glyph "
                 m += self.gname
                 m += ". Substituting zero."
-                self.preferences.top_window().show_error_message(["Error", "Error", m])
+                self.send_error_message({"msg": m, "mode": "console"})
+                # self.preferences.top_window().show_error_message(["Error", "Error", m])
             return self.point_list[0]
         result = self.resolve_point_identifier(result, depth=depth+1)
         if self._is_pt_obj(result):

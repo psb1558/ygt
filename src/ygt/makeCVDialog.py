@@ -46,6 +46,8 @@ NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 
 class cvSource:
 
+    def send_error_message(self, d: dict): ...
+
     def cvt(self): ...
 
     def current_cv(self): ...
@@ -106,6 +108,9 @@ class cvEditPane(QWidget, cvSource):
         self.layout.addLayout(self.cv_list_layout)
         self.layout.addWidget(self.edit_pane)
         self.setLayout(self.layout)
+
+    def send_error_message(self, d: dict):
+        self.yg_font.send_error_message(d)
 
     def add_cv(self):
         self._current_cv_name = NEW_CV_NAME
@@ -242,6 +247,7 @@ class cvtWindow(QWidget):
         self.tabs = QTabWidget()
         self.cv_tab = cvEditPane(self, self.yg_font, self.preferences)
         self.source_tab = editorPane(self, self.cvt, is_cvt_valid, save_on_focus_out=True)
+        self.source_tab.setup_error_signal(self.yg_font.send_error_message)
         self.masters_tab = None
         if self.yg_font.is_variable_font:
             self.masters_tab = mastersWidget(self, self.yg_font)
@@ -657,6 +663,9 @@ class makeCVDialog(QDialog, cvSource):
         self.layout.addWidget(self.buttonBox)
         self.setLayout(self.layout)
         self.setWindowTitle("Make Control Value")
+
+    def send_error_message(self, d: dict):
+        self.yg_font.send_error_message(d)
 
     def cvt(self):
         return self._cvt

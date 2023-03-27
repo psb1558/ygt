@@ -19,6 +19,7 @@ from .ygSchema import (
     are_defaults_valid,
     are_names_valid,
     are_properties_valid)
+from .ygError import ygErrorMessages
 from .makeCVDialog import cvtWindow
 from xgridfit import compile_list, compile_all
 from fontTools import ufoLib
@@ -123,7 +124,7 @@ class MainWindow(QMainWindow):
         # The undo registry should keep a record of undo stacks for each
         # glyph that has been edited, and for the prep, cvar, fpgm, macros,
         # and defaults.
-        self. undo_registry = {}
+        self.error_manager = ygErrorMessages(self)
         if not win_list:
             self.win_list = [self]
         else:
@@ -520,7 +521,8 @@ class MainWindow(QMainWindow):
         emsg =  "Error compiling YAML or Xgridfit code. "
         emsg += "Check the correctness of your code (including any "
         emsg += "functions or macros and the prep program) and try again."
-        self.show_error_message(["Error", "Error", emsg])
+        self.error_manager.new_message({"msg": emsg, "mode": "console"})
+        # self.show_error_message(["Error", "Error", emsg])
 
     def check_axis_button(self) -> None:
         if self.current_axis == "y":
@@ -612,7 +614,8 @@ class MainWindow(QMainWindow):
             self.font_viewer.raise_()
             self.font_viewer.activateWindow()
         else:
-            self.show_error_message(["Error", "Error", "Can't create the font view dialog."])
+            self.error_manager.new_message({"msg": "Can't create the font view dialog.", "mode": "console"})
+            # self.show_error_message(["Error", "Error", "Can't create the font view dialog."])
 
     #
     # Indices vs. coordinates outline display
@@ -869,6 +872,7 @@ class MainWindow(QMainWindow):
 
     def add_editor(self, editor: ygYAMLEditor):
         self.source_editor = editor
+        self.source_editor.setup_error_signal(self.error_manager.new_message)
         self.qs.addWidget(self.source_editor)
 
     def add_glyph_pane(self, g: ygGlyphView) -> None:
@@ -987,7 +991,8 @@ class MainWindow(QMainWindow):
             emsg = "Failed to compile one or more glyphs: "
             for f in failed_list:
                 emsg += (f + " ")
-            self.show_error_message(["Error", "Error", emsg])
+            self.error_manager.new_message({"msg": emsg, "mode": "console"})
+            # self.show_error_message(["Error", "Error", emsg])
 
     @pyqtSlot()
     def font_gen_error(self) -> None:
@@ -997,7 +1002,8 @@ class MainWindow(QMainWindow):
         emsg =  "Failed to generate the font. This most likely due to an error "
         emsg += "in function, macro, or prep code or in your cvt or cvar "
         emsg += "entries."
-        self.show_error_message(["Error", "Error", emsg])
+        self.error_manager.new_message({"msg": emsg, "mode": "console"})
+        # self.show_error_message(["Error", "Error", emsg])
 
     @pyqtSlot()
     def open_recent(self) -> None:
@@ -1036,7 +1042,8 @@ class MainWindow(QMainWindow):
                 emsg += f
             else:
                 emsg += str(f)
-            self.show_error_message(["Error", "Error", emsg])
+            self.error_manager.new_message({"msg": emsg, "mode": "console"})
+            # self.show_error_message(["Error", "Error", emsg])
         if result == 1:
             self.set_preferences()
             w = MainWindow(self.app, win_list=self.win_list, prefs=self.preferences)
@@ -1164,6 +1171,7 @@ class MainWindow(QMainWindow):
                 self.yg_font = ygFont(self, yaml_source, ygt_filename=ygt_filename)
             else:
                 self.yg_font = ygFont(self, filename)
+            self.yg_font.setup_error_signal(self.error_manager.new_message)
 
             if ("current_glyph" in self.preferences and
                 self.yg_font.full_name() in self.preferences["current_glyph"]):
@@ -1263,7 +1271,7 @@ class MainWindow(QMainWindow):
             base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
             # if not self.yg_font.clean():
             if not self.is_file_clean():
-                base += "●"
+                base += "*"
         self.setWindowTitle(base)
         if self.glyph_pane:
             self.set_statusbar_text(None)
@@ -1284,10 +1292,10 @@ class MainWindow(QMainWindow):
         self.set_statusbar_text(bool(t))
 
     def show_error_message(self, msg_list: list) -> None:
-        print(msg_list[0])
-        print(msg_list[1])
-        print(msg_list[2])
-        return
+        #print(msg_list[0])
+        #print(msg_list[1])
+        #print(msg_list[2])
+        #return
         msg = QMessageBox(self)
         if msg_list[0] == "Warning":
             msg.setIcon(QMessageBox.Icon.Warning)
