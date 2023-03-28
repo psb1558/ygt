@@ -2261,8 +2261,7 @@ class ygGlyph(QObject):
         self.undo_stack.push(new_cmd)
         if not new_cmd.valid:
             new_cmd.setObsolete(True)
-            self.send_error_message({"msg": "YAML source code is invalid.", "mode": "console"})
-            # self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+            self.send_error_message({"msg": "Invalid source.", "mode": "console"})
 
     def cleanup_glyph(self, source: Union[dict, None] = None) -> None:
         """ Call before saving YAML file.
@@ -2460,7 +2459,6 @@ class ygGlyph(QObject):
                     m += "edited since its hints were written, and if so, they "
                     m += "will have to be redone."
                     self.send_error_message({"msg": m, "mode": "console"})
-                    # self.preferences.top_window().show_error_message(["Error", "Error", m])
                 # Return an erroneous but safe number (it shouldn't make the
                 # program crash).
                 return self.point_list[0]
@@ -2481,7 +2479,6 @@ class ygGlyph(QObject):
                 m += self.gname
                 m += ". Substituting zero."
                 self.send_error_message({"msg": m, "mode": "console"})
-                # self.preferences.top_window().show_error_message(["Error", "Error", m])
             return self.point_list[0]
         result = self.resolve_point_identifier(result, depth=depth+1)
         if self._is_pt_obj(result):

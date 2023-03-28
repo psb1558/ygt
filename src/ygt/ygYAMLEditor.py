@@ -9,7 +9,7 @@ import re
 from yaml import Dumper
 import copy
 from schema import SchemaError
-from .ygSchema import is_valid, set_error_message, error_message
+from .ygSchema import is_valid, set_error_message, error_message, have_error_message
 
 # From https://stackoverflow.com/questions/8640959/
 # how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data
@@ -38,7 +38,6 @@ class ygYAMLEditor(QPlainTextEdit):
 
     def __init__(self, preferences, parent=None):
         super().__init__()
-        # self.setUndoRedoEnabled(False)
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setStyleSheet("ygYAMLEditor {font-family: Source Code Pro, monospace; background-color: white; }")
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
@@ -65,19 +64,15 @@ class ygYAMLEditor(QPlainTextEdit):
             s = yaml.safe_load(self.toPlainText())
         except Exception as e:
             err = True
+            set_error_message("Source can't be parsed.")
             msg = str(e)
         if not err:
             try:
                 err = not is_valid({"points": s})
-                if err:
-                    msg = error_message()
             except SchemaError as s:
                 err = True
-                msg = str(s)
         if err:
-            self.sig_error.emit({"msg": "Invalid source: " + msg, "mode": "console"})
-            # self.sig_error.emit({"msg": "YAML source code is invalid.", "mode": "console"})
-            # self.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+            self.sig_error.emit({"msg": error_message(), "mode": "console"})
         else:
             self.sig_source_from_editor.emit(s)
 
@@ -93,6 +88,8 @@ class ygYAMLEditor(QPlainTextEdit):
     @pyqtSlot()
     def check_valid(self):
         if not self.code_valid:
+            if not have_error_message():
+                set_error_message("Source can't be parsed.")
             self.sig_error.emit({"msg": error_message(), "mode": "console"})
             self.sig_status.emit(self.code_valid)
 
@@ -109,11 +106,6 @@ class ygYAMLEditor(QPlainTextEdit):
                 self.code_valid = False
             if self.code_valid:
                 self.code_valid = is_valid({"points": y})
-            if self.code_valid:
-                set_error_message(None)
-            else:
-                if not error_message():
-                    set_error_message("error")
         # If code is not valid, start timer. Any time user presses a key,
         # the timer will restart if code is not (yet) valid. The effect is
         # that user has two seconds after any keypress to achieve validity
@@ -239,8 +231,7 @@ class editorPane(QPlainTextEdit):
             return t
         except Exception as e:
             self.set_error_state(True)
-            self.sig_error.emit({"msg": "YAML source code is invalid.", "mode": "console"})
-            # self.owner.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+            self.sig_error.emit({"msg": "Source can't be parsed.", "mode": "console"})
 
     @pyqtSlot()
     def check_valid(self):
@@ -258,10 +249,12 @@ class editorPane(QPlainTextEdit):
         try:
             v = self.is_valid(yaml.safe_load(self.toPlainText()))
         except Exception as e:
-            print("Error on load:")
-            print(e)
+            self.set_error_state(True)
+            set_error_message("Source can't be parsed.")
+            self.sig_error.emit({"msg": error_message(), "mode": "console"})
         if v:
             self._timer.stop()
+            error_message()
             self.set_error_state(not v)
         else:
             self._timer.start(2000)
@@ -278,9 +271,9 @@ class editorPane(QPlainTextEdit):
                     self.set_error_state(True)
             else:
                 self.set_error_state(True)
+                set_error_message("Source can't be parsed.")
             if self.error_state:
-                self.sig_error.emit({"msg": "YAML source code is invalid.", "mode": "console"})
-                # self.owner.preferences.top_window().show_error_message(["Warning", "Warning", "YAML source code is invalid."])
+                self.sig_error.emit({"msg": error_message(), "mode": "console"})
 
     def showEvent(self, event):
         self.install_yaml(copy.copy(self.sourceable.source()))

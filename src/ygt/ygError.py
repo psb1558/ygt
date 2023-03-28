@@ -36,7 +36,7 @@ class ygErrorMessages():
     # @pyqtSlot(object)
     def new_message(self, m: dict):
         msg = m["msg"]
-        if msg != self.last_message:
+        if msg and (msg != self.last_message):
             self.last_message = msg
             if m["mode"] == "console":
                 if not self.error_pane:

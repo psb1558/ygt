@@ -263,9 +263,6 @@ class cvtWindow(QWidget):
         if not self.cvt.undo_stack.active():
             self.cvt.undo_stack.setActive(True)
 
-    # def showEvent(self, event):
-    #     self.cvt.undo_stack.setActive(True)
-
     def closeEvent(self, event):
         self.hide()
 
@@ -1284,15 +1281,3 @@ class masterValWidget(QLineEdit):
         if self.dirty and t != self.last_val:
             self.fixup()
             self.last_val = t
-
-
-
-#class cvOverUnderWidget(QComboBox):
-#    def __init__(self):
-#        super().__init__()
-#        self.addItem("below")
-#        self.addItem("above")
-#        self.setCurrentText("below")
-#
-#    def _text(self):
-#        return self.currentText()

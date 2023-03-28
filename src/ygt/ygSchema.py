@@ -2,29 +2,24 @@ from schema import Or, Optional, Schema, SchemaError, Use
 from .ygModel import unicode_categories
 import re
 
-standard_error = "YAML source is not valid"
-
-standard_okay = "Valid"
-
-_error_message = standard_okay
+_error_message = ""
 
 def set_error_message(t):
     global _error_message
-    if t == "error":
-        _error_message = standard_error
-    elif t:
+    if not _error_message:
         _error_message = t
-    else:
-        _error_message = "Valid"
 
-def error_message():
-    if _error_message == standard_okay:
-        return None
-    return _error_message
+def error_message(reset: bool = True) -> str:
+    global _error_message
+    r = _error_message
+    if reset:
+        _error_message = ""
+    return r
+
+def have_error_message():
+    return bool(_error_message)
 
 def is_point_valid_1(pt):
-
-    set_error_message(standard_okay)
 
     if type(pt) is int:
         return True
@@ -48,12 +43,9 @@ def is_point_valid_1(pt):
         if not err:
             return True
     set_error_message("point " + str(pt) + " is not valid")
-    raise SchemaError("point " + str(pt) + " is not valid")
-    # return False
+    return False
 
 def is_point_valid_2(pt):
-
-    set_error_message(standard_okay)
 
     if type(pt) is int:
         return True
@@ -70,13 +62,9 @@ def is_point_valid_2(pt):
         if not err:
             return True
     set_error_message("point " + str(pt) + " is not valid")
-    raise SchemaError("point " + str(pt) + " is not valid")
-    # return False
+    return False
 
 def validate_points(pt):
-
-    set_error_message(standard_okay)
-
     try:
         for p in pt:
             nested_point_schema.validate(p)
@@ -246,7 +234,6 @@ defaults_schema = Schema(defaults_struct)
 def is_valid(t):
     try:
         point_schema.validate(t)
-        set_error_message(standard_okay)
         return True
     except SchemaError as s:
         set_error_message("Error in YAML source: " + str(s))
@@ -265,13 +252,9 @@ def is_cvt_valid(t):
         k = t.keys()
         for kk in k:
             cvt_schema.validate(t[kk])
-        set_error_message(standard_okay)
         return True
     except SchemaError as s:
         set_error_message("Error in Control Value Table: " + str(s))
-        # print("Schema Error")
-        # print(s)
-        # set_error_message(standard_error)
     return False
 
 def is_cvar_valid(t):
@@ -280,8 +263,6 @@ def is_cvar_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in cvar: " + str(s))
-        # print("Error in is_cvar_valid:")
-        # print(s)
     return False
 
 def is_prep_valid(t):
@@ -290,8 +271,6 @@ def is_prep_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in prep: " + str(s))
-        #print("Error in is_prep_valid:")
-        #print(s)
     return False
 
 def are_functions_valid(t):
@@ -301,8 +280,6 @@ def are_functions_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in functions: " + str(s))
-        #print("Error in are_functions_valid:")
-        #print(s)
     return False
 
 def are_macros_valid(t):
@@ -312,8 +289,6 @@ def are_macros_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in macros: " + str(s))
-        # print("Error in are_macros_valid:")
-        # print(s)
     return False
 
 def are_defaults_valid(t):
@@ -322,8 +297,6 @@ def are_defaults_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in defaults: " + str(s))
-        #print("Error in are_defaults_valid:")
-        #print(s)
     return False
 
 def are_names_valid(t):
@@ -332,8 +305,6 @@ def are_names_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in point names: " + str(s))
-        # print("Error in are_names_valid:")
-        # print(s)
     return False
 
 def are_properties_valid(t):
@@ -342,8 +313,6 @@ def are_properties_valid(t):
         return True
     except SchemaError as s:
         set_error_message("Error in glyph properties: " + str(s))
-        # print("Error in are_properties_valid:")
-        # print(s)
 
 def always_valid(t):
     return True
