@@ -451,7 +451,7 @@ class cvWidget(QWidget):
         title (str): Title for this dialog box.
     """
 
-    def __init__(self, cv_source: cvSource, yg_font, owner, parent=None):
+    def __init__(self, cv_source: cvSource, yg_font, owner, parent=None, delta_pane=True, variant_pane=True):
         super().__init__(parent=parent)
         self.yg_font = yg_font
         self.owner = owner
@@ -463,16 +463,18 @@ class cvWidget(QWidget):
         self.tabs = QTabWidget()
         self.general_tab = QWidget()
         self.link_tab = QWidget()
-        self.delta_tab = QWidget()
+        self.delta_tab = None
         self.variants_tab = None
         self.masters = None
-        if self.yg_font.is_variable_font:
+        if self.yg_font.is_variable_font and variant_pane:
             self.variants_tab = QWidget()
             self.masters = self.yg_font.masters
         self.tabs.addTab(self.general_tab, "General")
         self.tabs.addTab(self.link_tab, "Same As")
-        self.tabs.addTab(self.delta_tab, "Deltas")
-        if self.masters:
+        if delta_pane:
+            self.delta_tab = QWidget()
+            self.tabs.addTab(self.delta_tab, "Deltas")
+        if self.variants_tab:
             self.tabs.addTab(self.variants_tab, "Variants")
 
         # set up general tab
@@ -558,22 +560,24 @@ class cvWidget(QWidget):
 
         # Set up deltas tab
 
-        self.delta_tab_layout = QVBoxLayout()
-        self.delta_pane = cvDeltaWidget(self.cv_source)
-        self.delta_button_layout = QHBoxLayout()
-        add_delta_button = QPushButton("Add")
-        del_delta_button = QPushButton("Delete")
-        add_delta_button.clicked.connect(self.delta_pane.model().new_row)
-        del_delta_button.clicked.connect(self.del_delta_row)
-        self.delta_button_layout.addWidget(add_delta_button)
-        self.delta_button_layout.addWidget(del_delta_button)
-        self.delta_tab_layout.addWidget(self.delta_pane)
-        self.delta_tab_layout.addLayout(self.delta_button_layout)
+        self.delta_tab_layout = None
+        if self.delta_tab:
+            self.delta_tab_layout = QVBoxLayout()
+            self.delta_pane = cvDeltaWidget(self.cv_source)
+            self.delta_button_layout = QHBoxLayout()
+            add_delta_button = QPushButton("Add")
+            del_delta_button = QPushButton("Delete")
+            add_delta_button.clicked.connect(self.delta_pane.model().new_row)
+            del_delta_button.clicked.connect(self.del_delta_row)
+            self.delta_button_layout.addWidget(add_delta_button)
+            self.delta_button_layout.addWidget(del_delta_button)
+            self.delta_tab_layout.addWidget(self.delta_pane)
+            self.delta_tab_layout.addLayout(self.delta_button_layout)
 
         # Set up variants tab
 
         self.variants_tab_layout = None
-        if self.masters:
+        if self.variants_tab:
             self.variants_tab_layout = QVBoxLayout()
             self.var_widgets = []
             self.var_layouts = []
@@ -588,14 +592,15 @@ class cvWidget(QWidget):
             self.general_tab_layout.addLayout(w)
         for w in self.link_widgets:
             self.link_tab_layout.addLayout(w)
-        if self.masters:
+        if self.variants_tab:
             for w in self.var_layouts:
                 self.variants_tab_layout.addLayout(w)
 
         self.general_tab.setLayout(self.general_tab_layout)
         self.link_tab.setLayout(self.link_tab_layout)
-        self.delta_tab.setLayout(self.delta_tab_layout)
-        if self.masters:
+        if self.delta_tab:
+            self.delta_tab.setLayout(self.delta_tab_layout)
+        if self.variants_tab:
             self.variants_tab.setLayout(self.variants_tab_layout)
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
@@ -687,7 +692,7 @@ class makeCVDialog(QDialog, cvSource):
 
         self.layout = QVBoxLayout()
 
-        self.pane = cvWidget(self, self.yg_font, None)
+        self.pane = cvWidget(self, self.yg_font, None, delta_pane=False, variant_pane=False)
 
         # Set up buttons
 
