@@ -98,9 +98,9 @@ HINT_COLOR = {"anchor":      HINT_ANCHOR_COLOR,
               "shift":       HINT_SHIFT_COLOR,
               "interpolate": HINT_INTERPOLATE_COLOR,
               "stem":        HINT_STEM_COLOR,
-              "whitespace":  HINT_STEM_COLOR,
-              "blackspace":  HINT_STEM_COLOR,
-              "grayspace":   HINT_STEM_COLOR,
+              "whitedist":  HINT_STEM_COLOR,
+              "blackdist":  HINT_STEM_COLOR,
+              "graydist":   HINT_STEM_COLOR,
               "move":        HINT_STEM_COLOR,
               "macro":       HINT_FUNC_COLOR,
               "function":    HINT_FUNC_COLOR,
@@ -111,9 +111,9 @@ SELECTED_HINT_COLOR = {"anchor":      HINT_ANCHOR_SELECT_COLOR,
                        "shift":       HINT_SHIFT_SELECT_COLOR,
                        "interpolate": HINT_INTERPOLATE_SELECT_COLOR,
                        "stem":        HINT_STEM_SELECT_COLOR,
-                       "whitespace":  HINT_STEM_SELECT_COLOR,
-                       "blackspace":  HINT_STEM_SELECT_COLOR,
-                       "grayspace":   HINT_STEM_SELECT_COLOR,
+                       "whitedist":  HINT_STEM_SELECT_COLOR,
+                       "blackdist":  HINT_STEM_SELECT_COLOR,
+                       "graydist":   HINT_STEM_SELECT_COLOR,
                        "move":        HINT_STEM_SELECT_COLOR,
                        "macro":       HINT_FUNC_SELECT_COLOR,
                        "function":    HINT_FUNC_SELECT_COLOR,
@@ -745,9 +745,9 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             pen.setColor(SELECTED_HINT_COLOR[hint_type])
         else:
             pen.setColor(HINT_COLOR[hint_type])
-        if hint_type == "whitespace":
+        if hint_type == "whitedist":
             pen.setDashPattern([2,2])
-        if hint_type == "grayspace":
+        if hint_type == "graydist":
             pen.setDashPattern([4,2])
         self.setPen(pen)
 
@@ -2373,7 +2373,7 @@ class ygGlyphScene(QGraphicsScene):
             a.setVisible(False)
 
         # Color. We don't recommend setting the "color" bits directly,
-        # but rather set "rel" to blackspace, whitespace, etc.
+        # but rather set "rel" to blackdist, whitedist, etc.
 
         hint_color_menu = cmenu.addMenu("Set distance type...")
 
@@ -2381,7 +2381,7 @@ class ygGlyphScene(QGraphicsScene):
 
         black_space = QAction("Black", self, checkable=True)
         if hint != None:
-            if hint.yg_hint.hint_type() in ["stem", "blackspace"]:
+            if hint.yg_hint.hint_type() in ["stem", "blackdist"]:
                 black_space.setChecked(True)
         hint_color_menu.addAction(black_space)
         if no_color_menu:
@@ -2390,7 +2390,7 @@ class ygGlyphScene(QGraphicsScene):
 
         white_space = QAction("White", self, checkable=True)
         if hint != None:
-            if hint.yg_hint.hint_type() == "whitespace":
+            if hint.yg_hint.hint_type() == "whitedist":
                 white_space.setChecked(True)
         hint_color_menu.addAction(white_space)
         if no_color_menu:
@@ -2399,7 +2399,7 @@ class ygGlyphScene(QGraphicsScene):
 
         gray_space = QAction("Gray", self, checkable=True)
         if hint != None:
-            if hint.yg_hint.hint_type() == "grayspace":
+            if hint.yg_hint.hint_type() == "graydist":
                 gray_space.setChecked(True)
         hint_color_menu.addAction(gray_space)
         if no_color_menu:
@@ -2575,11 +2575,11 @@ class ygGlyphScene(QGraphicsScene):
             except Exception:
                 self.yg_glyph.send_error_message({"msg": self.cv_error_msg, "mode": "console"})
         if hint and ntype == 3 and (action == black_space):
-            self.sig_change_hint_color.emit({"hint":  hint, "color": "blackspace"})
+            self.sig_change_hint_color.emit({"hint":  hint, "color": "blackdist"})
         if hint and ntype == 3 and (action == white_space):
-            self.sig_change_hint_color.emit({"hint":  hint, "color": "whitespace"})
+            self.sig_change_hint_color.emit({"hint":  hint, "color": "whitedist"})
         if hint and ntype == 3 and (action == gray_space):
-            self.sig_change_hint_color.emit({"hint":  hint, "color": "grayspace"})
+            self.sig_change_hint_color.emit({"hint":  hint, "color": "graydist"})
         if hint and ntype == 4 and (action == add_params):
             self.sig_edit_macfunc_params.emit(hint)
         if action in macro_actions:
@@ -2728,9 +2728,9 @@ class ygGlyphView(QGraphicsView):
                              "Align (L)": "align",
                              "Shift (S)": "shift",
                              "Interpolate (I)": "interpolate",
-                             "White Distance (W)": "whitespace",
-                             "Black Distance (B)": "blackspace",
-                             "Gray Distance (G)": "grayspace"}
+                             "White Distance (W)": "whitedist",
+                             "Black Distance (B)": "blackdist",
+                             "Gray Distance (G)": "graydist"}
         with_ctrl =  (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier
         with_shift = (QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier) == Qt.KeyboardModifier.ShiftModifier
         self.viewer.make_hint_from_selection(menu_to_hint_type[self.sender().text()], ctrl=with_ctrl, shift=with_shift)

@@ -1,6 +1,6 @@
 # import traceback
 from typing import Any, TypeVar, Union, Optional, List, Callable, overload
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import Qt, QObject, QModelIndex, pyqtSignal, pyqtSlot, QAbstractTableModel
 from PyQt6.QtGui import QUndoCommand, QUndoStack, QAction
 from fontTools import ttLib, ufoLib
 import yaml
@@ -14,11 +14,12 @@ import unicodedata
 import abc
 from .ygPreferences import ygPreferences
 from .cvGuesser import instanceChecker
+# from .ygSchema import error_message, set_error_message, is_cv_delta_valid
 import defcon
 from ufo2ft import compileTTF
 
 hint_type_nums  = {"anchor": 0, "align": 1, "shift": 1, "interpolate": 2,
-                   "stem": 3, "whitespace": 3, "blackspace": 3, "grayspace": 3,
+                   "stem": 3, "whitedist": 3, "blackdist": 3, "graydist": 3,
                    "move": 3, "macro": 4, "function": 4}
 
 unicode_categories = ["Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L",  "Mn", "Mc",
@@ -65,6 +66,8 @@ unicode_cat_names = {"Lu":   "Letter, uppercase",
                      "Co":   "Other, private use",
                      "Cn":   "Other, not assigned",
                      "C":    "Other"}
+
+INITIAL_CV_DELTA = {"size": 25, "distance": 0.0}
 
 reverse_unicode_cat_names = {v: k for k, v in unicode_cat_names.items()}
 
@@ -302,6 +305,7 @@ class ygFont(QObject):
         #
         self.glyphs      = ygGlyphs(self.source).data
         self.defaults    = ygDefaults(self, self.source)
+        self.defaults.set_default({"init-graphics": False, "cleartype": True})
         if not "cvt" in self.source:
             self.source["cvt"] = {}
         if len(self.source["cvt"]) == 0:
@@ -403,7 +407,7 @@ class ygFont(QObject):
         self.cvt         = ygcvt(self.main_window, self, self.source)
         if self.is_variable_font and not self.defaults.get_default("cv_vars_generated"):
             instanceChecker(self.ft_font, self.cvt, self.masters).refresh()
-            self.defaults.set_default(cv_vars_generated=True)
+            self.defaults.set_default({"cv_vars_generated": True})
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
         if "functions" in self.source:
@@ -572,7 +576,6 @@ class ygFont(QObject):
                 del self.source["glyphs"][g]
         except Exception as e:
             self.send_error_message({"msg": "Error in cleanup_font: " + str(e), "mode": "console"})
-            # print("Error in cleanup_font: " + str(e))
 
     def has_hints(self, gname: str) -> bool:
         if not gname in self.glyphs:
@@ -997,6 +1000,107 @@ class cvtEditCommand(QUndoCommand):
 
     def undo(self) -> None:
         self.undo_state.restore()
+        self.send_signal()
+
+
+# QUndoCommand
+class editCVDeltaCommand(cvtEditCommand):
+    def __init__(self, yg_font, cv_delta, index, val):
+        self.yg_font = yg_font
+        self.cv_delta = cv_delta
+        self.index = index
+        self.val = val
+        super().__init__(yg_font)
+        self.setText("Edit Control Value Deltas")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+            self.cv_delta.dataChanged.emit(self.index, self.index)
+        else:
+            if self.index.row() < len(self.cv_delta._data):
+                self.cv_delta._store_val(self.index, self.val)
+                self.cv_delta.dataChanged.emit(self.index, self.index)
+            # Does this happen? Rather, one always adds the row first, then
+            # edits.
+            #if self.index.row() == len(self.cv_delta._data):
+            #    self.cv_delta._data.append([25, 0.0])
+            #    self.cv_delta._store_val(self.index, self.value)
+            #    self.cv_delta.dataChanged.emit(self.index, self.index)
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+    def undo(self):
+        self.undo_state.restore()
+        self.cv_delta.dataChanged.emit(self.index, self.index)
+        self.send_signal()
+
+
+# QUndoCommand
+class addCVDeltaCommand(cvtEditCommand):
+    def __init__(self, yg_font, cv_delta):
+        self.yg_font = yg_font
+        self.cv_delta = cv_delta
+        self.index = self.cv_delta.rowCount(None)
+        super().__init__(yg_font)
+        self.setText("Add Control Value Delta")
+
+    def redo(self):
+        if self.redo_state:
+            self.cv_delta.beginInsertRows(QModelIndex(), self.index, self.index)
+            self.redo_state.restore()
+            self.cv_delta.endInsertRows()
+        else:
+            c = self.cv_delta.cvt.get_cv(self.cv_delta.name)
+            # print(self.cv_delta.rowCount(None))
+            self.cv_delta.beginInsertRows(QModelIndex(), self.index, self.index)
+            if not "deltas" in c:
+                c["deltas"] = []
+            # print("INITIAL_CV_DELTA: " + str(INITIAL_CV_DELTA))
+            c["deltas"].append(copy.deepcopy(INITIAL_CV_DELTA))
+            # print(c)
+            self.cv_delta.endInsertRows()
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+    def undo(self):
+        self.cv_delta.beginRemoveRows(QModelIndex(), self.index, self.index)
+        self.undo_state.restore()
+        self.cv_delta.endRemoveRows()
+        self.send_signal()
+
+
+# QUndoCommand
+class deleteCVDeltaCommand(cvtEditCommand):
+    def __init__(self, yg_font, cv_delta, c, row):
+        self.yg_font = yg_font
+        self.cv_delta = cv_delta
+        self.c = c
+        self.row = row
+        super().__init__(yg_font)
+        self.setText("Add Control Value Delta")
+
+    def redo(self):
+        if self.redo_state:
+            self.cv_delta.beginRemoveRows(QModelIndex(), self.row, self.row)
+            self.redo_state.restore()
+            self.cv_delta.endRemoveRows()
+        else:
+            self.cv_delta.beginRemoveRows(QModelIndex(), self.row, self.row)
+            del self.c["deltas"][self.row]
+            if len(self.c["deltas"]) == 0:
+                try:
+                    del self.c["deltas"]
+                except Exception:
+                    pass
+            self.cv_delta.endRemoveRows()
+            self.redo_state = cvtSaver(self.yg_font)
+        self.send_signal()
+
+    def undo(self):
+        self.cv_delta.beginInsertRows(QModelIndex(), self.row, self.row)
+        self.undo_state.restore()
+        self.cv_delta.endInsertRows()
         self.send_signal()
 
 
@@ -2973,10 +3077,6 @@ class ygMasters:
             self.source["masters"] = {}
         if len(self.source["masters"]) == 0:
             self.build_master_list()
-        #k = self.keys()
-        #for kk in k:
-        #    print("master for " + str(kk))
-        #    print(self.get_master_coords(kk))
 
     def create_master(self):
         master_id = random_id("master")
@@ -3108,14 +3208,117 @@ class ygDefaults(ygSourceable):
             return self.data[args[0]]
         return None
 
-    def set_default(self, **kwargs) -> None:
-        for key, value in kwargs.items():
+    def set_default(self, dflts) -> None:
+        for key, value in dflts.items():
             self.data[key] = value
 
     def save(self, c: dict) -> None:
         self.data = c
         self.font.source["defaults"] = c
         self.set_clean(True)
+
+
+
+class ygCVDeltas(QAbstractTableModel):
+    """ Provides a view of the 'deltas' section of a CV and
+        implements a model to work with the QTableView for CVs
+        in the CV editing pane.
+
+    """
+    def __init__(self, cvt: "ygcvt", name: str):
+        super(ygCVDeltas, self).__init__()
+        self.cvt = cvt
+        self.name = name
+        self._data = None
+        self.header_data = ["Size", "Distance"]
+        self.dataChanged.connect(self.data_changed)
+
+    def data_changed(self, index_a, index_b):
+        c = self.cvt.get_cv(self.name)
+        row = index_a.row()
+        # column = index_a.column()
+        try:
+            from .ygSchema import is_cv_delta_valid
+            if not is_cv_delta_valid(c["deltas"][row]):
+                self.cvt.yg_font.send_error_message({"msg": "Illegal value in Control Value Delta " + str(c["deltas"][row]), "mode": "console"})
+        except Exception as e:
+            print(e)
+
+    def columnCount(self, index):
+        return 2
+    
+    def rowCount(self, index):
+        c = self.cvt.get_cv(self.name)
+        try:
+            return len(c["deltas"])
+        except Exception:
+            return 0
+    
+    def _mk_row(self, d: dict) -> list:
+        return [d["size"], d["distance"]]
+    
+    def _store_val(self, index, val):
+        c = self.cvt.get_cv(self.name)
+        if not "deltas"in c:
+            c["deltas"] = []
+        if index.row() == len(c["deltas"]):
+            # Is trying to append to the list. We'll create a place to put it.
+            c["deltas"].append(copy.deepcopy(INITIAL_CV_DELTA))
+        try:
+            if index.column() == 0:
+                c["deltas"][index.row()]["size"] = int(val)
+            elif index.column() == 1:
+                try:
+                    c["deltas"][index.row()]["distance"] = float(val)
+                except Exception:
+                    c["deltas"][index.row()]["distance"] = str(val)
+        except Exception as e:
+            print(e)
+
+    def data(self, index, role):
+        c = self.cvt.get_cv(self.name)
+        arr = []
+        if role == Qt.ItemDataRole.DisplayRole:
+            if "deltas" in c:
+                for d in c["deltas"]:
+                    arr.append(self._mk_row(d))
+            if len(arr) > 0:
+                self._data = arr
+                return self._data[index.row()][index.column()]
+        return None
+        
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        if index.isValid() and role == Qt.ItemDataRole.EditRole:
+            self.cvt.undo_stack.push(editCVDeltaCommand(self.cvt.yg_font, self, index, value))
+            return True
+        return False
+    
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """ Actually just appends a new row to the existing structure. We never
+            insert multiple rows, and we always append rather than insert.
+
+        """
+        self.cvt.undo_stack.push(addCVDeltaCommand(self.cvt.yg_font, self))
+        return True
+
+    @pyqtSlot()
+    def new_row(self):
+        self.insertRows(0, 0)
+
+    def deleteRows(self, row, count, parent=QModelIndex()):
+        c = self.cvt.get_cv(self.name)
+        if "deltas" in c and row < len(c["deltas"]):
+            self.cvt.undo_stack.push(deleteCVDeltaCommand(self.cvt.yg_font, self, c, row))
+            return True
+        return False
+
+
+    def flags(self, index):
+        return super().flags(index) | Qt.ItemFlag.ItemIsEditable
+        
+    def headerData(self, section, orientation, role):
+        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+            return self.header_data[section]
 
 
 
@@ -3265,6 +3468,9 @@ class ygcvt(ygSourceable):
         if name in self.font_source["cvt"]:
             return self.font_source["cvt"][name]
         return None
+    
+    def get_deltas(self, name: str):
+        return ygCVDeltas(self, name)
     
     def add_cv(self, name: str, props: Union[int, dict]) -> None:
         self.undo_stack.push(addCVCommand(self.yg_font, name, props))

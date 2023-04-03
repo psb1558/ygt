@@ -1,8 +1,15 @@
-from schema import Or, Optional, Schema, SchemaError, Use
-from .ygModel import unicode_categories
+from schema import Or, Optional, Schema, SchemaError, Use, And
+# from .ygModel import unicode_categories
 import re
 
 _error_message = ""
+
+#DELTA_FLOATS = [4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.875, 0.75, 0.625,
+#                0.5, 0.375, 0.25, 0.125, -0.125, -0.25, -0.375, -0.5, 
+#                -0.625, -0.75, -0.875, -1.0, -1.5, -2.0, -2.5, -3.0, 
+#                -3.5, -4.0]
+DELTA_DIST =   [-8, -7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8]
+DELTA_SHIFT =  [2, 4, 8, 16, 32, 64]
 
 def set_error_message(t):
     global _error_message
@@ -19,8 +26,26 @@ def error_message(reset: bool = True) -> str:
 def have_error_message():
     return bool(_error_message)
 
-def is_point_valid_1(pt):
+def is_cv_distance_valid(s):
+    try:
+        sss = float(s)
+    except Exception:
+        sss = s
+    if type(sss) is float or type(sss) is int:
+        f = float(sss)
+        return f >= -4.0 and f <= 4.0
+        # return float(sss) in DELTA_FLOATS
+    if type(sss) is str:
+        ss = sss.split("/", 1)
+        try:
+            left = int(ss[0])
+            right = int(ss[1])
+        except Exception:
+            return False
+        return left in DELTA_DIST and right in DELTA_SHIFT
+    return False
 
+def is_point_valid_1(pt):
     if type(pt) is int:
         return True
     if type(pt) is str:
@@ -46,7 +71,6 @@ def is_point_valid_1(pt):
     return False
 
 def is_point_valid_2(pt):
-
     if type(pt) is int:
         return True
     if type(pt) is str:
@@ -87,9 +111,9 @@ nested_point_struct = {
     Optional("round"):    is_round_valid,
     Optional("min"):      bool,
     "rel": Or("stem",
-              "blackspace",
-              "whitespace",
-              "grayspace",
+              "blackdist",
+              "whitedist",
+              "graydist",
               "shift",
               "align",
               "interpolate"),
@@ -109,9 +133,9 @@ point_struct = {
             Optional("function"): Or(str, dict),
             Optional("macro"):    Or(str, dict),
             Optional("rel"):      Or("stem",
-                                     "blackspace",
-                                     "whitespace",
-                                     "grayspace",
+                                     "blackdist",
+                                     "whitedist",
+                                     "graydist",
                                      "shift",
                                      "align",
                                      "interpolate"),
@@ -139,10 +163,16 @@ cv_origin_struct = {
     "ptnum": [int]
 }
 
+cv_delta_struct = {
+    "size":     And(Use(int), lambda n: 9 <= n <= 56),
+    "distance": is_cv_distance_valid
+}
+
 cvt_entry_struct = {
     "val": int,
     "type": Or("pos", "dist"),
     "axis": Or("y", "x"),
+    Optional("round"): bool,
     Optional("col"): Or("black", "white", "gray"),
     Optional("suffix"): str,
     Optional("cat"): Or("Lu", "Ll", "Lt", "LC", "Lm", "Lo", "L", "Mn", "Mc",
@@ -152,7 +182,8 @@ cvt_entry_struct = {
                         "Cn", "C"),
     Optional("same-as"): cv_same_as_struct,
     Optional("var"): cv_var_struct,
-    Optional("origin"): cv_origin_struct
+    Optional("origin"): cv_origin_struct,
+    Optional("deltas"): [cv_delta_struct]
 }
 
 function_entry_struct = {
@@ -175,7 +206,7 @@ macro_entry_struct = {
     "code": str
 }
 
-hint_types = ["blackspace", "whitespace", "grayspace", "anchor", "shift", "align", "interpolate"]
+hint_types = ["blackdist", "whitedist", "graydist", "anchor", "shift", "align", "interpolate"]
 
 defaults_struct = {
     Optional("use-truetype-defaults"): bool,
@@ -239,6 +270,7 @@ def is_valid(t):
         set_error_message("Error in YAML source: " + str(s))
     return False
 
+cv_delta_schema = Schema(cv_delta_struct)
 cvt_schema =      Schema(cvt_entry_struct)
 cvar_schema =     Schema(cvar_entry_struct)
 prep_schema =     Schema({ "code": str })
@@ -246,6 +278,14 @@ function_schema = Schema(function_entry_struct)
 macro_schema =    Schema(macro_entry_struct)
 props_schema =    Schema(properties_struct)
 names_schema =    Schema(names_struct)
+
+def is_cv_delta_valid(c):
+    try:
+        cv_delta_schema.validate(c)
+        return True
+    except SchemaError as s:
+        set_error_message("Illegal value in Control Value Delta: " + str(s))
+    return False
 
 def is_cvt_valid(t):
     try:

@@ -130,6 +130,7 @@ class MainWindow(QMainWindow):
         self.filename_extension = None
         self.cvt_editor = None
         self.cvar_editor = None
+        self.prep_editor = None
         self.function_editor = None
         self.macro_editor = None
         self.default_editor = None
@@ -1049,6 +1050,32 @@ class MainWindow(QMainWindow):
             <command name="SCANCTRL"/>
             <command name="SCANTYPE"/>
             </code>"""
+        function_code = """<code xmlns="http://xgridfit.sourceforge.net/Xgridfit2">
+        <command name="SDB"/>
+        <command name="DUP"/>
+        <push>0</push>
+        <command name="NEQ"/>
+        <command name="IF"/>
+        <command name="DUP"/>
+        <push>0</push>
+        <command name="LT"/>
+        <command name="IF"/>
+        <push>8</push>
+        <command name="ADD"/>
+        <command name="ELSE"/>
+        <push>7</push>
+        <command name="ADD"/>
+        <command name="EIF"/>
+        <command name="SWAP"/>
+        <push>1</push>
+        <command name="DELTAP1"/>
+        <command name="ELSE"/>
+        <command name="POP"/>
+        <command name="POP"/>
+        <command name="EIF"/>
+        <push>8</push>
+        <command name="SDB"/>
+        </code>"""
         yaml_source: dict = {}
         yaml_source["font"] = {}
         yaml_source["font"]["in"] = copy.copy(filename)
@@ -1060,7 +1087,15 @@ class MainWindow(QMainWindow):
         yaml_source["cvt"] = {}
         yaml_source["prep"] = {}
         yaml_source["prep"] = {"code": prep_code}
-        yaml_source["functions"] = {}
+        # Supply a pre-built delta function.
+        yaml_source["functions"] = {"delta": {
+            "primitive": True,
+            "stack-safe": True,
+            "size": {"type": "int", "val": 25},
+            "distance": {"type": "int", "val": 0},
+            "pt": {"type": "point", "subtype": "target"},
+            "code": function_code
+        }}
         yaml_source["macros"] = {}
         yaml_source["glyphs"] = {}
         return yaml_source
@@ -1302,12 +1337,12 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def edit_prep(self) -> None:
-        self.cvt_editor = editorDialog(self.preferences,
+        self.prep_editor = editorDialog(self.preferences,
                                                 self.yg_font.prep,
                                                 "prep",
                                                 is_prep_valid)
-        self.cvt_editor.show()
-        self.cvt_editor.activateWindow()
+        self.prep_editor.show()
+        self.prep_editor.activateWindow()
 
     @pyqtSlot()
     def edit_cvar(self) -> None:

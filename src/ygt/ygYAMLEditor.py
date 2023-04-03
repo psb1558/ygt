@@ -111,7 +111,10 @@ class ygYAMLEditor(QPlainTextEdit):
         # that user has two seconds after any keypress to achieve validity
         # before any message is displayed.
         if self.code_valid:
-            self._timer.stop()
+            try:
+                self._timer.stop()
+            except Exception:
+                pass
             self.sig_status.emit(self.code_valid)
         else:
             self._timer.start(2000)
@@ -210,7 +213,7 @@ class editorPane(QPlainTextEdit):
             t = yaml.dump(y, sort_keys=False, Dumper=Dumper)
         except Exception as e:
             print(e)
-            t = self._empty_string
+            t = self.owner._empty_string
         self.install_text(t)
 
     def set_style(self):
@@ -244,7 +247,7 @@ class editorPane(QPlainTextEdit):
             return
         self.sourceable.set_clean(False)
         if len(self.toPlainText()) == 0:
-            self.setPlainText(self._empty_string)
+            self.setPlainText(self.owner._empty_string)
         v = False
         try:
             v = self.is_valid(yaml.safe_load(self.toPlainText()))

@@ -9,7 +9,8 @@ from PyQt6.QtWidgets import (QDialog,
                              QWidget,
                              QTabWidget,
                              QListWidget,
-                             QPushButton)
+                             QPushButton,
+                             QTableView)
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import (QIntValidator,
                          QDoubleValidator,
@@ -246,6 +247,7 @@ class cvtWindow(QWidget):
 
         self.tabs = QTabWidget()
         self.cv_tab = cvEditPane(self, self.yg_font, self.preferences)
+        self._empty_string = "{}\n"
         self.source_tab = editorPane(self, self.cvt, is_cvt_valid, save_on_focus_out=True)
         self.source_tab.setup_error_signal(self.yg_font.send_error_message)
         self.masters_tab = None
@@ -313,13 +315,14 @@ class mastersWidget(QWidget):
         add_button.clicked.connect(self.add_master)
         del_button.clicked.connect(self.del_master)
         self.master_list_layout.addLayout(self.button_layout)
-        self.layout.addLayout(self.master_list_layout)
-        self.edit_pane_layout = QVBoxLayout()
-        self.edit_pane_layout.addWidget(self.edit_pane)
         self.refresh_variants_button = QPushButton("Generate Variant Control Values")
-        self.edit_pane_layout.addWidget(self.refresh_variants_button)
         self.refresh_variants_button.clicked.connect(self.yg_font.refresh_variant_cvs)
-        self.layout.addLayout(self.edit_pane_layout)
+        self.master_list_layout.addWidget(self.refresh_variants_button)
+        self.layout.addLayout(self.master_list_layout)
+        self.layout.addWidget(self.edit_pane)
+        #self.edit_pane_layout = QVBoxLayout()
+        #self.edit_pane_layout.addWidget(self.edit_pane)
+        #self.layout.addLayout(self.edit_pane_layout)
         self.setLayout(self.layout)
 
     def current_master_name(self):
@@ -409,6 +412,21 @@ class masterWidget(QWidget):
         for n in self.names:
             n.refresh(m)
 
+    #def event(self, event):
+    #    print(event)
+    #    print(event.type())
+    #    print(event.spontaneous())
+    #    return super().event(event)
+
+
+
+class cvDeltaWidget(QTableView):
+    def __init__(self, cv_source: cvSource):
+        super().__init__()
+        self.cv_source = cv_source
+        self.delta_data = self.cv_source.cvt().get_deltas(self.cv_source.current_cv_name())
+        self.setModel(self.delta_data)
+
 
 
 class cvWidget(QWidget):
@@ -445,6 +463,7 @@ class cvWidget(QWidget):
         self.tabs = QTabWidget()
         self.general_tab = QWidget()
         self.link_tab = QWidget()
+        self.delta_tab = QWidget()
         self.variants_tab = None
         self.masters = None
         if self.yg_font.is_variable_font:
@@ -452,6 +471,7 @@ class cvWidget(QWidget):
             self.masters = self.yg_font.masters
         self.tabs.addTab(self.general_tab, "General")
         self.tabs.addTab(self.link_tab, "Same As")
+        self.tabs.addTab(self.delta_tab, "Deltas")
         if self.masters:
             self.tabs.addTab(self.variants_tab, "Variants")
 
@@ -536,6 +556,20 @@ class cvWidget(QWidget):
         self.link_widgets[-1].addWidget(self.cv_above_ppem_widget)
         self.link_widgets[-1].addWidget(QLabel("ppem"))
 
+        # Set up deltas tab
+
+        self.delta_tab_layout = QVBoxLayout()
+        self.delta_pane = cvDeltaWidget(self.cv_source)
+        self.delta_button_layout = QHBoxLayout()
+        add_delta_button = QPushButton("Add")
+        del_delta_button = QPushButton("Delete")
+        add_delta_button.clicked.connect(self.delta_pane.model().new_row)
+        del_delta_button.clicked.connect(self.del_delta_row)
+        self.delta_button_layout.addWidget(add_delta_button)
+        self.delta_button_layout.addWidget(del_delta_button)
+        self.delta_tab_layout.addWidget(self.delta_pane)
+        self.delta_tab_layout.addLayout(self.delta_button_layout)
+
         # Set up variants tab
 
         self.variants_tab_layout = None
@@ -560,10 +594,16 @@ class cvWidget(QWidget):
 
         self.general_tab.setLayout(self.general_tab_layout)
         self.link_tab.setLayout(self.link_tab_layout)
+        self.delta_tab.setLayout(self.delta_tab_layout)
         if self.masters:
             self.variants_tab.setLayout(self.variants_tab_layout)
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
+
+    def del_delta_row(self):
+        i = self.delta_pane.selectedIndexes()
+        if len(i) > 0:
+            self.delta_pane.model().deleteRows(i[0].row(), 1)
 
     def refresh(self, cv_source):
         """ If we're coming from the source pane, every cv in the
