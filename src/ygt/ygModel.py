@@ -84,55 +84,87 @@ def random_id(s):
 
 # Classes in this file:
 
+#
+# Font Objects:
+#
 # SourceFile: The yaml source read from and written to by this program.
 # FontFiles: Input and output font files.
-# ygSourceable: Superclass for various chunks of ygt source code.
-# ygFont(QObject): Keeps the fontTools representation of a font and provides
-#                  an interface for the YAML code.
-# ygMasters: A list of ygMaster objects
-# ygMaster: A master--not a font master, but a CVAR master.
-# ygprep(ygSourceable): Holds the cvt program/pre-program.
-# ygDefaults(ygSourceable): Keeps defaults for this font's hints.
-# ygcvt(ygSourceable): Keeps the control values for this font.
-# ygcvar(ygSourceable): Keeps the cvar table.
-# ygFunctions(ygSourceable): Holds the functions (fpgm table) for this font.
-# ygMacros(ygSourceable): Holds the macros for this font.
+# ygFont(QObject): Keeps the fontTools representation of a font and
+#                  provides an interface for the YAML code.
 # ygCaller: superclass for ygFunction and ygMacro.
 # ygFunction(ygCaller): A function call.
 # ygMacro(ygCaller): A macro call.
 # ygPoint: One point.
 # ygParams: For functions and macros, holds their parameters.
 # ygSet: A set of points, for SLOOP instructions like shift and interpolate.
-# ygGlyphProperties: Keeps miscellaneous properties for a glyph.
-# ygGlyphNames: Keeps named points and sets.
+#
+#  Commands:
+#
 # glyphSaver: Utility for undo/redo system.
+# fontInfoSaver: Utility for undo/redo system.
+# 
+# fontInfoEditCommand(QUndoCommand): Superclass for editing font-level data.
 # glyphEditCommand(QUndoCommand): superclass for most editing commands.
-# changePointNumbersCommand(glyphEditCommand): Glyph editing command
-# updateSourceCommand(glyphEditCommand): Glyph editing command
+# 
+# saveEditBoxCommand(fontInfoEditCommand): Saves the contents of an editing dialog.
+# setDefaultCommand(fontInfoEditCommand): Sets a default value.
+# deleteDefaultCommand(fontInfoEditCommand): Delete a default key/value pair.
+# roundingDefaultCommand(fontInfoEditCommand): Set all rounding defaults.
+# editCVDeltaCommand(fontInfoEditCommand): change existing CV deltas.
+# addCVDeltaCommand(fontInfoEditCommand): add a CV delta.
+# deleteCVDeltaCommanddeleteCVDeltaCommand Delete a CV delta key/value pair.
+# addMasterCommand(fontInfoEditCommand): Add a master.
+# deleteMasterCommand(fontInfoEditCommand): Delete a master.
+# setMasterNameCommand(fontInfoEditCommand): Change a master's display name.
+# setMasterAxisValueCommand(fontInfoEditCommand): Change value in master def.
+# deleteMasterAxisCommand(fontInfoEditCommand): Delete a master axis.
+# addCVCommand(fontInfoEditCommand): Add a control value.
+# setCVPropertyCommand(fontInfoEditCommand): set a CV property.
+# delCVPropertyCommand(fontInfoEditCommand): delete a CV property.
+# deleteCVCommand(fontInfoEditCommand): Delete a CV.
+# renameCVCommand(fontInfoEditCommand): Rename a CV.
+# changePointNumbersCommand(glyphEditCommand): Glyph editing command.
+# updateSourceCommand(glyphEditCommand): Glyph editing command.
 # replacePointNamesCommand(glyphEditCommand): Glyph editing command.
 # replaceGlyphPropsCommand(glyphEditCommand): Glyph editing command.
 # addPointSetNameCommand(glyphEditCommand): Glyph editing command.
 # setMacFuncOtherArgsCommand(glyphEditCommand): Glyph editing command.
 # swapMacFuncPointsCommand(glyphEditCommand): Glyph editing command.
+# cleanupGlyphCommand(glyphEditCommand): Glyph editing command.
 # changeDistanceTypeCommand(glyphEditCommand): Glyph editing command.
 # toggleMinDistCommand(glyphEditCommand): Glyph editing command.
 # changeCVCommand(glyphEditCommand): Glyph editing command.
 # toggleRoundingCommand(glyphEditCommand): Glyph editing command.
 # makeSetCommand(glyphEditCommand): Glyph editing command.
 # addHintCommand(glyphEditCommand): Glyph editing command.
-# cleanupGlyphCommand(glyphEditCommand): Glyph editing command.
 # deleteHintsCommand(glyphEditCommand): Glyph editing command.
 # reverseHintCommand(glyphEditCommand): Glyph editing command.
 # switchAxisCommand(QUndoCommand): Glyph editing command.
 # glyphAddPropertyCommand(QUndoCommand): Glyph editing command.
 # glyphDeletePropertyCommand(QUndoCommand): Glyph editing command.
+#
+#  Font objects (resumed):
+#
+# glyphSourceTester: Tests equality of object IDs.
 # ygGlyph(QObject): Keeps data for the current glyph.
 # ygGlyphs: Collection of this font's glyphs.
 # Comparable: superclass for ygHintSource: for ordering hints.
 # ygHintSource(Comparable): Wrapper for hint source: use when sorting.
 # ygHint(QObject): One hint (including a function or macro call).
+# ygSourceable: Superclass for various chunks of ygt source code.
+# ygMasters: Collection of this font's masters
+# ygprep(ygSourceable): Holds the cvt program/pre-program.
+# ygDefaults(ygSourceable): Keeps defaults for this font's hints.
+# ygCVDeltas(QAbstractTableModel): Collection of deltas for a CV.
+# ygcvt(ygSourceable): Keeps the control values for this font.
+# ygFunctions(ygSourceable): Holds the functions for this font.
+# ygcvar(ygSourceable): Keeps the cvar table (deprecated).
+# ygMacros(ygSourceable): Holds the macros for this font.
+# ygGlyphProperties: Keeps miscellaneous properties for a glyph.
+# ygGlyphNames: Keeps named points and sets.
 # ygHintSorter: Sorts hints into their proper order.
 # ygPointSorter: Utility for sorting points on the x or y axis.
+
 
 
 class SourceFile:
@@ -244,6 +276,13 @@ class ygFont(QObject):
     def __init__(self, main_window: Any, source_file: Union[str, dict], ygt_filename: str = "") -> None:
         super().__init__()
         self.main_window = main_window
+
+        #
+        # Set up an undo stack
+        #
+        self.undo_stack = QUndoStack()
+        self.main_window.add_undo_stack(self.undo_stack)
+
         #
         # Open the font
         #
@@ -305,7 +344,7 @@ class ygFont(QObject):
         #
         self.glyphs      = ygGlyphs(self.source).data
         self.defaults    = ygDefaults(self, self.source)
-        self.defaults.set_default({"init-graphics": False, "cleartype": True})
+        self.defaults._set_default({"init-graphics": False, "cleartype": True})
         if not "cvt" in self.source:
             self.source["cvt"] = {}
         if len(self.source["cvt"]) == 0:
@@ -407,7 +446,7 @@ class ygFont(QObject):
         self.cvt         = ygcvt(self.main_window, self, self.source)
         if self.is_variable_font and not self.defaults.get_default("cv_vars_generated"):
             instanceChecker(self.ft_font, self.cvt, self.masters).refresh()
-            self.defaults.set_default({"cv_vars_generated": True})
+            self.defaults._set_default({"cv_vars_generated": True})
         self.cvar        = ygcvar(self, self.source)
         self.prep        = ygprep(self, self.source)
         if "functions" in self.source:
@@ -446,7 +485,6 @@ class ygFont(QObject):
             if not g.isComposite():
                 cc = g.getCoordinates(self.ft_font['glyf'])
                 if len(cc) > 0:
-                    # u = self.get_unicode(gn)
                     self.glyph_list.append((self.get_unicode(gn), gn))
         self.glyph_list.sort(key = lambda x : x[1])
         self.glyph_list.sort(key = lambda x : x[0])
@@ -957,38 +995,71 @@ class glyphSaver:
 
 
 
-class cvtSaver:
-    """ Helper for cvt and master commands.
+class fontInfoSaver:
+    """ Helper for all undos concerning font-level info.
     """
     def __init__(self, yg_font: ygFont) -> None:
         self.yg_font = yg_font
         self.msource = None
         if self.yg_font.masters:
             self.msource = copy.deepcopy(self.yg_font.source["masters"])
-        self.csource = copy.deepcopy(self.yg_font.source["cvt"])
+        self.csource = None
+        if "cvt" in self.yg_font.source:
+            self.csource = copy.deepcopy(self.yg_font.source["cvt"])
+        self.dsource = None
+        if "defaults" in self.yg_font.source:
+            self.dsource = copy.deepcopy(self.yg_font.source["defaults"])
+        self.psource = None
+        if "prep" in self.yg_font.source:
+            self.psource = copy.deepcopy(self.yg_font.source["prep"])
+        self.mcsource = None
+        if "macros" in self.yg_font.source:
+            self.mcsource = copy.deepcopy(self.yg_font.source["macros"])
+        self.fsource = None
+        if "functions" in self.yg_font.source:
+            self.fsource = copy.deepcopy(self.yg_font.source["functions"])
+
+    def _install_dict(self, k, d):
+        if d:
+            if k in self.yg_font.source:
+                self.yg_font.source[k].clear()
+            else:
+                self.yg_font.source[k] = {}
+            if len(d) > 0:
+                for kk in d.keys():
+                    self.yg_font.source[k][kk] = d[kk]
+        else:
+            try:
+                del self.yg_font.source[k]
+            except KeyError:
+                pass
 
     def restore(self) -> None:
         if self.yg_font.masters and self.msource:
             self.yg_font.source["masters"].clear()
             for k in self.msource.keys():
                 self.yg_font.source["masters"][k] = self.msource[k]
-        self.yg_font.source["cvt"].clear()
-        if len(self.csource) > 0:
-            for k in self.csource.keys():
-                self.yg_font.source["cvt"][k] = self.csource[k]
+        else:
+            try:
+                del self.yg_font.source["masters"]
+            except KeyError:
+                pass
+        self._install_dict("cvt", self.csource)
+        self._install_dict("defaults", self.dsource)
+        self._install_dict("prep", self.psource)
+        self._install_dict("macros", self.mcsource)
+        self._install_dict("functions", self.fsource)
 
 
-
-class cvtEditCommand(QUndoCommand):
-    """ Superclass for editing the cvt. If we can get a reference to the current
-        glyph, we'll be able to send it a signal when there's a change in the CVT.
+class fontInfoEditCommand(QUndoCommand):
+    """ Superclass for editing font-level data.
     """
     def __init__(self, yg_font: ygFont) -> None:
         super().__init__()
         self.yg_font = yg_font
         self.yg_glyph = self.yg_font.main_window.current_glyph()
-        self.undo_state = cvtSaver(self.yg_font)
-        self.redo_state: Union[cvtSaver, None] = None
+        self.undo_state = fontInfoSaver(self.yg_font)
+        self.redo_state: Union[fontInfoSaver, None] = None
 
     def send_signal(self) -> None:
         if self.yg_font.signal_connected:
@@ -1000,293 +1071,6 @@ class cvtEditCommand(QUndoCommand):
 
     def undo(self) -> None:
         self.undo_state.restore()
-        self.send_signal()
-
-
-# QUndoCommand
-class editCVDeltaCommand(cvtEditCommand):
-    def __init__(self, yg_font, cv_delta, index, val):
-        self.yg_font = yg_font
-        self.cv_delta = cv_delta
-        self.index = index
-        self.val = val
-        super().__init__(yg_font)
-        self.setText("Edit Control Value Deltas")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-            self.cv_delta.dataChanged.emit(self.index, self.index)
-        else:
-            if self.index.row() < len(self.cv_delta._data):
-                self.cv_delta._store_val(self.index, self.val)
-                self.cv_delta.dataChanged.emit(self.index, self.index)
-            # Does this happen? Rather, one always adds the row first, then
-            # edits.
-            #if self.index.row() == len(self.cv_delta._data):
-            #    self.cv_delta._data.append([25, 0.0])
-            #    self.cv_delta._store_val(self.index, self.value)
-            #    self.cv_delta.dataChanged.emit(self.index, self.index)
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-    def undo(self):
-        self.undo_state.restore()
-        self.cv_delta.dataChanged.emit(self.index, self.index)
-        self.send_signal()
-
-
-# QUndoCommand
-class addCVDeltaCommand(cvtEditCommand):
-    def __init__(self, yg_font, cv_delta):
-        self.yg_font = yg_font
-        self.cv_delta = cv_delta
-        self.index = self.cv_delta.rowCount(None)
-        super().__init__(yg_font)
-        self.setText("Add Control Value Delta")
-
-    def redo(self):
-        if self.redo_state:
-            self.cv_delta.beginInsertRows(QModelIndex(), self.index, self.index)
-            self.redo_state.restore()
-            self.cv_delta.endInsertRows()
-        else:
-            c = self.cv_delta.cvt.get_cv(self.cv_delta.name)
-            # print(self.cv_delta.rowCount(None))
-            self.cv_delta.beginInsertRows(QModelIndex(), self.index, self.index)
-            if not "deltas" in c:
-                c["deltas"] = []
-            # print("INITIAL_CV_DELTA: " + str(INITIAL_CV_DELTA))
-            c["deltas"].append(copy.deepcopy(INITIAL_CV_DELTA))
-            # print(c)
-            self.cv_delta.endInsertRows()
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-    def undo(self):
-        self.cv_delta.beginRemoveRows(QModelIndex(), self.index, self.index)
-        self.undo_state.restore()
-        self.cv_delta.endRemoveRows()
-        self.send_signal()
-
-
-# QUndoCommand
-class deleteCVDeltaCommand(cvtEditCommand):
-    def __init__(self, yg_font, cv_delta, c, row):
-        self.yg_font = yg_font
-        self.cv_delta = cv_delta
-        self.c = c
-        self.row = row
-        super().__init__(yg_font)
-        self.setText("Add Control Value Delta")
-
-    def redo(self):
-        if self.redo_state:
-            self.cv_delta.beginRemoveRows(QModelIndex(), self.row, self.row)
-            self.redo_state.restore()
-            self.cv_delta.endRemoveRows()
-        else:
-            self.cv_delta.beginRemoveRows(QModelIndex(), self.row, self.row)
-            del self.c["deltas"][self.row]
-            if len(self.c["deltas"]) == 0:
-                try:
-                    del self.c["deltas"]
-                except Exception:
-                    pass
-            self.cv_delta.endRemoveRows()
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-    def undo(self):
-        self.cv_delta.beginInsertRows(QModelIndex(), self.row, self.row)
-        self.undo_state.restore()
-        self.cv_delta.endInsertRows()
-        self.send_signal()
-
-
-
-class addMasterCommand(cvtEditCommand):
-    def __init__(self, yg_font, id, data):
-        self.id = id
-        self.data = data
-        super().__init__(yg_font)
-        self.setText("Add Master")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            self.yg_font.source["masters"][self.id] = self.data
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class deleteMasterCommand(cvtEditCommand):
-    def __init__(self, yg_font, id):
-        self.id = id
-        super().__init__(yg_font)
-        self.setText("Delete Master")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            try:
-                del self.yg_font.source["masters"][id]
-            except Exception:
-                pass
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class setMasterNameCommand(cvtEditCommand):
-    def __init__(self, yg_font, m_id, name):
-        self.m_id = m_id
-        self.name = name
-        super().__init__(yg_font)
-        self.setText("Set Master Name")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            if not self.m_id in self.yg_font.source["masters"]:
-                self.yg_font.source["masters"][self.m_id] = {}
-            self.yg_font.source["masters"][self.m_id]["name"] = self.name
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class setMasterAxisValueCommand(cvtEditCommand):
-    def __init__(self, yg_font, m_id, axis, val):
-        self.m_id = m_id
-        self.axis = axis
-        self.val = val
-        super().__init__(yg_font)
-        self.setText("Set Master Axis Value")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            if not "vals" in self.yg_font.source["masters"][self.m_id]:
-                self.yg_font.source["masters"][self.m_id]["vals"] = {}
-            self.yg_font.source["masters"][self.m_id]["vals"][self.axis] = self.val
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class deleteMasterAxisCommand(cvtEditCommand):
-    def __init__(self, yg_font, m_id, axis):
-        self.m_id = m_id
-        self.axis = axis
-        super().__init__(yg_font)
-        self.setText("Delete Master Axis")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            try:
-                del self.yg_font.source["masters"][self.m_id]["vals"][self.axis]
-                if len(self.yg_font.source["masters"][self.m_id]["vals"]) == 0:
-                    del self.yg_font.source["masters"][self.m_id]["vals"]
-            except KeyError:
-                pass
-        self.send_signal()
-
-
-
-class addCVCommand(cvtEditCommand):
-    def __init__(self, yg_font: ygFont, name: str, props: Union[int, dict]) -> None:
-        super().__init__(yg_font)
-        self.name = name
-        self.props = props
-        self.setText("Add Control Value")
-
-    def redo(self) -> None:
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            self.yg_font.source["cvt"][self.name] = self.props
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-class setCVPropertyCommand(cvtEditCommand):
-    def __init__(self, yg_font: ygFont, cv_name: str, prop_name: str, val: Any) -> None:
-        super().__init__(yg_font)
-        self.name = cv_name
-        self.val = val
-        self.prop = prop_name
-        self.setText("Set Control Value Property")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            self.yg_font.source["cvt"][self.name][self.prop] = self.val
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class delCVPropertyCommand(cvtEditCommand):
-    def __init__(self, yg_font: ygFont, name: str, prop: str):
-        self.name = name
-        self.prop = prop
-        super().__init__(yg_font)
-        self.setText("Delete Control Value Property")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            try:
-                del self.yg_font.source["cvt"][self.name][self.prop]
-            except Exception:
-                pass
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class deleteCVCommand(cvtEditCommand):
-    def __init__(self, yg_font: ygFont, name: str) -> None:
-        super().__init__(yg_font)
-        self.name = name
-        self.setText("Delete Control Value")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            try:
-                del self.yg_font.source["cvt"][self.name]
-            except KeyError:
-                pass
-            self.redo_state = cvtSaver(self.yg_font)
-        self.send_signal()
-
-
-
-class renameCVCommand(cvtEditCommand):
-    def __init__(self, yg_font: ygFont, old_name: str, new_name: str) -> None:
-        self.old_name = old_name
-        self.new_name = new_name
-        super().__init__(yg_font)
-        self.setText("Rename Control Value")
-
-    def redo(self):
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            self.yg_font.source["cvt"][self.new_name] = self.yg_font.source["cvt"].pop(self.old_name)
-            self.redo_state = cvtSaver(self.yg_font)
         self.send_signal()
 
 
@@ -1314,6 +1098,361 @@ class glyphEditCommand(QUndoCommand):
 
     def undo(self) -> None:
         self.undo_state.restore()
+        self.send_signal()
+
+
+
+class saveEditBoxCommand(fontInfoEditCommand):
+    def __init__(self, yg_font: ygFont, sourceable: "ygSourceable", c: dict, text: str) -> None:
+        self.sourceable = sourceable
+        self.c = c
+        self.text = text
+        super().__init__(yg_font)
+        self.setText(text)
+
+    def redo(self):
+        print("Running redo: " + self.text)
+        if self.redo_state:
+            self.redo_state.restore()
+            self.cv_delta.dataChanged.emit(self.index, self.index)
+        else:
+            print("Running first")
+            self.sourceable._save(self.c)
+        self.send_signal()
+
+
+class setDefaultCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, yg_defaults, d: dict) -> None:
+        self.yg_defaults = yg_defaults
+        self.d = d
+        super().__init__(yg_font)
+        self.setText("Set defaults")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+            self.cv_delta.dataChanged.emit(self.index, self.index)
+        else:
+            self.yg_defaults._set_default(self.d)
+            #for key, value in self.d.items():
+            #    self.yg_defaults.data[key] = value
+        self.send_signal()
+
+
+
+class deleteDefaultCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, yg_defaults, k):
+        self.yg_defaults = yg_defaults
+        self.k = k
+        super().__init__(yg_font)
+        self.setText("Delete Default")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+            self.cv_delta.dataChanged.emit(self.index, self.index)
+        else:
+            try:
+                del self.yg_defaults.data[self.k]
+            except Exception:
+                pass
+        self.send_signal()
+
+class roundingDefaultCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, yg_defaults, r: dict) -> None:
+        self.yg_defaults = yg_defaults
+        self.r = r
+        super().__init__(yg_font)
+        self.setText("Set rounding default")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+            self.cv_delta.dataChanged.emit(self.index, self.index)
+        else:
+            self.yg_defaults.clear_rounding()
+            k = self.r.keys()
+            for kk in k:
+                val = self.r[kk]
+                if val != self.yg_defaults.rounding_default(kk):
+                    self.yg_defaults.set_rounding(kk, val)
+        self.send_signal()
+
+
+
+
+class editCVDeltaCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, cv_delta, index, val):
+        self.yg_font = yg_font
+        self.cv_delta = cv_delta
+        self.index = index
+        self.val = val
+        super().__init__(yg_font)
+        self.setText("Edit Control Value Deltas")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+            self.cv_delta.dataChanged.emit(self.index, self.index)
+        else:
+            if self.index.row() < len(self.cv_delta._data):
+                self.cv_delta._store_val(self.index, self.val)
+                self.cv_delta.dataChanged.emit(self.index, self.index)
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+    def undo(self):
+        self.undo_state.restore()
+        self.cv_delta.dataChanged.emit(self.index, self.index)
+        self.send_signal()
+
+
+class addCVDeltaCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, cv_delta):
+        self.yg_font = yg_font
+        self.cv_delta = cv_delta
+        self.index = self.cv_delta.rowCount(None)
+        super().__init__(yg_font)
+        self.setText("Add Control Value Delta")
+
+    def redo(self):
+        if self.redo_state:
+            self.cv_delta.beginInsertRows(QModelIndex(), self.index, self.index)
+            self.redo_state.restore()
+            self.cv_delta.endInsertRows()
+        else:
+            c = self.cv_delta.cvt.get_cv(self.cv_delta.name)
+            self.cv_delta.beginInsertRows(QModelIndex(), self.index, self.index)
+            if not "deltas" in c:
+                c["deltas"] = []
+            c["deltas"].append(copy.deepcopy(INITIAL_CV_DELTA))
+            self.cv_delta.endInsertRows()
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+    def undo(self):
+        self.cv_delta.beginRemoveRows(QModelIndex(), self.index, self.index)
+        self.undo_state.restore()
+        self.cv_delta.endRemoveRows()
+        self.send_signal()
+
+
+class deleteCVDeltaCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, cv_delta, c, row):
+        self.yg_font = yg_font
+        self.cv_delta = cv_delta
+        self.c = c
+        self.row = row
+        super().__init__(yg_font)
+        self.setText("Delete Control Value Delta")
+
+    def redo(self):
+        if self.redo_state:
+            self.cv_delta.beginRemoveRows(QModelIndex(), self.row, self.row)
+            self.redo_state.restore()
+            self.cv_delta.endRemoveRows()
+        else:
+            self.cv_delta.beginRemoveRows(QModelIndex(), self.row, self.row)
+            del self.c["deltas"][self.row]
+            if len(self.c["deltas"]) == 0:
+                try:
+                    del self.c["deltas"]
+                except Exception:
+                    pass
+            self.cv_delta.endRemoveRows()
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+    def undo(self):
+        self.cv_delta.beginInsertRows(QModelIndex(), self.row, self.row)
+        self.undo_state.restore()
+        self.cv_delta.endInsertRows()
+        self.send_signal()
+
+
+
+class addMasterCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, id, data):
+        self.id = id
+        self.data = data
+        super().__init__(yg_font)
+        self.setText("Add Master")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["masters"][self.id] = self.data
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class deleteMasterCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, id):
+        self.id = id
+        super().__init__(yg_font)
+        self.setText("Delete Master")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["masters"][id]
+            except Exception:
+                pass
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class setMasterNameCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, m_id, name):
+        self.m_id = m_id
+        self.name = name
+        super().__init__(yg_font)
+        self.setText("Set Master Name")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            if not self.m_id in self.yg_font.source["masters"]:
+                self.yg_font.source["masters"][self.m_id] = {}
+            self.yg_font.source["masters"][self.m_id]["name"] = self.name
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class setMasterAxisValueCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, m_id, axis, val):
+        self.m_id = m_id
+        self.axis = axis
+        self.val = val
+        super().__init__(yg_font)
+        self.setText("Set Master Axis Value")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            if not "vals" in self.yg_font.source["masters"][self.m_id]:
+                self.yg_font.source["masters"][self.m_id]["vals"] = {}
+            self.yg_font.source["masters"][self.m_id]["vals"][self.axis] = self.val
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class deleteMasterAxisCommand(fontInfoEditCommand):
+    def __init__(self, yg_font, m_id, axis):
+        self.m_id = m_id
+        self.axis = axis
+        super().__init__(yg_font)
+        self.setText("Delete Master Axis")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["masters"][self.m_id]["vals"][self.axis]
+                if len(self.yg_font.source["masters"][self.m_id]["vals"]) == 0:
+                    del self.yg_font.source["masters"][self.m_id]["vals"]
+            except KeyError:
+                pass
+        self.send_signal()
+
+
+
+class addCVCommand(fontInfoEditCommand):
+    def __init__(self, yg_font: ygFont, name: str, props: Union[int, dict]) -> None:
+        super().__init__(yg_font)
+        self.name = name
+        self.props = props
+        self.setText("Add Control Value")
+
+    def redo(self) -> None:
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["cvt"][self.name] = self.props
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+class setCVPropertyCommand(fontInfoEditCommand):
+    def __init__(self, yg_font: ygFont, cv_name: str, prop_name: str, val: Any) -> None:
+        super().__init__(yg_font)
+        self.name = cv_name
+        self.val = val
+        self.prop = prop_name
+        self.setText("Set Control Value Property")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["cvt"][self.name][self.prop] = self.val
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class delCVPropertyCommand(fontInfoEditCommand):
+    def __init__(self, yg_font: ygFont, name: str, prop: str):
+        self.name = name
+        self.prop = prop
+        super().__init__(yg_font)
+        self.setText("Delete Control Value Property")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["cvt"][self.name][self.prop]
+            except Exception:
+                pass
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class deleteCVCommand(fontInfoEditCommand):
+    def __init__(self, yg_font: ygFont, name: str) -> None:
+        super().__init__(yg_font)
+        self.name = name
+        self.setText("Delete Control Value")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            try:
+                del self.yg_font.source["cvt"][self.name]
+            except KeyError:
+                pass
+            self.redo_state = fontInfoSaver(self.yg_font)
+        self.send_signal()
+
+
+
+class renameCVCommand(fontInfoEditCommand):
+    def __init__(self, yg_font: ygFont, old_name: str, new_name: str) -> None:
+        self.old_name = old_name
+        self.new_name = new_name
+        super().__init__(yg_font)
+        self.setText("Rename Control Value")
+
+    def redo(self):
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.yg_font.source["cvt"][self.new_name] = self.yg_font.source["cvt"].pop(self.old_name)
+            self.redo_state = fontInfoSaver(self.yg_font)
         self.send_signal()
 
 
@@ -2462,9 +2601,6 @@ class ygGlyph(QObject):
     def clean(self) -> bool:
         return self._clean
 
-    # def make_named_points(self, pts, name):
-    #     self.names.add(pts, name)
-
     @overload
     def points_to_labels(self, pts: Union[ygPoint, str]) -> str: ...
 
@@ -3060,7 +3196,10 @@ class ygSourceable:
 
     def source(self) -> dict:
         return self.data
-
+    
+    def _save(self, c: dict) -> None:
+        pass
+    
     def save(self, c: dict) -> None:
         k = c.keys()
         for kk in k:
@@ -3098,7 +3237,6 @@ class ygMasters:
     
     def master_by_name(self, n):
         k = self.source["masters"].keys()
-        # raise Exception("Just ending the proggy")
         for kk in k:
             if self.source["masters"][kk]["name"] == n:
                 return kk, self.source["masters"][kk]
@@ -3111,7 +3249,7 @@ class ygMasters:
             return self.create_master()
         
     def add_master(self, id, data):
-        self.yg_font.cvt.undo_stack.push(addMasterCommand(self.yg_font, id, data))
+        self.yg_font.undo_stack.push(addMasterCommand(self.yg_font, id, data))
 
     def del_by_name(self, name):
         m = self.master_by_name(name)
@@ -3119,12 +3257,12 @@ class ygMasters:
             self.del_by_id(m[0])
 
     def del_by_id(self, id):
-        self.yg_font.cvt.undo_stack.push(deleteMasterCommand(self.yg_font, id))
+        self.yg_font.undo_stack.push(deleteMasterCommand(self.yg_font, id))
 
     def set_master_name(self, m_id, name):
         """ Assumes that a master already exists
         """
-        self.yg_font.cvt.undo_stack.push(setMasterNameCommand(self.yg_font, m_id, name))
+        self.yg_font.undo_stack.push(setMasterNameCommand(self.yg_font, m_id, name))
 
     def get_master_name(self, m_id):
         try:
@@ -3156,10 +3294,10 @@ class ygMasters:
             return 0.0
         
     def set_axis_value(self, m_id, axis, val):
-        self.yg_font.cvt.undo_stack.push(setMasterAxisValueCommand(self.yg_font, m_id, axis, val))
+        self.yg_font.undo_stack.push(setMasterAxisValueCommand(self.yg_font, m_id, axis, val))
 
     def del_axis(self, m_id, axis):
-        self.yg_font.cvt.undo_stack.push(deleteMasterAxisCommand(self.yg_font, m_id, axis))
+        self.yg_font.undo_stack.push(deleteMasterAxisCommand(self.yg_font, m_id, axis))
 
     def build_master_list(self):
         # Build initial list of masters; install in source
@@ -3182,15 +3320,20 @@ class ygMasters:
 
 class ygprep(ygSourceable):
     def __init__(self, font: ygFont, source: dict) -> None:
+        self.yg_font = font
         if "prep" in source:
             data = source["prep"]
         else:
             data = {}
         super().__init__(font, data)
 
+    def _save(self, c: dict):
+        self.font.source["prep"]["code"] = c["code"]
+
     def save(self, c: dict) -> None:
-        self.data = c
-        self.font.source["prep"] = c
+        self.yg_font.undo_stack.push(saveEditBoxCommand(self.yg_font, self, c, "Save CVT Program Edits"))
+        # self.data["code"] = c["code"]
+        # self._save(c)
         self.set_clean(True)
 
 
@@ -3207,15 +3350,63 @@ class ygDefaults(ygSourceable):
         if args[0] in self.data:
             return self.data[args[0]]
         return None
-
-    def set_default(self, dflts) -> None:
+    
+    def _set_default(self, dflts: dict) -> None:
         for key, value in dflts.items():
             self.data[key] = value
 
+    def set_default(self, dflts: dict) -> None:
+        self.font.undo_stack.push(setDefaultCommand(self.font, self, dflts))
+
+    def del_default(self, k):
+        self.font.undo_stack.push(deleteDefaultCommand(self.font, self, k))
+
+    def _save(self, c: dict):
+        k = c.keys()
+        for kk in k:
+            self.font_source["defaults"][kk] = c[kk]
+
     def save(self, c: dict) -> None:
-        self.data = c
-        self.font.source["defaults"] = c
+        self.yg_font.undo_stack.push(saveEditBoxCommand(self.yg_font, self, c, "Edit Font Defaults"))
+        #k = c.keys()
+        #for kk in k:
+        #    self.data[kk] = c[kk]
+        #self._save(c)
         self.set_clean(True)
+
+    def clear_rounding(self):
+        try:
+            del self.data["round"]
+        except KeyError:
+            pass
+        try:
+            del self.data["no-round"]
+        except KeyError:
+            pass
+
+    def set_rounding_defaults(self, r: dict):
+        self.font.undo_stack.push(roundingDefaultCommand(self.font, self, r))
+
+    def set_rounding(self, hint_type: str, b: bool) -> None:
+        if b:
+            if not "round" in self.data:
+                self.data["round"] = []
+            self.data["round"].append(hint_type)
+        else:
+            if not "no-round" in self.data:
+                self.data["no-round"] = []
+            self.data["no-round"].append(hint_type)
+
+    def rounding_default(self, hint_type):
+        return hint_type_nums[hint_type] in [0, 3]
+
+    def rounding_state(self, hint_type):
+        if "round" in self.data and hint_type in self.data["round"]:
+            return True
+        if "no-round" in self.data and hint_type in self.data["no-round"]:
+            return False
+        return self.rounding_default(hint_type)
+
 
 
 
@@ -3236,7 +3427,6 @@ class ygCVDeltas(QAbstractTableModel):
     def data_changed(self, index_a, index_b):
         c = self.cvt.get_cv(self.name)
         row = index_a.row()
-        # column = index_a.column()
         try:
             from .ygSchema import is_cv_delta_valid
             if not is_cv_delta_valid(c["deltas"][row]):
@@ -3289,7 +3479,7 @@ class ygCVDeltas(QAbstractTableModel):
         
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
         if index.isValid() and role == Qt.ItemDataRole.EditRole:
-            self.cvt.undo_stack.push(editCVDeltaCommand(self.cvt.yg_font, self, index, value))
+            self.cvt.yg_font.undo_stack.push(editCVDeltaCommand(self.cvt.yg_font, self, index, value))
             return True
         return False
     
@@ -3298,7 +3488,7 @@ class ygCVDeltas(QAbstractTableModel):
             insert multiple rows, and we always append rather than insert.
 
         """
-        self.cvt.undo_stack.push(addCVDeltaCommand(self.cvt.yg_font, self))
+        self.cvt.yg_font.undo_stack.push(addCVDeltaCommand(self.cvt.yg_font, self))
         return True
 
     @pyqtSlot()
@@ -3308,7 +3498,7 @@ class ygCVDeltas(QAbstractTableModel):
     def deleteRows(self, row, count, parent=QModelIndex()):
         c = self.cvt.get_cv(self.name)
         if "deltas" in c and row < len(c["deltas"]):
-            self.cvt.undo_stack.push(deleteCVDeltaCommand(self.cvt.yg_font, self, c, row))
+            self.cvt.yg_font.undo_stack.push(deleteCVDeltaCommand(self.cvt.yg_font, self, c, row))
             return True
         return False
 
@@ -3330,19 +3520,19 @@ class ygcvt(ygSourceable):
         if not "cvt" in self.font_source:
             self.font_source["cvt"] = {}
         self.data = self.font_source["cvt"]
-        if top_window:
-            self.undo_stack = QUndoStack()
-            self.top_window.add_undo_stack(self.undo_stack)
         super().__init__(self.yg_font, source["cvt"])
 
     def source(self):
         return self.font_source["cvt"]
-
-    def save(self, c: dict) -> None:
+    
+    def _save(self, c: dict):
         self.font_source["cvt"].clear()
         k = c.keys()
         for kk in k:
             self.font_source["cvt"][kk] = c[kk]
+
+    def save(self, c: dict) -> None:
+        self.yg_font.undo_stack.push(saveEditBoxCommand(self.yg_font, self, c, "Edit Control Values"))
         self.set_clean(True)
 
     def keys(self):
@@ -3473,19 +3663,19 @@ class ygcvt(ygSourceable):
         return ygCVDeltas(self, name)
     
     def add_cv(self, name: str, props: Union[int, dict]) -> None:
-        self.undo_stack.push(addCVCommand(self.yg_font, name, props))
+        self.yg_font.undo_stack.push(addCVCommand(self.yg_font, name, props))
 
     def set_cv_property(self, cv_name, prop_name, val):
-        self.undo_stack.push(setCVPropertyCommand(self.yg_font, cv_name, prop_name, val))
+        self.yg_font.undo_stack.push(setCVPropertyCommand(self.yg_font, cv_name, prop_name, val))
 
     def del_cv_property(self, cv_name, prop_name):
-        self.undo_stack.push(delCVPropertyCommand(self.yg_font, cv_name, prop_name))
+        self.yg_font.undo_stack.push(delCVPropertyCommand(self.yg_font, cv_name, prop_name))
 
     def del_cv(self, name):
-        self.undo_stack.push(deleteCVCommand(self.yg_font, name))
+        self.yg_font.undo_stack.push(deleteCVCommand(self.yg_font, name))
 
     def rename(self, old_name, new_name):
-        self.undo_stack.push(renameCVCommand(self.yg_font, old_name, new_name))
+        self.yg_font.undo_stack.push(renameCVCommand(self.yg_font, old_name, new_name))
 
     def __len__(self):
         return len(self.font_source["cvt"])
@@ -3496,9 +3686,20 @@ class ygFunctions(ygSourceable):
     def __init__(self, font: ygFont, source: dict) -> None:
         super().__init__(font, source)
 
+    def _save(self, c: dict):
+        try:
+            self.font.source["functions"].clear()
+        except KeyError:
+            pass
+        if not "functions" in self.font.source:
+            self.font.source["functions"] = {}
+        k = c.keys()
+        for kk in k:
+            self.font.source["functions"][kk] = c[kk]
+
     def save(self, c: dict) -> None:
-        self.data = c
-        self.font.source["functions"] = c
+        self.yg_font.undo_stack.push(saveEditBoxCommand(self.yg_font, self, c, "Edit Functions"))
+        # self._save(c)
         self.set_clean(True)
 
 
@@ -3507,14 +3708,29 @@ class ygMacros(ygSourceable):
     def __init__(self, font: ygFont, source: dict) -> None:
         super().__init__(font, source)
 
+    def _save(self, c: dict):
+        try:
+            self.font.source["macros"].clear()
+        except KeyError:
+            pass
+        if not "macros" in self.font.source:
+            self.font.source["macros"] = {}
+        k = c.keys()
+        for kk in k:
+            self.font.source["macros"][kk] = c[kk]
+
     def save(self, c: dict) -> None:
-        self.data = c
-        self.font.source["macros"] = c
+        self.yg_font.undo_stack.push(saveEditBoxCommand(self.yg_font, self, c, "Edit Macros"))
+        # self._save(c)
         self.set_clean(True)
 
 
 
 class ygcvar(ygSourceable):
+    """ This structure is now obsolete. If the more recent way of constructing
+        the cvar (through CV properties and masters) is available, this
+        structure, if present, will be ignored; if not, it will be used.
+    """
     def __init__(self, font: ygFont, source: dict) -> None:
         try:
             data = source["cvar"]

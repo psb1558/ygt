@@ -20,7 +20,7 @@ from .ygSchema import (
     are_names_valid,
     are_properties_valid)
 from .ygError import ygErrorMessages
-from .makeCVDialog import cvtWindow
+from .makeCVDialog import fontInfoWindow
 from xgridfit import compile_list, compile_all
 from fontTools import ufoLib
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
@@ -128,8 +128,9 @@ class MainWindow(QMainWindow):
             self.win_list = win_list
         self.filename = None
         self.filename_extension = None
+        self.font_info_editor = None
         self.cvt_editor = None
-        self.cvar_editor = None
+        #self.cvar_editor = None
         self.prep_editor = None
         self.function_editor = None
         self.macro_editor = None
@@ -186,6 +187,10 @@ class MainWindow(QMainWindow):
 
         self.menu = self.menuBar()
 
+        #
+        # File menu
+        #
+
         self.file_menu = self.menu.addMenu("&File")
 
         self.open_action = self.file_menu.addAction("Open")
@@ -212,7 +217,19 @@ class MainWindow(QMainWindow):
         self.quit_action = self.file_menu.addAction("Quit")
         self.quit_action.setShortcut(QKeySequence.StandardKey.Quit)
 
+        self.file_menu.addSeparator()
+
+        self.font_info_action = self.file_menu.addAction("Font Info")
+        self.font_info_action.setShortcut(QKeySequence("Ctrl+i"))
+        self.font_info_action.setEnabled(False)
+
         self.file_menu.aboutToShow.connect(self.file_menu_about_to_show)
+
+        
+
+        #
+        # Edit Menu
+        #
 
         self.edit_menu = self.menu.addMenu("&Edit")
 
@@ -242,6 +259,10 @@ class MainWindow(QMainWindow):
 
         self.edit_menu.aboutToShow.connect(self.edit_menu_about_to_show)
 
+        #
+        # Preview Menu
+        #
+
         self.preview_menu = self.menu.addMenu("&Preview")
 
         self.save_current_glyph_action = self.preview_menu.addAction("Update Preview")
@@ -251,6 +272,7 @@ class MainWindow(QMainWindow):
         self.toggle_auto_preview_action = self.preview_menu.addAction("Auto update")
         self.toggle_auto_preview_action.setCheckable(True)
         self.toggle_auto_preview_action.setChecked(True)
+        self.toggle_auto_preview_action.setEnabled(False)
 
         self.preview_menu.addSeparator()
 
@@ -305,6 +327,10 @@ class MainWindow(QMainWindow):
 
         self.preview_menu.aboutToShow.connect(self.preview_menu_about_to_show)
 
+        #
+        # View Menu
+        #
+
         self.view_menu = self.menu.addMenu("&View")
 
         self.zoom_in_action = self.view_menu.addAction("Zoom In")
@@ -336,6 +362,47 @@ class MainWindow(QMainWindow):
         self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
 
         self.view_menu.setEnabled(False)
+
+        #
+        # Code Menu
+        #
+
+        self.code_menu = self.menu.addMenu("&Code")
+
+        self.compile_action = self.code_menu.addAction("Compile")
+        self.compile_action.setShortcut(QKeySequence("Ctrl+r"))
+
+        self.cleanup_action = self.code_menu.addAction("Clean up")
+
+        self.to_coords_action = self.code_menu.addAction("Indices to Coords")
+
+        self.to_indices_action = self.code_menu.addAction("Coords to Indices")
+
+        self.code_menu.addSeparator()
+
+        self.edit_names_action = self.code_menu.addAction("Edit point names...")
+
+        self.edit_properties_action = self.code_menu.addAction("Edit glyph properties...")
+
+        self.code_menu.addSeparator()
+
+        self.edit_cvt_action = self.code_menu.addAction("Edit cvt...")
+
+        self.edit_prep_action = self.code_menu.addAction("Edit prep...")
+
+        # self.edit_cvar_action = self.code_menu.addAction("Edit cvar...")
+
+        self.edit_functions_action = self.code_menu.addAction("Edit Functions...")
+
+        self.edit_macros_action = self.code_menu.addAction("Edit Macros...")
+
+        self.edit_defaults_action = self.code_menu.addAction("Edit Defaults...")
+
+        self.code_menu.setEnabled(False)
+
+        #
+        # Toolbar
+        #
 
         axis_action_group = QActionGroup(self.toolbar)
         axis_action_group.setExclusive(True)
@@ -449,38 +516,6 @@ class MainWindow(QMainWindow):
         self.make_cv_action.setShortcut(QKeySequence(Qt.Key.Key_C))
         self.make_cv_action.setEnabled(False)
 
-        self.code_menu = self.menu.addMenu("&Code")
-
-        self.compile_action = self.code_menu.addAction("Compile")
-        self.compile_action.setShortcut(QKeySequence("Ctrl+r"))
-
-        self.cleanup_action = self.code_menu.addAction("Clean up")
-
-        self.to_coords_action = self.code_menu.addAction("Indices to Coords")
-
-        self.to_indices_action = self.code_menu.addAction("Coords to Indices")
-
-        self.code_menu.setEnabled(False)
-
-        self.window_menu = self.menu.addMenu("&Window")
-
-        self.edit_names_action = self.window_menu.addAction("Edit point names...")
-
-        self.edit_properties_action = self.window_menu.addAction("Edit glyph properties...")
-
-        self.window_menu.addSeparator()
-
-        self.edit_cvt_action = self.window_menu.addAction("Edit cvt...")
-
-        self.edit_prep_action = self.window_menu.addAction("Edit prep...")
-
-        self.edit_cvar_action = self.window_menu.addAction("Edit cvar...")
-
-        self.edit_functions_action = self.window_menu.addAction("Edit Functions...")
-
-        self.edit_macros_action = self.window_menu.addAction("Edit Macros...")
-
-        self.edit_defaults_action = self.window_menu.addAction("Edit Defaults...")
 
         self.central_widget = self.qs
         self.setCentralWidget(self.central_widget)
@@ -579,6 +614,7 @@ class MainWindow(QMainWindow):
         self.pv_set_size_action.setEnabled(True)
         self.pv_show_hints_action.setEnabled(True)
         self.pv_show_grid_action.setEnabled(True)
+        self.toggle_auto_preview_action.setEnabled(True)
         if self.instance_menu != None:
             self.prev_instance_action.setEnabled(True)
             self.next_instance_action.setEnabled(True)
@@ -640,12 +676,12 @@ class MainWindow(QMainWindow):
             self.index_label_action.setEnabled(False)
             self.coord_label_action.setEnabled(True)
 
-    @pyqtSlot()
-    def window_menu_about_to_show(self) -> None:
-        if len(self.win_list) > 0:
-            wins = []
-            for w in self.win_list:
-                wins.append(w.filename)
+    #@pyqtSlot()
+    #def window_menu_about_to_show(self) -> None:
+    #    if len(self.win_list) > 0:
+    #        wins = []
+    #        for w in self.win_list:
+    #            wins.append(w.filename)
 
     @pyqtSlot()
     def file_menu_about_to_show(self) -> None:
@@ -723,6 +759,7 @@ class MainWindow(QMainWindow):
         self.quit_action.triggered.connect(self.quit, type=Qt.ConnectionType.QueuedConnection)
         self.open_action.triggered.connect(self.open_file)
         self.save_font_action.triggered.connect(self.export_font)
+        self.font_info_action.triggered.connect(self.edit_font_info)
 
     def setup_recents_connections(self) -> None:
         for a in self.recents_actions:
@@ -749,7 +786,7 @@ class MainWindow(QMainWindow):
     def setup_edit_connections(self) -> None:
         self.edit_cvt_action.triggered.connect(self.edit_cvt)
         self.edit_prep_action.triggered.connect(self.edit_prep)
-        self.edit_cvar_action.triggered.connect(self.edit_cvar)
+        # self.edit_cvar_action.triggered.connect(self.edit_cvar)
         self.edit_functions_action.triggered.connect(self.edit_functions)
         self.edit_macros_action.triggered.connect(self.edit_macros)
         self.edit_defaults_action.triggered.connect(self.edit_defaults)
@@ -1133,6 +1170,7 @@ class MainWindow(QMainWindow):
         self.save_action.setEnabled(True)
         self.save_as_action.setEnabled(True)
         self.save_font_action.setEnabled(True)
+        self.font_info_action.setEnabled(True)
         self.goto_action.setEnabled(True)
         self.vertical_action.setEnabled(True)
         self.horizontal_action.setEnabled(True)
@@ -1328,12 +1366,21 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def edit_cvt(self) -> None:
-        if not self.cvt_editor:
-            self.cvt_editor = cvtWindow(self.yg_font, self.preferences)
-        self.yg_font.setup_signal(self.cvt_editor.refresh)
+        self.cvt_editor = editorDialog(self.preferences,
+                                       self.yg_font.cvt,
+                                       "cvt",
+                                       is_cvt_valid)
         self.cvt_editor.show()
-        self.cvt_editor.raise_()
         self.cvt_editor.activateWindow()
+
+    @pyqtSlot()
+    def edit_font_info(self) -> None:
+        if not self.font_info_editor:
+            self.font_info_editor = fontInfoWindow(self.yg_font, self.preferences)
+        self.yg_font.setup_signal(self.font_info_editor.refresh)
+        self.font_info_editor.show()
+        self.font_info_editor.raise_()
+        self.font_info_editor.activateWindow()
 
     @pyqtSlot()
     def edit_prep(self) -> None:
@@ -1344,15 +1391,15 @@ class MainWindow(QMainWindow):
         self.prep_editor.show()
         self.prep_editor.activateWindow()
 
-    @pyqtSlot()
-    def edit_cvar(self) -> None:
-        self.cvar_editor = editorDialog(self.preferences,
-                                                 self.yg_font.cvar,
-                                                 "cvar",
-                                                 is_cvar_valid,
-                                                 top_structure="list")
-        self.cvar_editor.show()
-        self.cvar_editor.activateWindow()
+    #@pyqtSlot()
+    #def edit_cvar(self) -> None:
+    #    self.cvar_editor = editorDialog(self.preferences,
+    #                                             self.yg_font.cvar,
+    #                                             "cvar",
+    #                                             is_cvar_valid,
+    #                                             top_structure="list")
+    #    self.cvar_editor.show()
+    #    self.cvar_editor.activateWindow()
 
     @pyqtSlot()
     def edit_functions(self) -> None:

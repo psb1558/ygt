@@ -10,19 +10,16 @@ from PyQt6.QtWidgets import (QDialog,
                              QTabWidget,
                              QListWidget,
                              QPushButton,
-                             QTableView)
+                             QTableView,
+                             QRadioButton,
+                             QCheckBox)
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import (QIntValidator,
-                         QDoubleValidator,
-                         QUndoCommand,
-                         QUndoStack)
-from .ygModel import (unicode_categories,
-                      unicode_cat_names,
+                         QDoubleValidator)
+from .ygModel import (unicode_cat_names,
                       reverse_unicode_cat_names,
                       ygMasters,
                       random_id)
-from .ygYAMLEditor import editorPane
-from .ygSchema import is_cvt_valid
 
 NEW_CV_NAME    = "New_Control_Value"
 NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
@@ -33,19 +30,28 @@ NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 #
 # Here is the structure of the CVT edit window:
 #
-# cvtWindow ---|
-#              |--- cvEditPane ---|
-#              |                  | --- QListWidget
-#              |                  | --- cvWidget ---|
-#              |                                    | --- general_tab
-#              |                                    | --- link tab
-#              |                                    | --- variants tab
-#              |--- editorPane (cvt source)
-#              |--- mastersWidget ---|
-#                                    |--- QListWidget
-#                                    |--- masterWidget
+# fontInfoWindow ---|
+#                   |--- cvEditPane ---   |
+#                   |                     | --- QListWidget
+#                   |                     | --- cvWidget ---|
+#                   |                                       |--- general_tab
+#                   |                                       |--- same-as tab
+#                   |                                       |--- deltas tab
+#                   |                                       |--- variants tab
+#                   |
+#                   |--- mastersWidget ---|
+#                   |                     |--- QListWidget
+#                   |                     |--- masterWidget
+#                   |                     |--- generate variant CVs button
+#                   |
+#                   |--- font defaults ---|
+#                                         |--- Rounding
+#                                         |--- Miscellaneous defaults
 
 class cvSource:
+    """ Mixin superclass for objects that serve CV data.
+    
+    """
 
     def send_error_message(self, d: dict): ...
 
@@ -70,6 +76,15 @@ class cvSource:
 class cvEditPane(QWidget, cvSource):
     """ A widget with a list of CVs and a cvWidget. Click in the
         list to display and edit that CV.
+
+        params:
+
+        owner: The owner of this widget.
+
+        yg_font (ygFont): The font being edited.
+
+        preferences (ygPreferences): The preferences for this app.
+
     """
     def __init__(self, owner, yg_font, preferences):
         super().__init__()
@@ -221,20 +236,16 @@ class cvEditPane(QWidget, cvSource):
 
 
 
-class cvtWindow(QWidget):
-    """ A one-stop shop for everything having to do with CVs.
+class fontInfoWindow(QWidget):
+    """ A one-stop shop for font-level settings: CVs, masters, font-wide
+        defaults.
 
-        Three tabs: 1.) for GUI editing of Control Values, 2.) for editing
-        CVT source, 3.) only with variable fonts, "Masters."
-    
-        On the CV tab, 2 sections: on left, a QListWidget displaying the
-        names of the CVs; on right, a QTabWidget for editing a single CV.
-        The tabs are 1.) General tab, 2.) "Same-As" tab, 3.) for variable
-        fonts only, a "Variants" tab. There should also be buttons for
-        adding and deleting CVs.
+        params:
 
-        On the "Masters" tab, 1.) a list of masters (or regions) on the
-        left, and 2.) a pane for editing axes/values on the right.
+        yg_font (ygFont): The font being edited.
+
+        preferences (ygPreferences): The preferences for this app.
+
     """
     def __init__(self, yg_font, preferences):
         super().__init__()
@@ -248,22 +259,22 @@ class cvtWindow(QWidget):
         self.tabs = QTabWidget()
         self.cv_tab = cvEditPane(self, self.yg_font, self.preferences)
         self._empty_string = "{}\n"
-        self.source_tab = editorPane(self, self.cvt, is_cvt_valid, save_on_focus_out=True)
-        self.source_tab.setup_error_signal(self.yg_font.send_error_message)
         self.masters_tab = None
         if self.yg_font.is_variable_font:
             self.masters_tab = mastersWidget(self, self.yg_font)
         self.tabs.addTab(self.cv_tab, "Control Values")
-        self.tabs.addTab(self.source_tab, "Source")
         if self.yg_font.is_variable_font:
             self.tabs.addTab(self.masters_tab, "Masters")
+        self.defaults_pane = defaultsPane(self.yg_font)
+        self.tabs.addTab(self.defaults_pane, "Defaults")
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
-        self.window().setWindowTitle("Control Values")
+        self.window().setWindowTitle("Font Info")
+
 
     def undo_state_active(self):
-        if not self.cvt.undo_stack.active():
-            self.cvt.undo_stack.setActive(True)
+        if not self.yg_font.undo_stack.isActive():
+            self.yg_font.undo_stack.setActive(True)
 
     def closeEvent(self, event):
         self.hide()
@@ -271,19 +282,27 @@ class cvtWindow(QWidget):
     @pyqtSlot()
     def refresh(self):
         self.cv_tab.refresh()
-        self.source_tab.refresh()
+        self.defaults_pane.refresh()
         if self.masters_tab:
             self.masters_tab.refresh()
 
     def event(self, event):
         if event.type() == event.Type.WindowActivate:
-            self.cvt.undo_stack.setActive(True)
+            self.undo_state_active()
+            # self.yg_font.undo_stack.setActive(True)
         return super().event(event)
 
 
 
 class mastersWidget(QWidget):
     """ A pane for editing masters.
+
+        params:
+
+        owner: The owner of this widget.
+
+        yg_font (ygFont): The font being edited.
+
     """
     def __init__(self, owner, yg_font):
         super().__init__()
@@ -320,9 +339,6 @@ class mastersWidget(QWidget):
         self.master_list_layout.addWidget(self.refresh_variants_button)
         self.layout.addLayout(self.master_list_layout)
         self.layout.addWidget(self.edit_pane)
-        #self.edit_pane_layout = QVBoxLayout()
-        #self.edit_pane_layout.addWidget(self.edit_pane)
-        #self.layout.addLayout(self.edit_pane_layout)
         self.setLayout(self.layout)
 
     def current_master_name(self):
@@ -381,7 +397,16 @@ class mastersWidget(QWidget):
 
 
 class masterWidget(QWidget):
-    """ A pane for editing a master
+    """ A pane for editing a master.
+
+        params:
+
+        masters (ygMasters): The masters for this font.
+
+        m_id (str): The ID of the present master.
+
+        yg_font (ygFont): The font being edited.
+
     """
     def __init__(self, masters, m_id, yg_font):
         super().__init__()
@@ -421,6 +446,11 @@ class masterWidget(QWidget):
 
 
 class cvDeltaWidget(QTableView):
+    """ A table for creating and editing CV Deltas.
+
+        params: cv_source (cvSource): The CV to which deltas will be applied.
+    
+    """
     def __init__(self, cv_source: cvSource):
         super().__init__()
         self.cv_source = cv_source
@@ -436,19 +466,19 @@ class cvWidget(QWidget):
 
         params:
 
-        cv_name (str): The current name (if any) of the cv. If this
-        isn't initially an empty string, the QLineEdit for it is
-        disabled.
+        cv_source (cvSource): data from one CV.
 
-        cv (dict): The kind of dict ygt stores cv info in. Can contain
-        initial values or values of the cv being edited.
+        yg_font (ygFont): The font being edited.
 
-        cvt (dict): This font's cvt.
+        owner: The owner of this widget.
 
-        preferences (ygPreferences): provides reference to this font's
-        top_window.
+        parent: The parent of this widget.
 
-        title (str): Title for this dialog box.
+        delta_pane (bool): Whether a delta pane should be included.
+
+        variant_pane (bool): Whether (if this is a variable font) a
+        variant pane should be included.
+
     """
 
     def __init__(self, cv_source: cvSource, yg_font, owner, parent=None, delta_pane=True, variant_pane=True):
@@ -654,6 +684,207 @@ class cvWidget(QWidget):
     #    return super().event(event)
 
 
+class defaultsPane(QWidget):
+    """ A tabbed pane holding two panes for editing font-wide
+        defaults.
+
+        params:
+
+        yg_font (ygFont): The font being edited.
+    
+    """
+    def __init__(self, yg_font):
+        super().__init__()
+        self.layout = QVBoxLayout()
+        self.tabs = QTabWidget()
+        self.round_widget = hintRoundWidget(yg_font)
+        self.misc_widget = miscDefaultsWidget(yg_font)
+        self.tabs.addTab(self.round_widget, "Rounding")
+        self.tabs.addTab(self.misc_widget, "Miscellaneous")
+        self.layout.addWidget(self.tabs)
+        self.setLayout(self.layout)
+
+    def refresh(self):
+        self.round_widget.refresh()
+        self.misc_widget.refresh()
+
+
+class hintRoundWidget(QWidget):
+    """ Widget for editing the initial round state of the seven types of
+        hint.
+
+        params:
+
+        yg_font (ygFont): The font being edited.
+    
+    """
+    def __init__(self, yg_font):
+        super().__init__()
+        self.yg_font = yg_font
+        self.defaults = yg_font.defaults
+        self.layout = QVBoxLayout()
+        self.ignore_signal = False
+
+        self.anchor_layout = QHBoxLayout()
+        self.anchor_checkbox = QCheckBox("Anchor")
+        self.anchor_layout.addWidget(self.anchor_checkbox)
+        self.layout.addLayout(self.anchor_layout)
+
+        self.blackdist_layout = QHBoxLayout()
+        self.blackdist_checkbox = QCheckBox("Black distance")
+        self.blackdist_layout.addWidget(self.blackdist_checkbox)
+        self.layout.addLayout(self.blackdist_layout)
+
+        self.whitedist_layout = QHBoxLayout()
+        self.whitedist_checkbox = QCheckBox("White distance")
+        self.whitedist_layout.addWidget(self.whitedist_checkbox)
+        self.layout.addLayout(self.whitedist_layout)
+
+        self.graydist_layout = QHBoxLayout()
+        self.graydist_checkbox = QCheckBox("Gray distance")
+        self.graydist_layout.addWidget(self.graydist_checkbox)
+        self.layout.addLayout(self.graydist_layout)
+
+        self.shift_layout = QHBoxLayout()
+        self.shift_checkbox = QCheckBox("Shift")
+        self.shift_layout.addWidget(self.shift_checkbox)
+        self.layout.addLayout(self.shift_layout)
+
+        self.align_layout = QHBoxLayout()
+        self.align_checkbox = QCheckBox("Align")
+        self.align_layout.addWidget(self.align_checkbox)
+        self.layout.addLayout(self.align_layout)
+
+        self.interpolate_layout = QHBoxLayout()
+        self.interpolate_checkbox = QCheckBox("Interpolate")
+        self.interpolate_layout.addWidget(self.interpolate_checkbox)
+        self.layout.addLayout(self.interpolate_layout)
+
+        self.refresh()
+
+        self.anchor_checkbox.stateChanged.connect(self.button_state_changed)
+        self.blackdist_checkbox.stateChanged.connect(self.button_state_changed)
+        self.whitedist_checkbox.stateChanged.connect(self.button_state_changed)
+        self.graydist_checkbox.stateChanged.connect(self.button_state_changed)
+        self.shift_checkbox.stateChanged.connect(self.button_state_changed)
+        self.align_checkbox.stateChanged.connect(self.button_state_changed)
+        self.interpolate_checkbox.stateChanged.connect(self.button_state_changed)
+
+        self.setLayout(self.layout)
+
+    def button_state_changed(self):
+        if self.ignore_signal:
+            return
+        r = {}
+        r["anchor"] = self.anchor_checkbox.isChecked()
+        r["blackdist"] = self.blackdist_checkbox.isChecked()
+        r["whitedist"] = self.whitedist_checkbox.isChecked()
+        r["graydist"] = self.graydist_checkbox.isChecked()
+        r["shift"] = self.shift_checkbox.isChecked()
+        r["align"] = self.align_checkbox.isChecked()
+        r["interpolate"] = self.interpolate_checkbox.isChecked()
+        self.defaults.set_rounding_defaults(r)
+
+    def fixup(self):
+        pass
+
+    def refresh(self):
+        self.ignore_signal = True
+        self.anchor_checkbox.setChecked(self.defaults.rounding_state("anchor"))
+        self.blackdist_checkbox.setChecked(self.defaults.rounding_state("blackdist"))
+        self.whitedist_checkbox.setChecked(self.defaults.rounding_state("whitedist"))
+        self.graydist_checkbox.setChecked(self.defaults.rounding_state("graydist"))
+        self.shift_checkbox.setChecked(self.defaults.rounding_state("shift"))
+        self.align_checkbox.setChecked(self.defaults.rounding_state("align"))
+        self.interpolate_checkbox.setChecked(self.defaults.rounding_state("interpolate"))
+        self.ignore_signal = False
+
+
+
+class miscDefaultsWidget(QWidget):
+    def __init__(self, yg_font):
+        super().__init__()
+        self.yg_font = yg_font
+        self.defaults = yg_font.defaults
+        self.layout = QVBoxLayout()
+        self.ignore_signal = False
+
+        self.tt_defaults = QCheckBox("Use TrueType defaults")
+        self.tt_defaults.stateChanged.connect(self.toggle_tt_defaults)
+
+        self.init_graphics = QCheckBox("Initialize graphics")
+        self.init_graphics.stateChanged.connect(self.toggle_init_graphics)
+
+        self.assume_always_y = QCheckBox("Assume axis always y")
+        self.assume_always_y.stateChanged.connect(self.toggle_assume_always_y)
+
+        self.cleartype = QCheckBox("Cleartype")
+        self.cleartype.stateChanged.connect(self.toggle_cleartype)
+
+        self.layout.addWidget(self.tt_defaults)
+        self.layout.addWidget(self.init_graphics)
+        self.layout.addWidget(self.assume_always_y)
+        self.layout.addWidget(self.cleartype)
+        self.setLayout(self.layout)
+
+        self.refresh()
+
+    def toggle_tt_defaults(self):
+        if self.ignore_signal:
+            return
+        if self.tt_defaults.isChecked():
+            self.defaults.set_default({"use-truetype-defaults": True})
+        else:
+            self.defaults.del_default("use-truetype-defaults")
+
+    def toggle_init_graphics(self):
+        if self.ignore_signal:
+            return
+        if not self.init_graphics.isChecked():
+            self.defaults.set_default({"init-graphics": False})
+        else:
+            self.defaults.del_default("init-graphics")
+
+    def toggle_assume_always_y(self):
+        if self.ignore_signal:
+            return
+        if self.assume_always_y.isChecked():
+            self.defaults.set_default({"assume-always-y": True})
+        else:
+            self.defaults.del_default("assume-always-y")
+
+    def toggle_cleartype(self):
+        if self.ignore_signal:
+            return
+        if self.cleartype.isChecked():
+            self.defaults.set_default({"cleartype": True})
+        else:
+            self.defaults.del_default("cleartype")
+
+    def fixup(self):
+        pass
+
+    def refresh(self, ign: bool = True):
+        self.ignore_signal = ign
+
+        t = self.defaults.get_default("use-truetype-defaults")
+        self.tt_defaults.setChecked(bool(t))
+
+        t = self.defaults.get_default("init-graphics")
+        if t == None:
+            t = True
+        self.init_graphics.setChecked(t)
+
+        t = self.defaults.get_default("assume-always-y")
+        self.assume_always_y.setChecked(bool(t))
+
+        t = self.defaults.get_default("cleartype")
+        self.cleartype.setChecked(bool(t))
+
+        self.ignore_signal = False
+
+
+
 
 class makeCVDialog(QDialog, cvSource):
     """ A dialog for creating a cv. This doesn't edit the cvt source
@@ -753,7 +984,7 @@ class makeCVDialog(QDialog, cvSource):
         super().accept()
 
     def showEvent(self, event):
-        self._cvt.undo_stack.setActive(True)
+        self.yg_font.undo_stack.setActive(True)
 
 
 class cvNameWidget(QLineEdit):

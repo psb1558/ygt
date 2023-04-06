@@ -252,15 +252,14 @@ class editorPane(QPlainTextEdit):
         try:
             v = self.is_valid(yaml.safe_load(self.toPlainText()))
         except Exception as e:
-            self.set_error_state(True)
             set_error_message("Source can't be parsed.")
-            self.sig_error.emit({"msg": error_message(), "mode": "console"})
         if v:
             self._timer.stop()
-            error_message()
             self.set_error_state(not v)
+            self.owner.set_dialog_title(True)
         else:
             self._timer.start(2000)
+            self.owner.set_dialog_title(False)
         self.dirty = True
 
     def focusOutEvent(self, event):
@@ -320,10 +319,12 @@ class editorDialog(QDialog):
         self.done(QDialog.DialogCode.Rejected)
 
     def accept(self):
+        print("Accept")
         err = False
         c = self.edit_pane.yaml_source()
         if c != None:
             if self.edit_pane.is_valid(c):
+                print("running save")
                 self.sourceable.save(c)
             else:
                 err = True
