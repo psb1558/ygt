@@ -1,25 +1,23 @@
-from PyQt6.QtWidgets import (QDialog,
-                             QVBoxLayout,
-                             QHBoxLayout,
-                             QDialogButtonBox,
-                             QComboBox,
-                             QLineEdit,
-                             QLabel,
-                             QWidget,
-                             QTabWidget,
-                             QListWidget,
-                             QPushButton,
-                             QTableView,
-                             QCheckBox)
+from PyQt6.QtWidgets import (
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QDialogButtonBox,
+    QComboBox,
+    QLineEdit,
+    QLabel,
+    QWidget,
+    QTabWidget,
+    QListWidget,
+    QPushButton,
+    QTableView,
+    QCheckBox,
+)
 from PyQt6.QtCore import Qt, pyqtSlot
-from PyQt6.QtGui import (QIntValidator,
-                         QDoubleValidator)
-from .ygModel import (unicode_cat_names,
-                      reverse_unicode_cat_names,
-                      ygMasters,
-                      random_id)
+from PyQt6.QtGui import QIntValidator, QDoubleValidator
+from .ygModel import unicode_cat_names, reverse_unicode_cat_names, ygMasters, random_id
 
-NEW_CV_NAME    = "New_Control_Value"
+NEW_CV_NAME = "New_Control_Value"
 NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 
 #
@@ -49,44 +47,52 @@ NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 #                                         |--- Rounding
 #                                         |--- Miscellaneous defaults
 
+
 class cvSource:
-    """ Mixin superclass for objects that serve CV data.
-    
-    """
+    """Mixin superclass for objects that serve CV data."""
 
-    def send_error_message(self, d: dict): ...
+    def send_error_message(self, d: dict):
+        ...
 
-    def cvt(self): ...
+    def cvt(self):
+        ...
 
-    def current_cv(self): ...
+    def current_cv(self):
+        ...
 
-    def current_cv_name(self): ...
+    def current_cv_name(self):
+        ...
 
-    def set_cv_name(self, s: str): ...
+    def set_cv_name(self, s: str):
+        ...
 
-    def from_current_cv(self, s: str): ...
+    def from_current_cv(self, s: str):
+        ...
 
-    def set_in_current_cv(self, k: str, s, fallback: None): ...
+    def set_in_current_cv(self, k: str, s, fallback: None):
+        ...
 
-    def has_key(self, k: str): ...
+    def has_key(self, k: str):
+        ...
 
-    def del_key(self, k: str): ...
-
+    def del_key(self, k: str):
+        ...
 
 
 class cvEditPane(QWidget, cvSource):
-    """ A widget with a list of CVs and a cvWidget. Click in the
-        list to display and edit that CV.
+    """A widget with a list of CVs and a cvWidget. Click in the
+    list to display and edit that CV.
 
-        params:
+    params:
 
-        owner: The owner of this widget.
+    owner: The owner of this widget.
 
-        yg_font (ygFont): The font being edited.
+    yg_font (ygFont): The font being edited.
 
-        preferences (ygPreferences): The preferences for this app.
+    preferences (ygPreferences): The preferences for this app.
 
     """
+
     def __init__(self, owner, yg_font, preferences):
         super().__init__()
         self.owner = owner
@@ -133,7 +139,9 @@ class cvEditPane(QWidget, cvSource):
         self._current_cv_name = NEW_CV_NAME
         self._cvt.add_cv(self._current_cv_name, NEW_CV_CONTENT)
         self.cv_list.addItem(self._current_cv_name)
-        matches = self.cv_list.findItems(self._current_cv_name, Qt.MatchFlag.MatchExactly)
+        matches = self.cv_list.findItems(
+            self._current_cv_name, Qt.MatchFlag.MatchExactly
+        )
         if len(matches) > 0:
             self.current_list_item = matches[0]
             self.cv_list.setCurrentItem(self.current_list_item)
@@ -152,16 +160,18 @@ class cvEditPane(QWidget, cvSource):
         self.refresh()
 
     def refresh(self):
-        """ This is the place to figure out whether the source
-            or masters have been changed: if not, we don't have to
-            go through all this.
+        """This is the place to figure out whether the source
+        or masters have been changed: if not, we don't have to
+        go through all this.
         """
         if not len(self._cvt):
             self.add_cv()
         self._current_cv = self._cvt.get_cv(self._current_cv_name)
         self.cv_list.clear()
         self.cv_list.addItems(self._cvt.keys())
-        matches = self.cv_list.findItems(self._current_cv_name, Qt.MatchFlag.MatchExactly)
+        matches = self.cv_list.findItems(
+            self._current_cv_name, Qt.MatchFlag.MatchExactly
+        )
         if len(matches) > 0:
             self.cv_list.setCurrentItem(matches[0])
         else:
@@ -178,9 +188,9 @@ class cvEditPane(QWidget, cvSource):
         self.edit_pane.fixup()
 
     def new_item(self, list_item, forced=False):
-        """ Switch the view to another cv. Simply delete the
-            old cv editing pane and create a new one to put
-            in its place.
+        """Switch the view to another cv. Simply delete the
+        old cv editing pane and create a new one to put
+        in its place.
         """
         new_cv_name = list_item.text()
         if forced or new_cv_name != self._current_cv_name:
@@ -197,20 +207,20 @@ class cvEditPane(QWidget, cvSource):
 
     def current_cv(self):
         return self._current_cv
-    
+
     def current_cv_name(self):
         return self._current_cv_name
 
     def set_cv_name(self, s: str):
         self._current_cv_name = s
-    
+
     def from_current_cv(self, s: str):
         try:
             return self._current_cv[s]
         except KeyError:
             return None
 
-    def set_in_current_cv(self, k: str, s, fallback = None):
+    def set_in_current_cv(self, k: str, s, fallback=None):
         if s == "None" or s == "" or s == None:
             if fallback != None:
                 self._cvt.set_cv_property(self.current_cv_name(), k, fallback)
@@ -236,18 +246,18 @@ class cvEditPane(QWidget, cvSource):
         self.fixup()
 
 
-
 class fontInfoWindow(QWidget):
-    """ A one-stop shop for font-level settings: CVs, masters, font-wide
-        defaults.
+    """A one-stop shop for font-level settings: CVs, masters, font-wide
+    defaults.
 
-        params:
+    params:
 
-        yg_font (ygFont): The font being edited.
+    yg_font (ygFont): The font being edited.
 
-        preferences (ygPreferences): The preferences for this app.
+    preferences (ygPreferences): The preferences for this app.
 
     """
+
     def __init__(self, yg_font, preferences):
         super().__init__()
         self.yg_font = yg_font
@@ -272,7 +282,6 @@ class fontInfoWindow(QWidget):
         self.setLayout(self.layout)
         self.window().setWindowTitle("Font Info")
 
-
     def undo_state_active(self):
         if not self.yg_font.undo_stack.isActive():
             self.yg_font.undo_stack.setActive(True)
@@ -294,17 +303,17 @@ class fontInfoWindow(QWidget):
         return super().event(event)
 
 
-
 class mastersWidget(QWidget):
-    """ A pane for editing masters.
+    """A pane for editing masters.
 
-        params:
+    params:
 
-        owner: The owner of this widget.
+    owner: The owner of this widget.
 
-        yg_font (ygFont): The font being edited.
+    yg_font (ygFont): The font being edited.
 
     """
+
     def __init__(self, owner, yg_font):
         super().__init__()
         self.owner = owner
@@ -321,11 +330,15 @@ class mastersWidget(QWidget):
         self.master_list.setCurrentItem(self.current_list_item)
         self.master_list.itemActivated.connect(self.new_item)
 
-        self._current_master = self.masters.master_by_name(self.current_list_item.text())
+        self._current_master = self.masters.master_by_name(
+            self.current_list_item.text()
+        )
 
         # And the edit pane.
 
-        self.edit_pane = masterWidget(self.masters, self._current_master[0], self.yg_font)
+        self.edit_pane = masterWidget(
+            self.masters, self._current_master[0], self.yg_font
+        )
 
         self.master_list_layout.addWidget(self.master_list)
         add_button = QPushButton("Add")
@@ -356,7 +369,9 @@ class mastersWidget(QWidget):
             self.layout.removeItem(old_pane)
             old_pane.widget().deleteLater()
             self._current_master = new_master
-            self.edit_pane = masterWidget(self.masters, self.current_master_id(), self.yg_font)
+            self.edit_pane = masterWidget(
+                self.masters, self.current_master_id(), self.yg_font
+            )
             self.layout.addWidget(self.edit_pane)
 
     def add_master(self):
@@ -373,7 +388,9 @@ class mastersWidget(QWidget):
         self.yg_font.masters.del_by_name(self.current_master_name())
         self.master_list.clear()
         try:
-            self._current_master = self.masters.master_by_name(self.yg_font.masters.names()[0])
+            self._current_master = self.masters.master_by_name(
+                self.yg_font.masters.names()[0]
+            )
         except IndexError:
             return
         self.refresh()
@@ -383,32 +400,36 @@ class mastersWidget(QWidget):
             return
         self.master_list.clear()
         self.master_list.addItems(self.yg_font.masters.names())
-        matches = self.master_list.findItems(self.current_master_name(), Qt.MatchFlag.MatchExactly)
+        matches = self.master_list.findItems(
+            self.current_master_name(), Qt.MatchFlag.MatchExactly
+        )
         if len(matches) > 0:
             self.master_list.setCurrentItem(matches[0])
         else:
             try:
                 current_item = self.master_list.item(0)
                 self.master_list.setCurrentItem(current_item)
-                self._current_master = self.yg_font.masters.master_by_name(current_item.text())
+                self._current_master = self.yg_font.masters.master_by_name(
+                    current_item.text()
+                )
             except Exception:
                 pass
         self.edit_pane.refresh(self._current_master)
 
 
-
 class masterWidget(QWidget):
-    """ A pane for editing a master.
+    """A pane for editing a master.
 
-        params:
+    params:
 
-        masters (ygMasters): The masters for this font.
+    masters (ygMasters): The masters for this font.
 
-        m_id (str): The ID of the present master.
+    m_id (str): The ID of the present master.
 
-        yg_font (ygFont): The font being edited.
+    yg_font (ygFont): The font being edited.
 
     """
+
     def __init__(self, masters, m_id, yg_font):
         super().__init__()
         self.masters = masters
@@ -431,58 +452,66 @@ class masterWidget(QWidget):
         self.setLayout(self.master_layout)
 
     def refresh(self, m):
-        """ Where m is a master tuple (id, dict of axis:val)
-        """
+        """Where m is a master tuple (id, dict of axis:val)"""
         self.m_id = m[0]
         self.master_name_widget.refresh(m)
         for n in self.names:
             n.refresh(m)
 
-    #def event(self, event):
+    # def event(self, event):
     #    print(event)
     #    print(event.type())
     #    print(event.spontaneous())
     #    return super().event(event)
 
 
-
 class cvDeltaWidget(QTableView):
-    """ A table for creating and editing CV Deltas.
+    """A table for creating and editing CV Deltas.
 
-        params: cv_source (cvSource): The CV to which deltas will be applied.
-    
+    params: cv_source (cvSource): The CV to which deltas will be applied.
+
     """
+
     def __init__(self, cv_source: cvSource):
         super().__init__()
         self.cv_source = cv_source
-        self.delta_data = self.cv_source.cvt().get_deltas(self.cv_source.current_cv_name())
+        self.delta_data = self.cv_source.cvt().get_deltas(
+            self.cv_source.current_cv_name()
+        )
         self.setModel(self.delta_data)
 
 
-
 class cvWidget(QWidget):
-    """ A pane for making and editing CVs. This class keeps a reference
-        to the CV being edited and updates it as the user works with the
-        controls.
+    """A pane for making and editing CVs. This class keeps a reference
+    to the CV being edited and updates it as the user works with the
+    controls.
 
-        params:
+    params:
 
-        cv_source (cvSource): data from one CV.
+    cv_source (cvSource): data from one CV.
 
-        yg_font (ygFont): The font being edited.
+    yg_font (ygFont): The font being edited.
 
-        owner: The owner of this widget.
+    owner: The owner of this widget.
 
-        parent: The parent of this widget.
+    parent: The parent of this widget.
 
-        delta_pane (bool): Whether a delta pane should be included.
+    delta_pane (bool): Whether a delta pane should be included.
 
-        variant_pane (bool): Whether (if this is a variable font) a
-        variant pane should be included.
+    variant_pane (bool): Whether (if this is a variable font) a
+    variant pane should be included.
 
     """
 
-    def __init__(self, cv_source: cvSource, yg_font, owner, parent=None, delta_pane=True, variant_pane=True):
+    def __init__(
+        self,
+        cv_source: cvSource,
+        yg_font,
+        owner,
+        parent=None,
+        delta_pane=True,
+        variant_pane=True,
+    ):
         super().__init__(parent=parent)
         self.yg_font = yg_font
         self.owner = owner
@@ -555,14 +584,12 @@ class cvWidget(QWidget):
 
         self.cv_below_ppem_widget = cvPPEMWidget(self.cv_source, "below")
         self.cv_above_ppem_widget = cvPPEMWidget(self.cv_source, "above")
-        self.cv_below_names_widget = cvNamesWidget(self.cv_source,
-                                                   "below",
-                                                   self.yg_font,
-                                                   ppem_widget=self.cv_below_ppem_widget)
-        self.cv_above_names_widget = cvNamesWidget(self.cv_source,
-                                                   "above",
-                                                   self.yg_font,
-                                                   ppem_widget=self.cv_above_ppem_widget)
+        self.cv_below_names_widget = cvNamesWidget(
+            self.cv_source, "below", self.yg_font, ppem_widget=self.cv_below_ppem_widget
+        )
+        self.cv_above_names_widget = cvNamesWidget(
+            self.cv_source, "above", self.yg_font, ppem_widget=self.cv_above_ppem_widget
+        )
         self.cv_below_ppem_widget.name_widget = self.cv_below_names_widget
         self.cv_above_ppem_widget.name_widget = self.cv_above_names_widget
 
@@ -642,11 +669,11 @@ class cvWidget(QWidget):
             self.delta_pane.model().deleteRows(i[0].row(), 1)
 
     def refresh(self, cv_source):
-        """ If we're coming from the source pane, every cv in the
-            cvt will have been replaced, so references to it have
-            got to be refreshed and the widgets updated as needed.
-            Think about whether there's a less awkward way to do
-            this.
+        """If we're coming from the source pane, every cv in the
+        cvt will have been replaced, so references to it have
+        got to be refreshed and the widgets updated as needed.
+        Think about whether there's a less awkward way to do
+        this.
         """
         self.cv_source = cv_source
         self.cv_name_widget.refresh(self.cv_source)
@@ -680,20 +707,21 @@ class cvWidget(QWidget):
             for w in self.var_widgets:
                 w.fixup()
 
-    #def event(self, event):
+    # def event(self, event):
     #    print(event)
     #    return super().event(event)
 
 
 class defaultsPane(QWidget):
-    """ A tabbed pane holding two panes for editing font-wide
-        defaults.
+    """A tabbed pane holding two panes for editing font-wide
+    defaults.
 
-        params:
+    params:
 
-        yg_font (ygFont): The font being edited.
-    
+    yg_font (ygFont): The font being edited.
+
     """
+
     def __init__(self, yg_font):
         super().__init__()
         self.layout = QVBoxLayout()
@@ -711,14 +739,15 @@ class defaultsPane(QWidget):
 
 
 class hintRoundWidget(QWidget):
-    """ Widget for editing the initial round state of the seven types of
-        hint.
+    """Widget for editing the initial round state of the seven types of
+    hint.
 
-        params:
+    params:
 
-        yg_font (ygFont): The font being edited.
-    
+    yg_font (ygFont): The font being edited.
+
     """
+
     def __init__(self, yg_font):
         super().__init__()
         self.yg_font = yg_font
@@ -797,18 +826,20 @@ class hintRoundWidget(QWidget):
         self.graydist_checkbox.setChecked(self.defaults.rounding_state("graydist"))
         self.shift_checkbox.setChecked(self.defaults.rounding_state("shift"))
         self.align_checkbox.setChecked(self.defaults.rounding_state("align"))
-        self.interpolate_checkbox.setChecked(self.defaults.rounding_state("interpolate"))
+        self.interpolate_checkbox.setChecked(
+            self.defaults.rounding_state("interpolate")
+        )
         self.ignore_signal = False
 
 
-
 class miscDefaultsWidget(QWidget):
-    """ GUI for setting defaults that have nothing to do with rounding.
+    """GUI for setting defaults that have nothing to do with rounding.
 
-        params:
+    params:
 
-        yg_font (ygFont): the font now being edited.
+    yg_font (ygFont): the font now being edited.
     """
+
     def __init__(self, yg_font):
         super().__init__()
         self.yg_font = yg_font
@@ -891,25 +922,24 @@ class miscDefaultsWidget(QWidget):
         self.ignore_signal = False
 
 
-
-
 class makeCVDialog(QDialog, cvSource):
-    """ A dialog for creating a cv. This doesn't edit the cvt source
-        directly, but instead works on a fragment of cv code to be
-        added when the accept() function is called.
+    """A dialog for creating a cv. This doesn't edit the cvt source
+    directly, but instead works on a fragment of cv code to be
+    added when the accept() function is called.
 
-        params:
+    params:
 
-        p1 (ygPoint): The first selected point.
+    p1 (ygPoint): The first selected point.
 
-        p2 (ygPoint): The second selected point; or None if only one
-        point is selected.
+    p2 (ygPoint): The second selected point; or None if only one
+    point is selected.
 
-        yg_glyph (ygGlyph): The current glyph.
+    yg_glyph (ygGlyph): The current glyph.
 
-        preferences (ygPreferences): the preferences for this app.
+    preferences (ygPreferences): the preferences for this app.
 
     """
+
     def __init__(self, p1, p2, yg_glyph, preferences):
         super().__init__()
         self.top_window = preferences.top_window()
@@ -942,11 +972,15 @@ class makeCVDialog(QDialog, cvSource):
 
         self.layout = QVBoxLayout()
 
-        self.pane = cvWidget(self, self.yg_font, None, delta_pane=False, variant_pane=False)
+        self.pane = cvWidget(
+            self, self.yg_font, None, delta_pane=False, variant_pane=False
+        )
 
         # Set up buttons
 
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -961,10 +995,10 @@ class makeCVDialog(QDialog, cvSource):
 
     def cvt(self):
         return self._cvt
-    
+
     def current_cv(self):
         return self.cv
-    
+
     def current_cv_name(self):
         return self.cv_name
 
@@ -977,7 +1011,7 @@ class makeCVDialog(QDialog, cvSource):
         except KeyError:
             return None
 
-    def set_in_current_cv(self, k: str, s, fallback = None):
+    def set_in_current_cv(self, k: str, s, fallback=None):
         if s == "None" or s == "" or s == None:
             if fallback != None:
                 self.cv[k] = fallback
@@ -1006,17 +1040,17 @@ class makeCVDialog(QDialog, cvSource):
         self.yg_font.undo_stack.setActive(True)
 
 
-
 class cvNameWidget(QLineEdit):
-    """ A widget for editing the name of a cv. Disable when it shouldn't
-        be edited.
+    """A widget for editing the name of a cv. Disable when it shouldn't
+    be edited.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
-        owner: The owner of this widget.
+    owner: The owner of this widget.
     """
+
     def __init__(self, cv_source: cvSource, owner=None):
         super().__init__()
         self.owner = owner
@@ -1034,7 +1068,7 @@ class cvNameWidget(QLineEdit):
 
     def _text(self):
         return self.text().strip()
-    
+
     def set_dirty(self):
         self.dirty = True
 
@@ -1066,22 +1100,22 @@ class cvNameWidget(QLineEdit):
         self.set_clean()
 
 
-
 class cvTypeWidget(QComboBox):
-    """ Widget for choosing a CV type.
+    """Widget for choosing a CV type.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, cv_source: cvSource):
         super().__init__()
         self.cv_source = cv_source
         self.addItem("pos")
         self.addItem("dist")
         t = self.cv_source.from_current_cv("type")
-        self.setCurrentText((lambda : "y" if not t else t)())
+        self.setCurrentText((lambda: "y" if not t else t)())
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
@@ -1102,15 +1136,15 @@ class cvTypeWidget(QComboBox):
         self.setCurrentText(self.cv_source.from_current_cv("type"))
 
 
-
 class cvColorWidget(QComboBox):
-    """ Widget for choosing a distance type.
+    """Widget for choosing a distance type.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, cv_source):
         super().__init__()
         self.cv_source = cv_source
@@ -1119,7 +1153,7 @@ class cvColorWidget(QComboBox):
         self.addItem("white")
         self.addItem("gray")
         col = self.cv_source.from_current_cv("col")
-        self.setCurrentText((lambda : "None" if not col else col)())
+        self.setCurrentText((lambda: "None" if not col else col)())
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
@@ -1147,22 +1181,22 @@ class cvColorWidget(QComboBox):
             self.setCurrentText("None")
 
 
-
 class cvAxisWidget(QComboBox):
-    """ Widget for choosing an axis for a CV.
+    """Widget for choosing an axis for a CV.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, cv_source: cvSource):
         super().__init__()
         self.cv_source = cv_source
         self.addItem("y")
         self.addItem("x")
         axis = self.cv_source.from_current_cv("axis")
-        self.setCurrentText((lambda : "y" if not axis else axis)())
+        self.setCurrentText((lambda: "y" if not axis else axis)())
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
@@ -1186,15 +1220,15 @@ class cvAxisWidget(QComboBox):
             self.setCurrentText("y")
 
 
-
 class cvUCatWidget(QComboBox):
-    """ Widget for choosing a category for a CV.
+    """Widget for choosing a category for a CV.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
@@ -1218,7 +1252,9 @@ class cvUCatWidget(QComboBox):
             if not new_text or new_text == "None":
                 self.cv_source.del_key("cat")
             else:
-                self.cv_source.set_in_current_cv("cat", reverse_unicode_cat_names[new_text])
+                self.cv_source.set_in_current_cv(
+                    "cat", reverse_unicode_cat_names[new_text]
+                )
             self.last_val = new_text
 
     def text_changed(self, s):
@@ -1227,27 +1263,29 @@ class cvUCatWidget(QComboBox):
     def refresh(self, cv_source):
         self.cv_source = cv_source
         if self.cv_source.has_key("cat"):
-            self.setCurrentText(unicode_cat_names[self.cv_source.from_current_cv("cat")])
+            self.setCurrentText(
+                unicode_cat_names[self.cv_source.from_current_cv("cat")]
+            )
         else:
             self.setCurrentText("None")
 
 
-
 class cvSuffixWidget(QLineEdit):
-    """ Widget for specifying a suffix (the CV is only available for glyphs with
-        this suffix).
+    """Widget for specifying a suffix (the CV is only available for glyphs with
+    this suffix).
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, cv_source: cvSource):
         super().__init__()
         self.cv_source = cv_source
         self.dirty = False
         suff = self.cv_source.from_current_cv("suffix")
-        self.setText((lambda : "None" if not suff else suff)())
+        self.setText((lambda: "None" if not suff else suff)())
         self.editingFinished.connect(self.text_changed)
         self.textChanged.connect(self.set_dirty)
         self.last_val = self.text()
@@ -1275,21 +1313,21 @@ class cvSuffixWidget(QLineEdit):
     def refresh(self, cv_source):
         self.cv_source = cv_source
         suff = self.cv_source.from_current_cv("suffix")
-        self.setText((lambda : "None" if not suff else suff)())
+        self.setText((lambda: "None" if not suff else suff)())
         self.set_clean()
 
 
-
 class cvVarWidget(QLineEdit):
-    """ Widget for editing variant CVs for the cvar table.
+    """Widget for editing variant CVs for the cvar table.
 
-        params:
+    params:
 
-        var_id (str): ID of the master associated with this widget.
+    var_id (str): ID of the master associated with this widget.
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, var_id: str, cv_source: cvSource) -> None:
         super().__init__()
         self.var_id = var_id
@@ -1315,10 +1353,10 @@ class cvVarWidget(QLineEdit):
         self.dirty = False
 
     def fixup(self):
-        """ The behavior we want is this: if the widget is blank,
-            delete the value for this master and display "None"
-            in the widget. If widget has a valid integer, plug
-            that in.
+        """The behavior we want is this: if the widget is blank,
+        delete the value for this master and display "None"
+        in the widget. If widget has a valid integer, plug
+        that in.
         """
         if self.dirty:
             new_text = self._text()
@@ -1350,15 +1388,15 @@ class cvVarWidget(QLineEdit):
         self.set_clean()
 
 
-
 class cvValueWidget(QLineEdit):
-    """ Widget for editing the value of a CV.
+    """Widget for editing the value of a CV.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
     """
+
     def __init__(self, cv_source: cvSource):
         super().__init__()
         self.cv_source = cv_source
@@ -1385,9 +1423,9 @@ class cvValueWidget(QLineEdit):
                 i = int(t)
             except ValueError:
                 i = 0
-            self.cv_source.set_in_current_cv("val", i, fallback = 0)
+            self.cv_source.set_in_current_cv("val", i, fallback=0)
             self.set_clean()
-    
+
     def text_changed(self):
         t = self._text()
         if t != self.last_val:
@@ -1397,21 +1435,21 @@ class cvValueWidget(QLineEdit):
     def refresh(self, cv_source):
         self.cv_source = cv_source
         i = self.cv_source.from_current_cv("val")
-        self.setText((lambda : "0" if not i else str(i))())
+        self.setText((lambda: "0" if not i else str(i))())
         self.set_clean()
 
 
-
 class cvPPEMWidget(QLineEdit):
-    """ Widget for editing a "ppem" value in the "same as" pane.
+    """Widget for editing a "ppem" value in the "same as" pane.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
-        above_below (str): Indicating which widget pair is being edited.
+    above_below (str): Indicating which widget pair is being edited.
 
     """
+
     def __init__(self, cv_source: cvSource, above_below: str):
         super().__init__()
         self.cv_source = cv_source
@@ -1479,21 +1517,21 @@ class cvPPEMWidget(QLineEdit):
         self.set_clean()
 
 
-
 class cvNamesWidget(QComboBox):
-    """ Widget for choosing a CV name in the "same as" pane.
+    """Widget for choosing a CV name in the "same as" pane.
 
-        params:
+    params:
 
-        cv_source (cvSource): Data for currently selected CV.
+    cv_source (cvSource): Data for currently selected CV.
 
-        above_below (str): Indicating which widget pair is being edited.
+    above_below (str): Indicating which widget pair is being edited.
 
-        yg_font (ygFont): The font being edited.
+    yg_font (ygFont): The font being edited.
 
-        ppem_widget: The associated cvPPEMWidget (if any).
+    ppem_widget: The associated cvPPEMWidget (if any).
 
     """
+
     def __init__(self, cv_source: cvSource, above_below, yg_font, ppem_widget=None):
         super().__init__()
         self.cv_source = cv_source
@@ -1532,18 +1570,18 @@ class cvNamesWidget(QComboBox):
         self.setCurrentText(n)
 
 
-
 class masterNameWidget(QLineEdit):
-    """ Widget for editing the name of a master. This name is for
-        display only: the master is referenced by an immutable id.
+    """Widget for editing the name of a master. This name is for
+    display only: the master is referenced by an immutable id.
 
-        params:
+    params:
 
-        masters (ygMasters): The collection of masters for this font.
+    masters (ygMasters): The collection of masters for this font.
 
-        m_id (str): The ID of the master associated with this widget.
+    m_id (str): The ID of the master associated with this widget.
 
     """
+
     def __init__(self, masters: ygMasters, m_id: str):
         super().__init__()
         self.masters = masters
@@ -1565,15 +1603,14 @@ class masterNameWidget(QLineEdit):
         self.dirty = False
 
     def refresh(self, m):
-        """ refresh is for updating editing widgets from the model.
-        """
+        """refresh is for updating editing widgets from the model."""
         self.m_id = m[0]
         self.setText(self.masters.get_master_name(self.m_id))
         self.set_clean()
 
     def fixup(self):
-        """ fixup is for changing the model based on what's in the editing
-            widgets.
+        """fixup is for changing the model based on what's in the editing
+        widgets.
         """
         self.masters.set_master_name(self.m_id, self._text())
         self.set_clean()
@@ -1585,19 +1622,19 @@ class masterNameWidget(QLineEdit):
             self.last_val = t
 
 
-
 class masterValWidget(QLineEdit):
-    """ Widget for editing the value of a master (-1.0 to 1.0)
+    """Widget for editing the value of a master (-1.0 to 1.0)
 
-        params:
+    params:
 
-        masters (ygMasters): The collection of masters for this font.
+    masters (ygMasters): The collection of masters for this font.
 
-        m_id (str): The ID of the master associated with this widget.
+    m_id (str): The ID of the master associated with this widget.
 
-        axis: The variation axis associated with this widget.
+    axis: The variation axis associated with this widget.
 
     """
+
     def __init__(self, masters: ygMasters, m_id: str, axis):
         super().__init__()
         self.masters = masters
@@ -1623,16 +1660,15 @@ class masterValWidget(QLineEdit):
         self.dirty = False
 
     def refresh(self, m):
-        """ refresh is for updating editing widgets from the model.
-        """
+        """refresh is for updating editing widgets from the model."""
         if m:
             self.m_id = m[0]
         self.setText(str(self.masters.get_axis_value(self.m_id, self.axis)))
         self.set_clean()
 
     def fixup(self):
-        """ fixup is for changing the model based on what's in the editing
-            widgets.
+        """fixup is for changing the model based on what's in the editing
+        widgets.
         """
         try:
             v = self._text()

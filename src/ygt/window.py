@@ -18,7 +18,8 @@ from .ygSchema import (
     are_functions_valid,
     are_defaults_valid,
     are_names_valid,
-    are_properties_valid)
+    are_properties_valid,
+)
 from .ygError import ygErrorMessages
 from .makeCVDialog import fontInfoWindow
 from xgridfit import compile_list, compile_all
@@ -38,7 +39,7 @@ from PyQt6.QtWidgets import (
     QGraphicsView,
     QLabel,
     QProgressBar,
-    QVBoxLayout
+    QVBoxLayout,
 )
 from PyQt6.QtGui import (
     QKeySequence,
@@ -47,26 +48,27 @@ from PyQt6.QtGui import (
     QActionGroup,
     QUndoStack,
     QUndoGroup,
-    QCloseEvent
+    QCloseEvent,
 )
 
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
 
+
 class ygPreviewFontMaker(QThread):
-    """ To be run from a QThread. This is because it can take the better
-        part of a second to generate a preview, even on a pretty fast
-        machine, and we want to be able to run this on a signal without
-        making the GUI balky.
+    """To be run from a QThread. This is because it can take the better
+    part of a second to generate a preview, even on a pretty fast
+    machine, and we want to be able to run this on a signal without
+    making the GUI balky.
 
-        Parameters:
+    Parameters:
 
-        font: a fontTools representation of the font
+    font: a fontTools representation of the font
 
-        source: the source for this font's hints
+    source: the source for this font's hints
 
-        glyph_list: the names of the glyphs for which we want to make the preview.
+    glyph_list: the names of the glyphs for which we want to make the preview.
     """
 
     sig_preview_ready = pyqtSignal(object)
@@ -82,19 +84,20 @@ class ygPreviewFontMaker(QThread):
     def run(self):
         try:
             font = copy.deepcopy(self.ft_font)
-            tmp_font, glyph_index, failed_glyph_list = compile_list(font, self.source, self.glyph_list)
-            self.sig_preview_ready.emit({"font": tmp_font, "gindex": glyph_index, "failed": failed_glyph_list})
+            tmp_font, glyph_index, failed_glyph_list = compile_list(
+                font, self.source, self.glyph_list
+            )
+            self.sig_preview_ready.emit(
+                {"font": tmp_font, "gindex": glyph_index, "failed": failed_glyph_list}
+            )
         except Exception as e:
             self.sig_preview_error.emit()
 
 
-
 class ygFontGenerator(QThread):
-    """ For generating whole fonts.
+    """For generating whole fonts."""
 
-    """
-
-    sig_font_gen_done  = pyqtSignal(object)
+    sig_font_gen_done = pyqtSignal(object)
     sig_font_gen_error = pyqtSignal()
 
     def __init__(self, font, source, output_font):
@@ -115,7 +118,7 @@ class ygFontGenerator(QThread):
 
 class MainWindow(QMainWindow):
     def __init__(self, app, win_list=None, prefs=None, parent=None):
-        super(MainWindow,self).__init__(parent=parent)
+        super(MainWindow, self).__init__(parent=parent)
         self.undo_group = QUndoGroup()
         self.undo_group.cleanChanged.connect(self.clean_changed)
         # The undo registry should keep a record of undo stacks for each
@@ -130,7 +133,7 @@ class MainWindow(QMainWindow):
         self.filename_extension = None
         self.font_info_editor = None
         self.cvt_editor = None
-        #self.cvar_editor = None
+        # self.cvar_editor = None
         self.prep_editor = None
         self.function_editor = None
         self.macro_editor = None
@@ -138,7 +141,9 @@ class MainWindow(QMainWindow):
         self.font_viewer = None
         self.statusbar = self.statusBar()
         self.statusbar_label = QLabel()
-        self.statusbar_label.setStyleSheet("QLabel {font-family: Source Code Pro, monospace; margin-left: 10px; }")
+        self.statusbar_label.setStyleSheet(
+            "QLabel {font-family: Source Code Pro, monospace; margin-left: 10px; }"
+        )
         self.statusbar.addWidget(self.statusbar_label)
 
         self.prog_path = os.path.split(__file__)[0]
@@ -146,11 +151,13 @@ class MainWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setWindowTitle("YGT")
         self.toolbar = self.addToolBar("Tools")
-        self.toolbar.setIconSize(QSize(32,32))
+        self.toolbar.setIconSize(QSize(32, 32))
         self.progress_bar = None
         self.progress_bar_action = None
         self.spacer = QWidget()
-        self.spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.spacer.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self.spacer_action = self.toolbar.addWidget(self.spacer)
         self.preview_container = QVBoxLayout()
         self.qs = QSplitter(self)
@@ -225,8 +232,6 @@ class MainWindow(QMainWindow):
 
         self.file_menu.aboutToShow.connect(self.file_menu_about_to_show)
 
-        
-
         #
         # Edit Menu
         #
@@ -277,11 +282,15 @@ class MainWindow(QMainWindow):
         self.preview_menu.addSeparator()
 
         self.pv_bigger_one_action = self.preview_menu.addAction("Grow by One")
-        self.pv_bigger_one_action.setShortcut(QKeySequence.StandardKey.MoveToPreviousLine)
+        self.pv_bigger_one_action.setShortcut(
+            QKeySequence.StandardKey.MoveToPreviousLine
+        )
         self.pv_bigger_one_action.setEnabled(False)
 
         self.pv_bigger_ten_action = self.preview_menu.addAction("Grow by Ten")
-        self.pv_bigger_ten_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up))
+        self.pv_bigger_ten_action.setShortcut(
+            QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up)
+        )
         self.pv_bigger_ten_action.setEnabled(False)
 
         self.pv_smaller_one_action = self.preview_menu.addAction("Shrink by One")
@@ -289,7 +298,9 @@ class MainWindow(QMainWindow):
         self.pv_smaller_one_action.setEnabled(False)
 
         self.pv_smaller_ten_action = self.preview_menu.addAction("Shrink by Ten")
-        self.pv_smaller_ten_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down))
+        self.pv_smaller_ten_action.setShortcut(
+            QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down)
+        )
         self.pv_smaller_ten_action.setEnabled(False)
 
         self.pv_show_hints_action = self.preview_menu.addAction("Show hinting")
@@ -353,7 +364,9 @@ class MainWindow(QMainWindow):
         self.next_glyph_action.setShortcut(QKeySequence.StandardKey.MoveToNextChar)
 
         self.previous_glyph_action = self.view_menu.addAction("Previous Glyph")
-        self.previous_glyph_action.setShortcut(QKeySequence.StandardKey.MoveToPreviousChar)
+        self.previous_glyph_action.setShortcut(
+            QKeySequence.StandardKey.MoveToPreviousChar
+        )
 
         self.view_menu.addSeparator()
 
@@ -382,7 +395,9 @@ class MainWindow(QMainWindow):
 
         self.edit_names_action = self.code_menu.addAction("Edit point names...")
 
-        self.edit_properties_action = self.code_menu.addAction("Edit glyph properties...")
+        self.edit_properties_action = self.code_menu.addAction(
+            "Edit glyph properties..."
+        )
 
         self.code_menu.addSeparator()
 
@@ -409,15 +424,23 @@ class MainWindow(QMainWindow):
 
         self.vertical_action = self.toolbar.addAction("Vertical hinting")
         vertical_icon = QIcon()
-        vertical_icon.addPixmap(QPixmap(self.icon_path + "vertical-on.png"), state=QIcon.State.On)
-        vertical_icon.addPixmap(QPixmap(self.icon_path + "vertical-off.png"), state=QIcon.State.Off)
+        vertical_icon.addPixmap(
+            QPixmap(self.icon_path + "vertical-on.png"), state=QIcon.State.On
+        )
+        vertical_icon.addPixmap(
+            QPixmap(self.icon_path + "vertical-off.png"), state=QIcon.State.Off
+        )
         self.vertical_action.setIcon(vertical_icon)
         self.vertical_action.setCheckable(True)
 
         self.horizontal_action = self.toolbar.addAction("Horizontal hinting")
         horizontal_icon = QIcon()
-        horizontal_icon.addPixmap(QPixmap(self.icon_path + "horizontal-on.png"), state=QIcon.State.On)
-        horizontal_icon.addPixmap(QPixmap(self.icon_path + "horizontal-off.png"), state=QIcon.State.Off)
+        horizontal_icon.addPixmap(
+            QPixmap(self.icon_path + "horizontal-on.png"), state=QIcon.State.On
+        )
+        horizontal_icon.addPixmap(
+            QPixmap(self.icon_path + "horizontal-off.png"), state=QIcon.State.Off
+        )
         self.horizontal_action.setIcon(horizontal_icon)
         self.horizontal_action.setCheckable(True)
 
@@ -432,8 +455,12 @@ class MainWindow(QMainWindow):
 
         self.cursor_action = self.toolbar.addAction("Cursor (Edit hints)")
         cursor_icon = QIcon()
-        cursor_icon.addPixmap(QPixmap(self.icon_path + "cursor-icon-on.png"), state=QIcon.State.On)
-        cursor_icon.addPixmap(QPixmap(self.icon_path + "cursor-icon-off.png"), state=QIcon.State.Off)
+        cursor_icon.addPixmap(
+            QPixmap(self.icon_path + "cursor-icon-on.png"), state=QIcon.State.On
+        )
+        cursor_icon.addPixmap(
+            QPixmap(self.icon_path + "cursor-icon-off.png"), state=QIcon.State.Off
+        )
         self.cursor_action.setIcon(cursor_icon)
         self.cursor_action.setCheckable(True)
 
@@ -441,8 +468,12 @@ class MainWindow(QMainWindow):
 
         self.hand_action = self.toolbar.addAction("Hand (Pan the canvas)")
         hand_icon = QIcon()
-        hand_icon.addPixmap(QPixmap(self.icon_path + "hand-icon-on.png"), state=QIcon.State.On)
-        hand_icon.addPixmap(QPixmap(self.icon_path + "hand-icon-off.png"), state=QIcon.State.Off)
+        hand_icon.addPixmap(
+            QPixmap(self.icon_path + "hand-icon-on.png"), state=QIcon.State.On
+        )
+        hand_icon.addPixmap(
+            QPixmap(self.icon_path + "hand-icon-off.png"), state=QIcon.State.Off
+        )
         self.hand_action.setIcon(hand_icon)
         self.hand_action.setCheckable(True)
 
@@ -454,51 +485,75 @@ class MainWindow(QMainWindow):
 
         self.black_action = self.toolbar.addAction("Black Distance (B)")
         self.black_action.setIcon(QIcon(QPixmap(self.icon_path + "black_distance.png")))
-        self.black_action.setShortcuts([QKeySequence(Qt.Key.Key_B),
-                                        QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B),
-                                        QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_B),
-                                        QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_B)])
+        self.black_action.setShortcuts(
+            [
+                QKeySequence(Qt.Key.Key_B),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B),
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_B),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_B),
+            ]
+        )
         self.black_action.setEnabled(False)
 
         self.toolbar.insertSeparator(self.black_action)
 
         self.white_action = self.toolbar.addAction("White Distance (W)")
         self.white_action.setIcon(QIcon(QPixmap(self.icon_path + "white_distance.png")))
-        self.white_action.setShortcuts([QKeySequence(Qt.Key.Key_W),
-                                        QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W),
-                                        QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_W),
-                                        QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_W)])
+        self.white_action.setShortcuts(
+            [
+                QKeySequence(Qt.Key.Key_W),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W),
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_W),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_W),
+            ]
+        )
         self.white_action.setEnabled(False)
 
         self.gray_action = self.toolbar.addAction("Gray Distance (G)")
         self.gray_action.setIcon(QIcon(QPixmap(self.icon_path + "gray_distance.png")))
-        self.gray_action.setShortcuts([QKeySequence(Qt.Key.Key_G),
-                                       QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G),
-                                       QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_G),
-                                       QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_G)])
+        self.gray_action.setShortcuts(
+            [
+                QKeySequence(Qt.Key.Key_G),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G),
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_G),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_G),
+            ]
+        )
         self.gray_action.setEnabled(False)
 
         self.shift_action = self.toolbar.addAction("Shift (S)")
         self.shift_action.setIcon(QIcon(QPixmap(self.icon_path + "shift.png")))
-        self.shift_action.setShortcuts([QKeySequence(Qt.Key.Key_S), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_S)])
+        self.shift_action.setShortcuts(
+            [QKeySequence(Qt.Key.Key_S), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_S)]
+        )
         self.shift_action.setEnabled(False)
 
         self.align_action = self.toolbar.addAction("Align (L)")
         self.align_action.setIcon(QIcon(QPixmap(self.icon_path + "align.png")))
-        self.align_action.setShortcuts([QKeySequence(Qt.Key.Key_L), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_L)])
+        self.align_action.setShortcuts(
+            [QKeySequence(Qt.Key.Key_L), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_L)]
+        )
         self.align_action.setEnabled(False)
 
         self.interpolate_action = self.toolbar.addAction("Interpolate (I)")
-        self.interpolate_action.setIcon(QIcon(QPixmap(self.icon_path + "interpolate.png")))
-        self.interpolate_action.setShortcuts([QKeySequence(Qt.Key.Key_I), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_I)])
+        self.interpolate_action.setIcon(
+            QIcon(QPixmap(self.icon_path + "interpolate.png"))
+        )
+        self.interpolate_action.setShortcuts(
+            [QKeySequence(Qt.Key.Key_I), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_I)]
+        )
         self.interpolate_action.setEnabled(False)
 
         self.anchor_action = self.toolbar.addAction("Anchor (A)")
         self.anchor_action.setIcon(QIcon(QPixmap(self.icon_path + "anchor.png")))
-        self.anchor_action.setShortcuts([QKeySequence(Qt.Key.Key_A),
-                                         QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A),
-                                         QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_A),
-                                         QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_A)])
+        self.anchor_action.setShortcuts(
+            [
+                QKeySequence(Qt.Key.Key_A),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A),
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_A),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_A),
+            ]
+        )
         self.anchor_action.setEnabled(False)
 
         self.make_set_action = self.toolbar.addAction("Make Set (K)")
@@ -507,7 +562,9 @@ class MainWindow(QMainWindow):
         self.make_set_action.setEnabled(False)
 
         self.make_cv_guess_action = self.toolbar.addAction("Guess Control Value (?)")
-        self.make_cv_guess_action.setIcon(QIcon(QPixmap(self.icon_path + "cv_guess.png")))
+        self.make_cv_guess_action.setIcon(
+            QIcon(QPixmap(self.icon_path + "cv_guess.png"))
+        )
         self.make_cv_guess_action.setShortcut(QKeySequence(Qt.Key.Key_Question))
         self.make_cv_guess_action.setEnabled(False)
 
@@ -515,7 +572,6 @@ class MainWindow(QMainWindow):
         self.make_cv_action.setIcon(QIcon(QPixmap(self.icon_path + "cv.png")))
         self.make_cv_action.setShortcut(QKeySequence(Qt.Key.Key_C))
         self.make_cv_action.setEnabled(False)
-
 
         self.central_widget = self.qs
         self.setCentralWidget(self.central_widget)
@@ -551,7 +607,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def preview_error(self) -> None:
-        emsg =  "Error compiling YAML or Xgridfit code. "
+        emsg = "Error compiling YAML or Xgridfit code. "
         emsg += "Check the correctness of your code (including any "
         emsg += "functions or macros and the prep program) and try again."
         self.error_manager.new_message({"msg": emsg, "mode": "console"})
@@ -601,7 +657,9 @@ class MainWindow(QMainWindow):
         # What function does this line serve?
         self.yg_string_preview.set_face(self.yg_preview.face)
 
-        self.preview_maker = ygPreviewFontMaker(font, source, self.preview_glyph_name_list)
+        self.preview_maker = ygPreviewFontMaker(
+            font, source, self.preview_glyph_name_list
+        )
         self.preview_maker.finished.connect(self.preview_maker.deleteLater)
         self.preview_maker.sig_preview_ready.connect(self.preview_ready)
         self.preview_maker.sig_preview_error.connect(self.preview_error)
@@ -636,8 +694,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_font_view(self) -> None:
-        """ Display the modeless dialog in fontViewDialog.py.
-        """
+        """Display the modeless dialog in fontViewDialog.py."""
         if not self.font_viewer:
             font_name = self.yg_font.font_files.in_font()
             glyph_list = self.yg_font.glyph_list
@@ -647,7 +704,9 @@ class MainWindow(QMainWindow):
             self.font_viewer.raise_()
             self.font_viewer.activateWindow()
         else:
-            self.error_manager.new_message({"msg": "Can't create the font view dialog.", "mode": "console"})
+            self.error_manager.new_message(
+                {"msg": "Can't create the font view dialog.", "mode": "console"}
+            )
 
     #
     # Indices vs. coordinates outline display
@@ -676,8 +735,8 @@ class MainWindow(QMainWindow):
             self.index_label_action.setEnabled(False)
             self.coord_label_action.setEnabled(True)
 
-    #@pyqtSlot()
-    #def window_menu_about_to_show(self) -> None:
+    # @pyqtSlot()
+    # def window_menu_about_to_show(self) -> None:
     #    if len(self.win_list) > 0:
     #        wins = []
     #        for w in self.win_list:
@@ -756,7 +815,9 @@ class MainWindow(QMainWindow):
     def setup_file_connections(self):
         self.save_action.triggered.connect(self.save_yaml_file)
         self.save_as_action.triggered.connect(self.save_as)
-        self.quit_action.triggered.connect(self.quit, type=Qt.ConnectionType.QueuedConnection)
+        self.quit_action.triggered.connect(
+            self.quit, type=Qt.ConnectionType.QueuedConnection
+        )
         self.open_action.triggered.connect(self.open_file)
         self.save_font_action.triggered.connect(self.export_font)
         self.font_info_action.triggered.connect(self.edit_font_info)
@@ -774,7 +835,9 @@ class MainWindow(QMainWindow):
         self.white_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.gray_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.anchor_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
-        self.interpolate_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.interpolate_action.triggered.connect(
+            self.glyph_pane.make_hint_from_selection
+        )
         self.shift_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.make_set_action.triggered.connect(self.glyph_pane.make_set)
@@ -843,15 +906,21 @@ class MainWindow(QMainWindow):
     def setup_glyph_pane_connections(self) -> None:
         self.setup_nav_connections()
         self.setup_zoom_connections()
-        self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
+        self.source_editor.setup_editor_signals(
+            self.glyph_pane.viewer.yg_glyph.save_editor_source
+        )
         self.source_editor.setup_status_indicator(self.set_status_validity_msg)
         self.setup_cursor_connections()
 
     def connect_editor_signals(self) -> None:
-        self.source_editor.setup_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
+        self.source_editor.setup_editor_signals(
+            self.glyph_pane.viewer.yg_glyph.save_editor_source
+        )
 
     def disconnect_editor_signals(self) -> None:
-        self.source_editor.disconnect_editor_signals(self.glyph_pane.viewer.yg_glyph.save_editor_source)
+        self.source_editor.disconnect_editor_signals(
+            self.glyph_pane.viewer.yg_glyph.save_editor_source
+        )
 
     def set_up_instance_list(self) -> None:
         if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
@@ -878,10 +947,12 @@ class MainWindow(QMainWindow):
 
     def set_size_and_position(self):
         if self.preferences.geometry_valid():
-            self.setGeometry(self.preferences["top_window_pos_x"],
-                             self.preferences["top_window_pos_y"],
-                             self.preferences["top_window_width"],
-                             self.preferences["top_window_height"])
+            self.setGeometry(
+                self.preferences["top_window_pos_x"],
+                self.preferences["top_window_pos_y"],
+                self.preferences["top_window_width"],
+                self.preferences["top_window_height"],
+            )
         else:
             qg = self.screen().availableGeometry()
             x = qg.x() + 20
@@ -914,8 +985,8 @@ class MainWindow(QMainWindow):
         self.cleanup_action.triggered.connect(self.glyph_pane.cleanup_yaml_code)
 
     def set_axis_buttons(self) -> None:
-        """ To be run right after preferences are loaded and before a file is
-            loaded.
+        """To be run right after preferences are loaded and before a file is
+        loaded.
 
         """
         if self.current_axis == "y":
@@ -962,7 +1033,9 @@ class MainWindow(QMainWindow):
             self.set_window_title()
 
     def save_as(self) -> None:
-        self.yg_font.source_file.filename = QFileDialog(parent=self).getSaveFileName()[0]
+        self.yg_font.source_file.filename = QFileDialog(parent=self).getSaveFileName()[
+            0
+        ]
         if not self.yg_font.source_file.filename:
             return
         self.preferences.add_recent(self.yg_font.source_file.filename)
@@ -974,7 +1047,7 @@ class MainWindow(QMainWindow):
         for k in glyph_backup.keys():
             glyph.gsource[k] = glyph_backup[k]
         self.undo_group.set_all_clean()
-    
+
     @pyqtSlot()
     def export_font(self) -> None:
         try:
@@ -993,8 +1066,9 @@ class MainWindow(QMainWindow):
         font = self.yg_font.preview_font
         msg_box = QMessageBox(self)
         msg_box.setText("Ready to export " + new_file_name + "?")
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Cancel |
-                                   QMessageBox.StandardButton.Save)
+        msg_box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Save
+        )
         msg_box.setIcon(QMessageBox.Icon.Question)
         msg_box.setDefaultButton(QMessageBox.StandardButton.Save)
         ret = msg_box.exec()
@@ -1007,7 +1081,9 @@ class MainWindow(QMainWindow):
         self.font_generator.start()
         self.progress_bar = QProgressBar()
         self.progress_bar.setMaximum(0)
-        self.progress_bar_action = self.toolbar.insertWidget(self.spacer_action, self.progress_bar)
+        self.progress_bar_action = self.toolbar.insertWidget(
+            self.spacer_action, self.progress_bar
+        )
 
     @pyqtSlot(object)
     def font_gen_finished(self, failed_list: list) -> None:
@@ -1017,7 +1093,7 @@ class MainWindow(QMainWindow):
         if len(failed_list) > 0:
             emsg = "Failed to compile one or more glyphs: "
             for f in failed_list:
-                emsg += (f + " ")
+                emsg += f + " "
             self.error_manager.new_message({"msg": emsg, "mode": "console"})
 
     @pyqtSlot()
@@ -1025,7 +1101,7 @@ class MainWindow(QMainWindow):
         self.toolbar.removeAction(self.progress_bar_action)
         self.progress_bar = None
         self.progress_bar_action = None
-        emsg =  "Failed to generate the font. This most likely due to an error "
+        emsg = "Failed to generate the font. This most likely due to an error "
         emsg += "in function, macro, or prep code or in your cvt or cvar "
         emsg += "entries."
         self.error_manager.new_message({"msg": emsg, "mode": "console"})
@@ -1052,9 +1128,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def open_file(self) -> None:
-        f: FileNameVar = QFileDialog.getOpenFileName(self, "Open TrueType font or YAML file",
-                                               "",
-                                               "Files (*.ttf *.ufo *.yaml)")
+        f: FileNameVar = QFileDialog.getOpenFileName(
+            self, "Open TrueType font or YAML file", "", "Files (*.ttf *.ufo *.yaml)"
+        )
         result = 1
         try:
             os.chdir(os.path.split(f[0])[0])
@@ -1076,7 +1152,9 @@ class MainWindow(QMainWindow):
                 w.show()
                 self.win_list.append(w)
 
-    def _initialize_source(self, filename: FileNameVar, fn_base: str, extension: str) -> dict:
+    def _initialize_source(
+        self, filename: FileNameVar, fn_base: str, extension: str
+    ) -> dict:
         prep_code = """<code xmlns=\"http://xgridfit.sourceforge.net/Xgridfit2\">
             <!-- Turn off hinting above 300 ppem -->
             <if test="pixels-per-em &gt; 300">
@@ -1125,27 +1203,29 @@ class MainWindow(QMainWindow):
         yaml_source["prep"] = {}
         yaml_source["prep"] = {"code": prep_code}
         # Supply a pre-built delta function.
-        yaml_source["functions"] = {"delta": {
-            "primitive": True,
-            "stack-safe": True,
-            "size": {"type": "int", "val": 25},
-            "distance": {"type": "int", "val": 0},
-            "pt": {"type": "point", "subtype": "target"},
-            "code": function_code
-        }}
+        yaml_source["functions"] = {
+            "delta": {
+                "primitive": True,
+                "stack-safe": True,
+                "size": {"type": "int", "val": 25},
+                "distance": {"type": "int", "val": 0},
+                "pt": {"type": "point", "subtype": "target"},
+                "code": function_code,
+            }
+        }
         yaml_source["macros"] = {}
         yaml_source["glyphs"] = {}
         return yaml_source
 
     def _open(self, f: FileNameVar) -> int:
-        """ Returns 0 if file opened in this window
-            Returns 1 if this window already has a file open
-            Returns 2 if the file is already open (the window is activated and brought to top)
+        """Returns 0 if file opened in this window
+        Returns 1 if this window already has a file open
+        Returns 2 if the file is already open (the window is activated and brought to top)
 
-            f param can be:
-            - the name of a .yaml file
-            - the name of a .ttf font
-            - the name of a .ufo font (treated differently if it contains ygt source)
+        f param can be:
+        - the name of a .yaml file
+        - the name of a .ttf font
+        - the name of a .ufo font (treated differently if it contains ygt source)
         """
         # If this window already has content, return 1 as a signal that a new window
         # has to be created.
@@ -1220,8 +1300,10 @@ class MainWindow(QMainWindow):
                 self.yg_font = ygFont(self, filename)
             self.yg_font.setup_error_signal(self.error_manager.new_message)
 
-            if ("current_glyph" in self.preferences and
-                self.yg_font.full_name() in self.preferences["current_glyph"]):
+            if (
+                "current_glyph" in self.preferences
+                and self.yg_font.full_name() in self.preferences["current_glyph"]
+            ):
                 initGlyph = self.preferences["current_glyph"][self.yg_font.full_name()]
             else:
                 initGlyph = "A"
@@ -1265,7 +1347,7 @@ class MainWindow(QMainWindow):
             self.make_set_action.setEnabled(False)
         elif selection_profile[0] == 1 and selection_profile[1] >= 1:
             # Enable make set button
-            if  1 in selection_profile[2] or 2 in selection_profile[2]:
+            if 1 in selection_profile[2] or 2 in selection_profile[2]:
                 self.make_set_action.setEnabled(True)
             else:
                 self.make_set_action.setEnabled(False)
@@ -1310,11 +1392,15 @@ class MainWindow(QMainWindow):
         self.set_window_title()
 
     def set_window_title(self) -> None:
-        """ And also the status bar
-        """
+        """And also the status bar"""
         base = "YGT"
         if self.yg_font:
-            base += " -- " + str(self.yg_font.family_name()) + "-" + str(self.yg_font.style_name())
+            base += (
+                " -- "
+                + str(self.yg_font.family_name())
+                + "-"
+                + str(self.yg_font.style_name())
+            )
             if not self.is_file_clean():
                 base += "*"
         self.setWindowTitle(base)
@@ -1322,8 +1408,10 @@ class MainWindow(QMainWindow):
             self.set_statusbar_text(None)
 
     def set_statusbar_text(self, valid: Union[bool, None]) -> None:
-        status_text =  self.glyph_pane.viewer.yg_glyph.gname
-        status_text += " - " + unicode_cat_names[self.glyph_pane.viewer.yg_glyph.get_category()]
+        status_text = self.glyph_pane.viewer.yg_glyph.gname
+        status_text += (
+            " - " + unicode_cat_names[self.glyph_pane.viewer.yg_glyph.get_category()]
+        )
         status_text += " (" + self.current_axis + ")"
         if valid != None:
             status_text += " ("
@@ -1366,10 +1454,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def edit_cvt(self) -> None:
-        self.cvt_editor = editorDialog(self.preferences,
-                                       self.yg_font.cvt,
-                                       "cvt",
-                                       is_cvt_valid)
+        self.cvt_editor = editorDialog(
+            self.preferences, self.yg_font.cvt, "cvt", is_cvt_valid
+        )
         self.cvt_editor.show()
         self.cvt_editor.activateWindow()
 
@@ -1384,15 +1471,14 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def edit_prep(self) -> None:
-        self.prep_editor = editorDialog(self.preferences,
-                                                self.yg_font.prep,
-                                                "prep",
-                                                is_prep_valid)
+        self.prep_editor = editorDialog(
+            self.preferences, self.yg_font.prep, "prep", is_prep_valid
+        )
         self.prep_editor.show()
         self.prep_editor.activateWindow()
 
-    #@pyqtSlot()
-    #def edit_cvar(self) -> None:
+    # @pyqtSlot()
+    # def edit_cvar(self) -> None:
     #    self.cvar_editor = editorDialog(self.preferences,
     #                                             self.yg_font.cvar,
     #                                             "cvar",
@@ -1403,46 +1489,50 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def edit_functions(self) -> None:
-        self.function_editor = editorDialog(self.preferences,
-                                                     self.yg_font.functions_func,
-                                                     "functions",
-                                                     are_functions_valid)
+        self.function_editor = editorDialog(
+            self.preferences,
+            self.yg_font.functions_func,
+            "functions",
+            are_functions_valid,
+        )
         self.function_editor.show()
         self.function_editor.activateWindow()
 
     @pyqtSlot()
     def edit_macros(self) -> None:
-        self.macro_editor = editorDialog(self.preferences,
-                                                  self.yg_font.macros_func,
-                                                  "macros",
-                                                  are_macros_valid)
+        self.macro_editor = editorDialog(
+            self.preferences, self.yg_font.macros_func, "macros", are_macros_valid
+        )
         self.macro_editor.show()
         self.macro_editor.activateWindow()
 
     @pyqtSlot()
     def edit_defaults(self) -> None:
-        self.default_editor = editorDialog(self.preferences,
-                                                    self.yg_font.defaults,
-                                                    "defaults",
-                                                    are_defaults_valid)
+        self.default_editor = editorDialog(
+            self.preferences, self.yg_font.defaults, "defaults", are_defaults_valid
+        )
         self.default_editor.show()
         self.default_editor.activateWindow()
 
     @pyqtSlot()
     def edit_names(self) -> None:
-        self.names_editor = editorDialog(self.preferences,
-                                         self.glyph_pane.viewer.yg_glyph.names,
-                                         "names",
-                                         are_names_valid)
+        self.names_editor = editorDialog(
+            self.preferences,
+            self.glyph_pane.viewer.yg_glyph.names,
+            "names",
+            are_names_valid,
+        )
         self.names_editor.show()
         self.names_editor.activateWindow()
 
     @pyqtSlot()
     def edit_properties(self) -> None:
-        self.properties_editor = editorDialog(self.preferences,
-                                              self.glyph_pane.viewer.yg_glyph.props,
-                                              "properties",
-                                              are_properties_valid)
+        self.properties_editor = editorDialog(
+            self.preferences,
+            self.glyph_pane.viewer.yg_glyph.props,
+            "properties",
+            are_properties_valid,
+        )
         self.properties_editor.show()
         self.properties_editor.activateWindow()
 
@@ -1452,8 +1542,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_goto_dialog(self) -> None:
-        text, ok = QInputDialog().getText(self, "Go to glyph", "Glyph name:",
-                                          QLineEdit.EchoMode.Normal)
+        text, ok = QInputDialog().getText(
+            self, "Go to glyph", "Glyph name:", QLineEdit.EchoMode.Normal
+        )
         if ok and text:
             self.glyph_pane.go_to_glyph(text)
 
@@ -1463,8 +1554,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_ppem_dialog(self):
-        text, ok = QInputDialog().getText(self, "Set Points per Em", "Points per em:",
-                                          QLineEdit.EchoMode.Normal)
+        text, ok = QInputDialog().getText(
+            self, "Set Points per Em", "Points per em:", QLineEdit.EchoMode.Normal
+        )
         if ok and text:
             self.yg_preview.set_size(text)
 
@@ -1476,9 +1568,11 @@ class MainWindow(QMainWindow):
         msg_box = QMessageBox()
         msg_box.setText("The YAML source has been modified.")
         msg_box.setInformativeText("Do you want to save it?")
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Discard |
-                                   QMessageBox.StandardButton.Cancel |
-                                   QMessageBox.StandardButton.Save)
+        msg_box.setStandardButtons(
+            QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel
+            | QMessageBox.StandardButton.Save
+        )
         msg_box.setDefaultButton(QMessageBox.StandardButton.Save)
         ret = msg_box.exec()
         if ret == QMessageBox.StandardButton.Cancel:
@@ -1547,7 +1641,9 @@ class MainWindow(QMainWindow):
                 self.app.quit()
 
     def resizeEvent(self, event):
-        self.preferences.set_top_window_size(event.size().width(), event.size().height())
+        self.preferences.set_top_window_size(
+            event.size().width(), event.size().height()
+        )
 
     def moveEvent(self, event):
         self.preferences.set_top_window_pos(event.pos().x(), event.pos().y())
@@ -1569,7 +1665,6 @@ class MainWindow(QMainWindow):
         return self.glyph_pane.viewer.yg_glyph
 
 
-
 class mainWinEventFilter(QObject):
     def __init__(self, top_win):
         super().__init__()
@@ -1582,9 +1677,7 @@ class mainWinEventFilter(QObject):
         return super().eventFilter(source, event)
 
 
-
 def main():
-
     # print(dir(Qt))
     # print(inspect.getargspec(freetype.Face.get_glyph_name))
 

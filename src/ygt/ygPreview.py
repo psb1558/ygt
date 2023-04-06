@@ -1,37 +1,21 @@
-from .freetypeFont import (
-    freetypeFont,
-    RENDER_GRAYSCALE,
-    RENDER_LCD_1,
-    RENDER_LCD_2
-)
+from .freetypeFont import freetypeFont, RENDER_GRAYSCALE, RENDER_LCD_1, RENDER_LCD_2
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
     QLineEdit,
     QPushButton,
     QHBoxLayout,
-    QVBoxLayout
+    QVBoxLayout,
 )
-from PyQt6.QtGui import (
-    QPainter,
-    QBrush,
-    QColor
-)
-from PyQt6.QtCore import (
-    Qt,
-    QRect,
-    pyqtSignal,
-    pyqtSlot,
-    QLine
-)
+from PyQt6.QtGui import QPainter, QBrush, QColor
+from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
 
 
-PREVIEW_WIDTH         = 450
-PREVIEW_HEIGHT        = 700
+PREVIEW_WIDTH = 450
+PREVIEW_HEIGHT = 700
 STRING_PREVIEW_HEIGHT = 150
-PREVIEW_HORI_MARGIN   = 25
-PREVIEW_VERT_MARGIN   = 50
-
+PREVIEW_HORI_MARGIN = 25
+PREVIEW_VERT_MARGIN = 50
 
 
 class ygPreviewContainer(QWidget):
@@ -39,15 +23,13 @@ class ygPreviewContainer(QWidget):
         super().__init__()
         self.layout = QVBoxLayout()
         self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(preview)
         self.layout.addWidget(string_preview)
         self.setLayout(self.layout)
 
 
-
 class ygPreview(QWidget):
-
     sig_preview_paint_done = pyqtSignal(object)
 
     def __init__(self, top_window):
@@ -101,22 +83,20 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.connect(func)
 
     def mk_color_list(self):
-        """ Pre-build a list of grayscale colors--for the big preview.
-
-        """
+        """Pre-build a list of grayscale colors--for the big preview."""
         l = [0] * 256
         for count, c in enumerate(l):
-            l[count] = QColor(101,53,15,count)
+            l[count] = QColor(101, 53, 15, count)
         return l
 
     def fetch_glyph(self, font, glyph_index):
-        """ Get a temporary FreeType font, then build the specified glyph.
+        """Get a temporary FreeType font, then build the specified glyph.
 
-            params:
+        params:
 
-            font: see freetypeFont for details.
+        font: see freetypeFont for details.
 
-            glyph_index: Index in the font of the glyph to build.
+        glyph_index: Index in the font of the glyph to build.
 
         """
         self.glyph_index = glyph_index
@@ -124,8 +104,7 @@ class ygPreview(QWidget):
         self._build_glyph()
 
     def _build_glyph(self):
-        """ Shape the point array and figure some key values.
-        """
+        """Shape the point array and figure some key values."""
         if self.face == None:
             return False
         self.face.set_render_mode(self.render_mode)
@@ -136,8 +115,8 @@ class ygPreview(QWidget):
         gdata = self.face._get_bitmap_metrics()
 
         ft_bitmap = self.face.glyph_slot.bitmap
-        ft_width  = ft_bitmap.width
-        ft_rows   = ft_bitmap.rows
+        ft_width = ft_bitmap.width
+        ft_rows = ft_bitmap.rows
         self.current_glyph_height = ft_rows
         # ft_pitch  = ft_bitmap.pitch
         self.bitmap_top = self.face.glyph_slot.bitmap_top
@@ -154,7 +133,7 @@ class ygPreview(QWidget):
         glyph_descent = ft_rows - self.bitmap_top
         if glyph_descent < 0:
             if abs(glyph_descent) > abs(self.face.descender):
-                self.total_height += (abs(glyph_descent) - abs(self.face.descender))
+                self.total_height += abs(glyph_descent) - abs(self.face.descender)
 
         self.pixel_size = self.max_pixel_size
         char_width = ft_width
@@ -162,7 +141,7 @@ class ygPreview(QWidget):
             char_width = ft_width / 3
         preview_display_width = PREVIEW_WIDTH - (PREVIEW_HORI_MARGIN * 2)
         if char_width * self.pixel_size > preview_display_width:
-            self.pixel_size = round(preview_display_width/char_width)
+            self.pixel_size = round(preview_display_width / char_width)
         preview_display_height = PREVIEW_HEIGHT - (PREVIEW_VERT_MARGIN * 2)
         if self.total_height * self.pixel_size > preview_display_height:
             self.pixel_size = round(preview_display_height / self.total_height)
@@ -231,8 +210,8 @@ class ygPreview(QWidget):
 
     def resize_by(self, n):
         if self.face != None and self.glyph_index != 0:
-            #self.char_size += n
-            #self.set_label_text()
+            # self.char_size += n
+            # self.set_label_text()
             self.set_size(self.char_size + n)
             self.update()
 
@@ -266,7 +245,7 @@ class ygPreview(QWidget):
                 k = il[0]
             self.instance = k
             self._set_instance()
-            
+
     @pyqtSlot()
     def prev_instance(self):
         if self.instance and self.instance_dict:
@@ -289,7 +268,7 @@ class ygPreview(QWidget):
         self.face.set_instance(self.instance)
         self.set_label_text()
         # self._build_glyph()
-        self.update()        
+        self.update()
 
     @pyqtSlot()
     def bigger_one(self):
@@ -313,13 +292,13 @@ class ygPreview(QWidget):
         if self.pixel_size < 5:
             return
         top = self.vertical_margin + (self.top_grid_offset * self.pixel_size)
-        left= self.horizontal_margin
+        left = self.horizontal_margin
         height = self.grid_height
         baseline = self.face.ascender
 
         pen = painter.pen()
         pen.setWidth(1)
-        line_length = (self.face.glyph_slot.bitmap.width * self.pixel_size)
+        line_length = self.face.glyph_slot.bitmap.width * self.pixel_size
         if self.render_mode != RENDER_GRAYSCALE:
             line_length = int(line_length / 3)
 
@@ -327,7 +306,7 @@ class ygPreview(QWidget):
             if i == baseline:
                 pen.setColor(QColor("red"))
             else:
-                pen.setColor(QColor(50,50,50,50))
+                pen.setColor(QColor(50, 50, 50, 50))
             painter.setPen(pen)
             painter.drawLine(QLine(left, top, left + line_length, top))
             top += self.pixel_size
@@ -338,18 +317,17 @@ class ygPreview(QWidget):
                 grid_width = round(grid_width / 3) + 1
             y_top = self.vertical_margin + (self.top_grid_offset * self.pixel_size)
             y_bot = top - self.pixel_size
-            pen.setColor(QColor(50,50,50,50))
+            pen.setColor(QColor(50, 50, 50, 50))
             painter.setPen(pen)
             for i, r in enumerate(range(grid_width)):
                 painter.drawLine(QLine(left, y_top, left, y_bot))
                 left += self.pixel_size
 
     def paintEvent_a(self, event):
-        """ Paint grayscale glyph.
-        """
+        """Paint grayscale glyph."""
         painter = QPainter(self)
         brush = QBrush()
-        brush.setColor(QColor('white'))
+        brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -375,12 +353,10 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.emit(None)
 
     def paintEvent_b(self, event):
-        """ Paint subpixel rendering with solid pixels.
-
-        """
+        """Paint subpixel rendering with solid pixels."""
         painter = QPainter(self)
         brush = QBrush()
-        brush.setColor(QColor('white'))
+        brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -409,12 +385,10 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.emit(None)
 
     def paintEvent_c(self, event):
-        """ Paint subpixel rendering with rgb pixel trios.
-
-        """
+        """Paint subpixel rendering with rgb pixel trios."""
         painter = QPainter(self)
         brush = QBrush()
-        brush.setColor(QColor('white'))
+        brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -430,14 +404,19 @@ class ygPreview(QWidget):
             for col in row:
                 for n, elem in enumerate(col):
                     if n == 0:
-                        qc = QColor(255-elem, 0, 0)
+                        qc = QColor(255 - elem, 0, 0)
                     elif n == 1:
-                        qc = QColor(0, 255-elem, 0)
+                        qc = QColor(0, 255 - elem, 0)
                     elif n == 2:
-                        qc = QColor(0, 0, 255-elem)
-                    qr = QRect(int(xposition), int(yposition), int(self.pixel_size/3), int(self.pixel_size))
+                        qc = QColor(0, 0, 255 - elem)
+                    qr = QRect(
+                        int(xposition),
+                        int(yposition),
+                        int(self.pixel_size / 3),
+                        int(self.pixel_size),
+                    )
                     painter.fillRect(qr, qc)
-                    xposition += self.pixel_size/3
+                    xposition += self.pixel_size / 3
             yposition += self.pixel_size
             xposition = self.horizontal_margin
         if self.show_grid:
@@ -446,9 +425,7 @@ class ygPreview(QWidget):
         self.sig_preview_paint_done.emit(None)
 
 
-
 class ygStringPreviewPanel(QWidget):
-
     sig_go_to_glyph = pyqtSignal(object)
 
     def __init__(self, yg_preview, top_window):
@@ -473,8 +450,7 @@ class ygStringPreviewPanel(QWidget):
         self._text = t
 
     def string_to_glyph_list(self, s):
-        """ Get a list of glyph names needed for string s.
-        """
+        """Get a list of glyph names needed for string s."""
         yg_font = self.top_window.glyph_pane.viewer.yg_glyph.yg_font
         result = []
         for c in s:
@@ -487,7 +463,7 @@ class ygStringPreviewPanel(QWidget):
 
     def _fill_background(self, painter):
         brush = QBrush()
-        brush.setColor(QColor('white'))
+        brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -503,13 +479,17 @@ class ygStringPreviewPanel(QWidget):
         self.face.reset_rect_list()
         xposition = 25
         yposition = 66
-        for s in range(10,100):
-            self.face.set_params(glyph=self.yg_preview.glyph_index,
-                                 render_mode = self.yg_preview.render_mode,
-                                 hinting_on = self.yg_preview.hinting_on,
-                                 size=s,
-                                 instance=self.yg_preview.instance)
-            advance = self.face.draw_char(painter, xposition, yposition, spacing_mark=True)
+        for s in range(10, 100):
+            self.face.set_params(
+                glyph=self.yg_preview.glyph_index,
+                render_mode=self.yg_preview.render_mode,
+                hinting_on=self.yg_preview.hinting_on,
+                size=s,
+                instance=self.yg_preview.instance,
+            )
+            advance = self.face.draw_char(
+                painter, xposition, yposition, spacing_mark=True
+            )
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):
                 if yposition == 66:
@@ -528,11 +508,9 @@ class ygStringPreviewPanel(QWidget):
         xposition = 25
         yposition = 66
         self.face = self.yg_preview.face
-        self.rect_list = self.face.draw_string(painter,
-                                               self._text,
-                                               xposition,
-                                               yposition,
-                                               x_limit=PREVIEW_WIDTH - 50)
+        self.rect_list = self.face.draw_string(
+            painter, self._text, xposition, yposition, x_limit=PREVIEW_WIDTH - 50
+        )
         painter.end()
 
     def mousePressEvent(self, event):
@@ -541,7 +519,7 @@ class ygStringPreviewPanel(QWidget):
         y = int(qp.y())
         rr = None
         for r in self.rect_list:
-            if r.contains(x,y):
+            if r.contains(x, y):
                 rr = r
                 break
         if rr != None:
@@ -551,11 +529,7 @@ class ygStringPreviewPanel(QWidget):
                 self.sig_go_to_glyph.emit(rr.gname.decode())
 
 
-
-
-
 class ygStringPreview(QWidget):
-
     sig_string_changed = pyqtSignal(object)
 
     def __init__(self, yg_preview, top_window):

@@ -1,14 +1,19 @@
-from PyQt6.QtWidgets import (QDialog,
-                             QVBoxLayout,
-                             QHBoxLayout,
-                             QDialogButtonBox,
-                             QComboBox,
-                             QLineEdit,
-                             QLabel)
+from PyQt6.QtWidgets import (
+    QDialog,
+    QVBoxLayout,
+    QHBoxLayout,
+    QDialogButtonBox,
+    QComboBox,
+    QLineEdit,
+    QLabel,
+)
+
 
 class macfuncDialog(QDialog):
     def __init__(self, _hint):
-        super(macfuncDialog,self).__init__(_hint.yg_hint.yg_glyph.preferences.top_window())
+        super(macfuncDialog, self).__init__(
+            _hint.yg_hint.yg_glyph.preferences.top_window()
+        )
         self.yg_hint = _hint.yg_hint
         self.result_dict = None
         self.setWindowTitle("Parameters for " + str(self.yg_hint.name))
@@ -17,19 +22,21 @@ class macfuncDialog(QDialog):
         try:
             self.yg_callable = self.yg_font.functions[self.yg_hint.name]
         except Exception as e:
-            #print("in function dialog:")
-            #print("Error: " + str(e))
+            # print("in function dialog:")
+            # print("Error: " + str(e))
             pass
         if self.yg_callable == None:
             try:
                 self.yg_callable = self.yg_font.macros[self.yg_hint.name]
             except Exception as e:
-                #print("in function dialog:")
-                #print("Error: " + str(e))
+                # print("in function dialog:")
+                # print("Error: " + str(e))
                 pass
         self.hint_type = _hint.yg_hint.hint_type()
         self.layout = QVBoxLayout()
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -51,7 +58,11 @@ class macfuncDialog(QDialog):
                         default_value = self.yg_callable[kk]["val"]
                     else:
                         default_value = None
-                    self.widgets[-1].addWidget(ygCVTWidget(self.yg_hint, self.yg_callable[kk]["type"], default_value))
+                    self.widgets[-1].addWidget(
+                        ygCVTWidget(
+                            self.yg_hint, self.yg_callable[kk]["type"], default_value
+                        )
+                    )
                 elif self.yg_callable[kk]["type"] == "int":
                     self.widgets.append(QHBoxLayout())
                     self.widgets[-1].addWidget(QLabel(kk))
@@ -89,12 +100,13 @@ class macfuncDialog(QDialog):
         self.result_dict = {"nm": self.yg_hint.macfunc_name()}
         for w in self.widgets:
             if w.itemAt(1).widget().text() != "None":
-                self.result_dict[w.itemAt(0).widget().text()] = w.itemAt(1).widget().text()
+                self.result_dict[w.itemAt(0).widget().text()] = (
+                    w.itemAt(1).widget().text()
+                )
         # So param_list is the answer from this dialog. Don't plug it into the
         # hint here, but rather in a QUndoCommand.
         # self.yg_hint._source[self.yg_hint.hint_type()] = param_list
         super().accept()
-
 
 
 class ygCVTWidget(QComboBox):
@@ -103,11 +115,13 @@ class ygCVTWidget(QComboBox):
         self.addItem("None")
         # self.setInsertPolicy(QComboBox.InsertPolicy.InsertAlphabetically)
         # cv_list = hint.yg_glyph.yg_font.cvt.get_list(_type, hint.yg_glyph.current_axis())
-        cv_list = hint.yg_glyph.yg_font.cvt.get_list(hint.yg_glyph,
-                                                     type=_type,
-                                                     axis=hint.yg_glyph.current_axis(),
-                                                     cat=hint.yg_glyph.get_category(),
-                                                     suffix=hint.yg_glyph.get_suffixes())
+        cv_list = hint.yg_glyph.yg_font.cvt.get_list(
+            hint.yg_glyph,
+            type=_type,
+            axis=hint.yg_glyph.current_axis(),
+            cat=hint.yg_glyph.get_category(),
+            suffix=hint.yg_glyph.get_suffixes(),
+        )
         cv_list.sort()
         for c in cv_list:
             self.addItem(c)

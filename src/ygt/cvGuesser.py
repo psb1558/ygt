@@ -1,11 +1,13 @@
 from fontTools.varLib import instancer
 
+
 class instanceChecker:
-    """ This class will build an instance for a variable font and check
-        the y positions of points from which the cvt table was made. If
-        the y positions are different, the y position of the point is
-        recorded and reported.
+    """This class will build an instance for a variable font and check
+    the y positions of points from which the cvt table was made. If
+    the y positions are different, the y position of the point is
+    recorded and reported.
     """
+
     def __init__(self, ft_font, cvt, masters):
         self.ft_font = ft_font
         self.cvt = cvt
@@ -47,10 +49,10 @@ class instanceChecker:
         # d is a dict in the format produced by get_all_variant_cvs.
         ck = self.cvt.keys()
         dk = d.keys()
-        for ckk in ck:                        # iterate through CVs.
-            for dkk in dk:                    # iterate through masters
-                if ckk in d[dkk]:             # if the master has an entry for the current CV,
-                    cv = self.cvt.get_cv(ckk) # create a "var" entry in the CV.
+        for ckk in ck:  # iterate through CVs.
+            for dkk in dk:  # iterate through masters
+                if ckk in d[dkk]:  # if the master has an entry for the current CV,
+                    cv = self.cvt.get_cv(ckk)  # create a "var" entry in the CV.
                     if not "var" in cv:
                         cv["var"] = {}
                     cv["var"][dkk] = d[dkk][ckk]
@@ -70,13 +72,13 @@ class instanceChecker:
             if type(cv) is dict and "origin" in cv:
                 if cv["type"] == "pos":
                     glyph_name = cv["origin"]["glyph"]
-                    ptnum =      cv["origin"]["ptnum"]
+                    ptnum = cv["origin"]["ptnum"]
                     y_pos = self.y_list(glyph_name)[ptnum[0]]
                     if cv["val"] != y_pos:
                         result[kk] = y_pos
                 elif cv["type"] == "dist":
                     glyph_name = cv["origin"]["glyph"]
-                    ptnum =      cv["origin"]["ptnum"]
+                    ptnum = cv["origin"]["ptnum"]
                     yl = self.y_list(glyph_name)
                     y_diff = abs(yl[ptnum[0]] - yl[ptnum[1]])
                     if cv["val"] != y_diff:
@@ -84,9 +86,10 @@ class instanceChecker:
         return result
 
     def y_list(self, glyph_name):
-        gl = self.current_instance['glyf'][glyph_name].getCoordinates(self.ft_font['glyf'][glyph_name])
+        gl = self.current_instance["glyf"][glyph_name].getCoordinates(
+            self.ft_font["glyf"][glyph_name]
+        )
         y_points = []
         for p in gl[0]:
             y_points.append(p[1])
         return y_points
-            

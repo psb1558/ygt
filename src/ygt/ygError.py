@@ -2,6 +2,7 @@ from collections import deque
 from PyQt6.QtWidgets import QPlainTextEdit
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
 
+
 class ygErrorWindow(QPlainTextEdit):
     def __init__(self, init_text: list = []) -> None:
         super().__init__()
@@ -26,13 +27,12 @@ class ygErrorWindow(QPlainTextEdit):
         self.hide()
 
 
-
-class ygErrorMessages():
+class ygErrorMessages:
     def __init__(self, top_window):
         self.error_pane = None
         self.top_window = top_window
         self.last_message = ""
-    
+
     # @pyqtSlot(object)
     def new_message(self, m: dict):
         msg = m["msg"]

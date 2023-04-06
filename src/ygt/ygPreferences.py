@@ -1,11 +1,13 @@
 import yaml
 import platform
+
 try:
     import winreg
 except ModuleNotFoundError:
     pass
 import os
 from yaml import Loader, Dumper
+
 
 class ygPreferences(dict):
     def __init__(self, *args, **kwargs):
@@ -15,7 +17,7 @@ class ygPreferences(dict):
         self["show_point_numbers"] = False
         self["current_glyph"] = {}
         self["current_axis"] = "y"
-        self["save_points_as"] = "coord" # "coord" or "name" or "index"
+        self["save_points_as"] = "coord"  # "coord" or "name" or "index"
         self["current_font"] = None
         self["show_metrics"] = True
         self["recents"] = []
@@ -120,8 +122,8 @@ class ygPreferences(dict):
 
     def save_config(self):
         if platform.system() == "Windows":
-          write_win_registry(self)
-        config_dir = os.path.expanduser('~/.ygt/')
+            write_win_registry(self)
+        config_dir = os.path.expanduser("~/.ygt/")
         if not os.path.isdir(config_dir):
             try:
                 os.mkdir(config_dir)
@@ -138,12 +140,13 @@ class ygPreferences(dict):
         with open(config_file, "w") as f:
             f.write(yaml.dump(save_dict, sort_keys=False, Dumper=Dumper))
 
+
 def open_config(top_window):
     if platform.system() == "Windows":
         return read_win_registry(top_window)
     try:
-        config_path = os.path.expanduser('~/.ygt/ygt_config.yaml')
-        with open(config_path, 'r') as pstream:
+        config_path = os.path.expanduser("~/.ygt/ygt_config.yaml")
+        with open(config_path, "r") as pstream:
             pref_dict = yaml.safe_load(pstream)
         p = ygPreferences()
         k = pref_dict.keys()
@@ -159,6 +162,7 @@ def open_config(top_window):
         p["top_window"] = top_window
         return p
 
+
 def read_win_registry(top_window):
     path = winreg.HKEY_CURRENT_USER
     p = ygPreferences()
@@ -169,8 +173,12 @@ def read_win_registry(top_window):
         p["top_window"] = top_window
         return p
     try:
-        p["show_off_curve_points"] = bool(winreg.QueryValueEx(key, "show_off_curve_points")[0])
-        p["show_point_numbers"] = bool(winreg.QueryValueEx(key, "show_point_numbers")[0])
+        p["show_off_curve_points"] = bool(
+            winreg.QueryValueEx(key, "show_off_curve_points")[0]
+        )
+        p["show_point_numbers"] = bool(
+            winreg.QueryValueEx(key, "show_point_numbers")[0]
+        )
         p["current_axis"] = winreg.QueryValueEx(key, "current_axis")[0]
         p["save_points_as"] = winreg.QueryValueEx(key, "save_points_as")[0]
         p["current_font"] = winreg.QueryValueEx(key, "current_font")[0]
@@ -194,37 +202,63 @@ def read_win_registry(top_window):
         pass
     return p
 
+
 def write_win_registry(prefs):
     path = winreg.HKEY_CURRENT_USER
     try:
         key = winreg.OpenKeyEx(path, r"SOFTWARE\\")
-        yg_key = winreg.CreateKey(key,"ygt")
-        winreg.SetValueEx(yg_key, "show_off_curve_points", 0, winreg.REG_DWORD,
-                          int(prefs["show_off_curve_points"]))
-        winreg.SetValueEx(yg_key, "show_point_numbers", 0, winreg.REG_DWORD,
-                          int(prefs["show_point_numbers"]))
-        winreg.SetValueEx(yg_key, "current_axis", 0, winreg.REG_SZ,
-                          prefs["current_axis"])
-        winreg.SetValueEx(yg_key, "save_points_as", 0, winreg.REG_SZ,
-                          prefs["save_points_as"])
-        winreg.SetValueEx(yg_key, "current_font", 0, winreg.REG_SZ,
-                          prefs["current_font"])
-        winreg.SetValueEx(yg_key, "show_metrics", 0, winreg.REG_DWORD,
-                          int(prefs["show_metrics"]))
-        winreg.SetValueEx(yg_key, "zoom_factor", 0, winreg.REG_SZ,
-                          str(prefs["zoom_factor"]))
-        winreg.SetValueEx(yg_key, "points_as_coords", 0, winreg.REG_DWORD,
-                          int(prefs["points_as_coords"]))
-        winreg.SetValueEx(yg_key, "auto_preview", 0, winreg.REG_DWORD,
-                          int(prefs["auto_preview"]))
-        winreg.SetValueEx(yg_key, "top_window_pos_x", 0, winreg.REG_DWORD,
-                          prefs["top_window_pos_x"])
-        winreg.SetValueEx(yg_key, "top_window_pos_y", 0, winreg.REG_DWORD,
-                          prefs["top_window_pos_y"])
-        winreg.SetValueEx(yg_key, "top_window_height", 0, winreg.REG_DWORD,
-                          prefs["top_window_height"])
-        winreg.SetValueEx(yg_key, "top_window_width", 0, winreg.REG_DWORD,
-                          prefs["top_window_width"])
+        yg_key = winreg.CreateKey(key, "ygt")
+        winreg.SetValueEx(
+            yg_key,
+            "show_off_curve_points",
+            0,
+            winreg.REG_DWORD,
+            int(prefs["show_off_curve_points"]),
+        )
+        winreg.SetValueEx(
+            yg_key,
+            "show_point_numbers",
+            0,
+            winreg.REG_DWORD,
+            int(prefs["show_point_numbers"]),
+        )
+        winreg.SetValueEx(
+            yg_key, "current_axis", 0, winreg.REG_SZ, prefs["current_axis"]
+        )
+        winreg.SetValueEx(
+            yg_key, "save_points_as", 0, winreg.REG_SZ, prefs["save_points_as"]
+        )
+        winreg.SetValueEx(
+            yg_key, "current_font", 0, winreg.REG_SZ, prefs["current_font"]
+        )
+        winreg.SetValueEx(
+            yg_key, "show_metrics", 0, winreg.REG_DWORD, int(prefs["show_metrics"])
+        )
+        winreg.SetValueEx(
+            yg_key, "zoom_factor", 0, winreg.REG_SZ, str(prefs["zoom_factor"])
+        )
+        winreg.SetValueEx(
+            yg_key,
+            "points_as_coords",
+            0,
+            winreg.REG_DWORD,
+            int(prefs["points_as_coords"]),
+        )
+        winreg.SetValueEx(
+            yg_key, "auto_preview", 0, winreg.REG_DWORD, int(prefs["auto_preview"])
+        )
+        winreg.SetValueEx(
+            yg_key, "top_window_pos_x", 0, winreg.REG_DWORD, prefs["top_window_pos_x"]
+        )
+        winreg.SetValueEx(
+            yg_key, "top_window_pos_y", 0, winreg.REG_DWORD, prefs["top_window_pos_y"]
+        )
+        winreg.SetValueEx(
+            yg_key, "top_window_height", 0, winreg.REG_DWORD, prefs["top_window_height"]
+        )
+        winreg.SetValueEx(
+            yg_key, "top_window_width", 0, winreg.REG_DWORD, prefs["top_window_width"]
+        )
         if yg_key:
             winreg.CloseKey(yg_key)
         return True

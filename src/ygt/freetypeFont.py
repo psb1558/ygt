@@ -2,17 +2,13 @@ import freetype as ft
 import numpy
 import copy
 from tempfile import SpooledTemporaryFile
-from PyQt6.QtGui import (
-    QColor,
-    QPen
-)
+from PyQt6.QtGui import QColor, QPen
 from PyQt6.QtCore import QRect
 
 
 RENDER_GRAYSCALE = 1
-RENDER_LCD_1     = 2
-RENDER_LCD_2     = 3
-
+RENDER_LCD_1 = 2
+RENDER_LCD_2 = 3
 
 
 class ygLetterBox:
@@ -26,30 +22,32 @@ class ygLetterBox:
         self.gname = gname
 
     def contains(self, x, y):
-        return (x >= self.x1 and x <= self.x2 and y >= self.y1 and y <= self.y2)
-
+        return x >= self.x1 and x <= self.x2 and y >= self.y1 and y <= self.y2
 
 
 class freetypeFont:
-    """ Holds a FreeType font. It will also keep the metrics and supply
-        key info, e.g. the ascender, or the top of a bitmap for a specific
-        character. It will keep a record of the current render state, and
-        it will draw a character (given a QPainter).
+    """Holds a FreeType font. It will also keep the metrics and supply
+    key info, e.g. the ascender, or the top of a bitmap for a specific
+    character. It will keep a record of the current render state, and
+    it will draw a character (given a QPainter).
 
-        params:
+    params:
 
-        font: must be either a SpooledTemporaryFile or a str (filename).
+    font: must be either a SpooledTemporaryFile or a str (filename).
 
-        size (int): The initial size of the characters (in pixels per em).
-        Default is 30.
+    size (int): The initial size of the characters (in pixels per em).
+    Default is 30.
 
-        Minimal example, to draw a character in the default size:
-          ftf = freetypeFont("Elstob-Regular.ttf")
-          # The GID of the desired character
-          ftf.set_char(60)
-          ftf.draw_char(painter)
+    Minimal example, to draw a character in the default size:
+      ftf = freetypeFont("Elstob-Regular.ttf")
+      # The GID of the desired character
+      ftf.set_char(60)
+      ftf.draw_char(painter)
     """
-    def __init__(self, font, size=30, render_mode=RENDER_LCD_1, hinting_on=True, instance=None):
+
+    def __init__(
+        self, font, size=30, render_mode=RENDER_LCD_1, hinting_on=True, instance=None
+    ):
         self.valid = True
         try:
             if type(font) is SpooledTemporaryFile:
@@ -85,13 +83,15 @@ class freetypeFont:
     def mk_bw_color_list(self):
         l = [0] * 256
         for count, c in enumerate(l):
-            l[count] = QColor(0,0,0,count)
+            l[count] = QColor(0, 0, 0, count)
         return l
 
     def reset_rect_list(self):
         self.rect_list = []
 
-    def set_params(self, glyph=None, render_mode=None, hinting_on=None, size=None, instance=None):
+    def set_params(
+        self, glyph=None, render_mode=None, hinting_on=None, size=None, instance=None
+    ):
         if render_mode != None:
             self.set_render_mode(render_mode)
         if hinting_on == None:
@@ -122,13 +122,13 @@ class freetypeFont:
         self.size = i
         self.face.set_char_size(i * 64)
         self._get_font_metrics()
-            
+
     def _get_font_metrics(self):
-        """ Populate class variables with basic metrics info for this font
-            at the current size.
+        """Populate class variables with basic metrics info for this font
+        at the current size.
         """
-        self.ascender = round(self.face.size.ascender/64)
-        self.descender = round(self.face.size.descender/64)
+        self.ascender = round(self.face.size.ascender / 64)
+        self.descender = round(self.face.size.descender / 64)
         self.face_height = self.ascender + abs(self.descender)
 
     def set_instance(self, instance):
@@ -137,14 +137,14 @@ class freetypeFont:
             self.face.set_var_named_instance(self.instance)
 
     def set_char(self, glyph_index):
-        """ Load a glyph (given its index in the font), generating the appropriate
-            kind of bitmap, and populate class variables with glyph-specific metrics
-            info.
+        """Load a glyph (given its index in the font), generating the appropriate
+        kind of bitmap, and populate class variables with glyph-specific metrics
+        info.
         """
         self.glyph_index = glyph_index
-        flags = 4        # i.e. grayscale
+        flags = 4  # i.e. grayscale
         if self.render_mode in [RENDER_LCD_1, RENDER_LCD_2]:
-            flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD 
+            flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD
         if not self.hinting_on:
             flags = flags | ft.FT_LOAD_NO_HINTING | ft.FT_LOAD_NO_AUTOHINT
         self.face.load_glyph(self.glyph_index, flags=flags)
@@ -171,22 +171,22 @@ class freetypeFont:
         width = metrics["width"]
         pitch = metrics["pitch"]
         for i in range(rows):
-            data.extend(self.glyph_slot.bitmap.buffer[i * pitch: i * pitch + width])
+            data.extend(self.glyph_slot.bitmap.buffer[i * pitch : i * pitch + width])
         if render_mode == RENDER_GRAYSCALE:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, width)
         else:
-            return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width/3), 3)
+            return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
 
     def _draw_char_lcd(self, painter, x, y, spacing_mark=False):
-        """ Draws a bitmap with subpixel rendering (suitable for an lcd screen)
+        """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
-            Params:
+        Params:
 
-            painter (QPainter): a Qt tool to draw with
+        painter (QPainter): a Qt tool to draw with
 
-            x (int): The left origin of the glyph
+        x (int): The left origin of the glyph
 
-            y (int): The baseline
+        y (int): The baseline
 
         """
         gdata = self._get_bitmap_metrics()
@@ -200,7 +200,7 @@ class freetypeFont:
             gdata["advance"] = self.advance = round(gdata["width"] / 3) + 4
         else:
             starting_xpos = xpos = x + gdata["bitmap_left"]
-        qp = QPen(QColor('black'))
+        qp = QPen(QColor("black"))
         qp.setWidth(1)
         white_color = QColor("white")
         for row in Z:
@@ -221,25 +221,29 @@ class freetypeFont:
         if abs(ending_ypos - starting_ypos) <= 5:
             starting_ypos -= 3
             ending_ypos += 3
-        self.rect_list.append(ygLetterBox(starting_xpos,
-                              starting_ypos,
-                              ending_xpos,
-                              ending_ypos,
-                              glyph_index=self.glyph_index,
-                              size=self.size,
-                              gname=self.index_to_name(self.glyph_index)))
+        self.rect_list.append(
+            ygLetterBox(
+                starting_xpos,
+                starting_ypos,
+                ending_xpos,
+                ending_ypos,
+                glyph_index=self.glyph_index,
+                size=self.size,
+                gname=self.index_to_name(self.glyph_index),
+            )
+        )
         return gdata["advance"]
 
     def _draw_char_grayscale(self, painter, x, y, spacing_mark=False):
-        """ Draws a bitmap with grayscale rendering
+        """Draws a bitmap with grayscale rendering
 
-            Params:
+        Params:
 
-            painter (QPainter): a Qt tool to draw with
+        painter (QPainter): a Qt tool to draw with
 
-            x (int): The left origin of the glyph
+        x (int): The left origin of the glyph
 
-            y (int): The baseline
+        y (int): The baseline
 
         """
         gdata = self._get_bitmap_metrics()
@@ -253,7 +257,7 @@ class freetypeFont:
             gdata["advance"] = self.advance = gdata["width"] + 4
         else:
             starting_xpos = xpos = x + gdata["bitmap_left"]
-        qp = QPen(QColor('black'))
+        qp = QPen(QColor("black"))
         qp.setWidth(1)
         for row in Z:
             xpos = starting_xpos
@@ -268,17 +272,21 @@ class freetypeFont:
         if abs(ending_ypos - starting_ypos) <= 5:
             starting_ypos -= 3
             ending_ypos += 3
-        self.rect_list.append(ygLetterBox(starting_xpos,
-                              starting_ypos,
-                              ending_xpos,
-                              ending_ypos,
-                              glyph_index=self.glyph_index,
-                              size=self.size,
-                              gname=self.index_to_name(self.glyph_index)))
+        self.rect_list.append(
+            ygLetterBox(
+                starting_xpos,
+                starting_ypos,
+                ending_xpos,
+                ending_ypos,
+                glyph_index=self.glyph_index,
+                size=self.size,
+                gname=self.index_to_name(self.glyph_index),
+            )
+        )
         return gdata["advance"]
 
     def name_to_index(self, gname):
-        s = bytes(gname, 'utf8')
+        s = bytes(gname, "utf8")
         try:
             return self.face.get_name_index(s)
         except Exception as e:
@@ -320,7 +328,9 @@ class freetypeFont:
         for i in indices:
             self.set_char(i)
             if self.last_glyph_index != None:
-                k = self.face.get_kerning(self.last_glyph_index, i, ft.FT_KERNING_DEFAULT)
+                k = self.face.get_kerning(
+                    self.last_glyph_index, i, ft.FT_KERNING_DEFAULT
+                )
                 xpos += k.x
             xpos += self.draw_char(painter, xpos, ypos)
             if xpos >= x_limit:

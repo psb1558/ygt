@@ -1,9 +1,6 @@
-from PyQt6.QtCore import (pyqtSignal, Qt, QTimer, pyqtSlot)
-from PyQt6.QtWidgets import (QDialog,
-                             QVBoxLayout,
-                             QPlainTextEdit,
-                             QDialogButtonBox)
-from PyQt6.QtGui import (QSyntaxHighlighter, QTextCharFormat, QColor)
+from PyQt6.QtCore import pyqtSignal, Qt, QTimer, pyqtSlot
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox
+from PyQt6.QtGui import QSyntaxHighlighter, QTextCharFormat, QColor
 import yaml
 import re
 from yaml import Dumper
@@ -11,25 +8,28 @@ import copy
 from schema import SchemaError
 from .ygSchema import is_valid, set_error_message, error_message, have_error_message
 
+
 # From https://stackoverflow.com/questions/8640959/
 # how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data
 # Presumed public domain, since it was posted in a public forum.
 def str_presenter(dumper, data):
-  if len(data.splitlines()) > 1:  # check for multiline string
-    return dumper.represent_scalar('tag:yaml.org,2002:str', data, style='|')
-  return dumper.represent_scalar('tag:yaml.org,2002:str', data)
+    if len(data.splitlines()) > 1:  # check for multiline string
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
 
 yaml.add_representer(str, str_presenter)
 
 # to use with safe_dump:
 yaml.representer.SafeRepresenter.add_representer(str, str_presenter)
 
+
 class ygYAMLEditor(QPlainTextEdit):
-    """ An editor for source code for the current axis of the current glyph.
+    """An editor for source code for the current axis of the current glyph.
 
-        Params:
+    Params:
 
-        preferences (ygPreferences): The preferences object for the current file.
+    preferences (ygPreferences): The preferences object for the current file.
     """
 
     sig_source_from_editor = pyqtSignal(object)
@@ -39,7 +39,9 @@ class ygYAMLEditor(QPlainTextEdit):
     def __init__(self, preferences, parent=None):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
-        self.setStyleSheet("ygYAMLEditor {font-family: Source Code Pro, monospace; background-color: white; }")
+        self.setStyleSheet(
+            "ygYAMLEditor {font-family: Source Code Pro, monospace; background-color: white; }"
+        )
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.preferences = preferences
         self.textChanged.connect(self.text_changed)
@@ -118,67 +120,65 @@ class ygYAMLEditor(QPlainTextEdit):
             self.sig_status.emit(self.code_valid)
         else:
             self._timer.start(2000)
-        
 
     def setup_editor(self):
-        tags = r'\b(ptid|ref|rel|macro|function|pos|dist|points|round|min)\:'
-        twospace =   r'(  |\- )'
-        fourspace =  r'(    |  \- )'
-        sixspace =   r'(      |    \- )'
-        eightspace = r'(        |      \- )'
-        tenspace =   r'(          |        \- )'
+        tags = r"\b(ptid|ref|rel|macro|function|pos|dist|points|round|min)\:"
+        twospace = r"(  |\- )"
+        fourspace = r"(    |  \- )"
+        sixspace = r"(      |    \- )"
+        eightspace = r"(        |      \- )"
+        tenspace = r"(          |        \- )"
 
         keytwo_format = QTextCharFormat()
-        keytwo_format.setForeground(QColor(122,6,70,255))
-        pattern = twospace+tags
+        keytwo_format.setForeground(QColor(122, 6, 70, 255))
+        pattern = twospace + tags
         self._highlighter.add_mapping(pattern, keytwo_format)
 
         keyfour_format = QTextCharFormat()
         keyfour_format.setForeground(QColor("blue"))
-        pattern = fourspace+tags
+        pattern = fourspace + tags
         self._highlighter.add_mapping(pattern, keyfour_format)
 
         keysix_format = QTextCharFormat()
-        keysix_format.setForeground(QColor(201,91,12,255))
-        pattern = sixspace+tags
+        keysix_format.setForeground(QColor(201, 91, 12, 255))
+        pattern = sixspace + tags
         self._highlighter.add_mapping(pattern, keysix_format)
 
         keyeight_format = QTextCharFormat()
         keyeight_format.setForeground(QColor("green"))
-        pattern = eightspace+tags
+        pattern = eightspace + tags
         self._highlighter.add_mapping(pattern, keyeight_format)
 
         keyten_format = QTextCharFormat()
         keyten_format.setForeground(QColor("brown"))
-        pattern = tenspace+tags
+        pattern = tenspace + tags
         self._highlighter.add_mapping(pattern, keyten_format)
 
         list_format = QTextCharFormat()
         list_format.setForeground(QColor("red"))
-        pattern = r'^(\- |  \- |    \- |      \- |        \- |          \- )'
+        pattern = r"^(\- |  \- |    \- |      \- |        \- |          \- )"
         self._highlighter.add_mapping(pattern, list_format)
 
         self._highlighter.setDocument(self.document())
 
 
-
 class editorPane(QPlainTextEdit):
-    """ An editor for any chunk of code from current file, e.g. functions.
-        This validates as the user types, but it only emits an error two
-        seconds after user has stopped typing. This cuts back on unnecessary
-        messages when (for example) a user is typing "true"--which is not
-        valid until the word is complete.
+    """An editor for any chunk of code from current file, e.g. functions.
+    This validates as the user types, but it only emits an error two
+    seconds after user has stopped typing. This cuts back on unnecessary
+    messages when (for example) a user is typing "true"--which is not
+    valid until the word is complete.
 
-        Params:
+    Params:
 
-        owner: The dialog or window that owns this pane.
+    owner: The dialog or window that owns this pane.
 
-        sourceable: Object of type Sourceable: the thing to edit.
+    sourceable: Object of type Sourceable: the thing to edit.
 
-        validator: function that will throw an exception if text is not valid.
+    validator: function that will throw an exception if text is not valid.
 
-        save_on_focus_out (bool): Whether to auto-save if user leaves this
-        editor.
+    save_on_focus_out (bool): Whether to auto-save if user leaves this
+    editor.
 
     """
 
@@ -217,9 +217,13 @@ class editorPane(QPlainTextEdit):
 
     def set_style(self):
         if self.error_state:
-            self.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: rgb(252,227,242);  }")
+            self.setStyleSheet(
+                "QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: rgb(252,227,242);  }"
+            )
         else:
-            self.setStyleSheet("QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: white;  }")
+            self.setStyleSheet(
+                "QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: white;  }"
+            )
 
     def set_error_state(self, b):
         if self.error_state != b:
@@ -283,7 +287,6 @@ class editorPane(QPlainTextEdit):
         self.install_yaml(copy.copy(self.sourceable.source()))
 
 
-
 class editorDialog(QDialog):
     def __init__(self, preferences, sourceable, title, validator, top_structure="dict"):
         super().__init__()
@@ -300,16 +303,20 @@ class editorDialog(QDialog):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         self.edit_pane = editorPane(self, sourceable, validator)
-        self.edit_pane.setup_error_signal(self.preferences.top_window().error_manager.new_message)
+        self.edit_pane.setup_error_signal(
+            self.preferences.top_window().error_manager.new_message
+        )
         self.layout.addWidget(self.edit_pane)
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         self.layout.addWidget(self.buttonBox)
 
     def set_dialog_title(self, is_valid):
-        v  = " (Invalid)"
+        v = " (Invalid)"
         if is_valid:
             v = " (Valid)"
         self.setWindowTitle(self.title + v)
@@ -333,7 +340,6 @@ class editorDialog(QDialog):
             self.reject()
             return
         self.done(QDialog.DialogCode.Accepted)
-
 
 
 class ygGlyphHighlighter(QSyntaxHighlighter):
