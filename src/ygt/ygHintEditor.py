@@ -1075,6 +1075,7 @@ class ygSetView(ygPointCollectionView):
         self.hint_type = hint_type
 
 
+
 class ygSelection(QObject):
     """ A list of selected objects (points, hints, or both).
 

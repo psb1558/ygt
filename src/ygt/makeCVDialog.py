@@ -1,4 +1,3 @@
-import copy
 from PyQt6.QtWidgets import (QDialog,
                              QVBoxLayout,
                              QHBoxLayout,
@@ -11,7 +10,6 @@ from PyQt6.QtWidgets import (QDialog,
                              QListWidget,
                              QPushButton,
                              QTableView,
-                             QRadioButton,
                              QCheckBox)
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import (QIntValidator,
@@ -24,14 +22,17 @@ from .ygModel import (unicode_cat_names,
 NEW_CV_NAME    = "New_Control_Value"
 NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
 
-# The problem in this file is keeping model and view in sync when individual widgets
-# have got their own pointers to CVs. Instead, give them a pointer to an ancestor
-# object that has access functions for the things they need (chiefly the current CV).
 #
-# Here is the structure of the CVT edit window:
+# A dialog (makeCVDialog) for creating a CV based on one or two selected points.
+#
+# A "Font Info" window (fontInfoWindow) for creating/editing/deleting CVs and
+# their various properties; editing variation masters; and managing the defaults
+# for the current font.
+#
+# Here is the structure of the Font Info window:
 #
 # fontInfoWindow ---|
-#                   |--- cvEditPane ---   |
+#                   |---- cvEditPane -----|
 #                   |                     | --- QListWidget
 #                   |                     | --- cvWidget ---|
 #                   |                                       |--- general_tab
@@ -802,6 +803,12 @@ class hintRoundWidget(QWidget):
 
 
 class miscDefaultsWidget(QWidget):
+    """ GUI for setting defaults that have nothing to do with rounding.
+
+        params:
+
+        yg_font (ygFont): the font now being edited.
+    """
     def __init__(self, yg_font):
         super().__init__()
         self.yg_font = yg_font
@@ -890,6 +897,18 @@ class makeCVDialog(QDialog, cvSource):
     """ A dialog for creating a cv. This doesn't edit the cvt source
         directly, but instead works on a fragment of cv code to be
         added when the accept() function is called.
+
+        params:
+
+        p1 (ygPoint): The first selected point.
+
+        p2 (ygPoint): The second selected point; or None if only one
+        point is selected.
+
+        yg_glyph (ygGlyph): The current glyph.
+
+        preferences (ygPreferences): the preferences for this app.
+
     """
     def __init__(self, p1, p2, yg_glyph, preferences):
         super().__init__()
@@ -987,9 +1006,16 @@ class makeCVDialog(QDialog, cvSource):
         self.yg_font.undo_stack.setActive(True)
 
 
+
 class cvNameWidget(QLineEdit):
     """ A widget for editing the name of a cv. Disable when it shouldn't
         be edited.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
+        owner: The owner of this widget.
     """
     def __init__(self, cv_source: cvSource, owner=None):
         super().__init__()
@@ -1043,6 +1069,11 @@ class cvNameWidget(QLineEdit):
 
 class cvTypeWidget(QComboBox):
     """ Widget for choosing a CV type.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, cv_source: cvSource):
         super().__init__()
@@ -1074,6 +1105,11 @@ class cvTypeWidget(QComboBox):
 
 class cvColorWidget(QComboBox):
     """ Widget for choosing a distance type.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, cv_source):
         super().__init__()
@@ -1114,6 +1150,11 @@ class cvColorWidget(QComboBox):
 
 class cvAxisWidget(QComboBox):
     """ Widget for choosing an axis for a CV.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, cv_source: cvSource):
         super().__init__()
@@ -1148,6 +1189,11 @@ class cvAxisWidget(QComboBox):
 
 class cvUCatWidget(QComboBox):
     """ Widget for choosing a category for a CV.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
@@ -1188,8 +1234,13 @@ class cvUCatWidget(QComboBox):
 
 
 class cvSuffixWidget(QLineEdit):
-    """ Widget for specifying a suffix (the CV is only available or glyphs with
+    """ Widget for specifying a suffix (the CV is only available for glyphs with
         this suffix).
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, cv_source: cvSource):
         super().__init__()
@@ -1231,6 +1282,13 @@ class cvSuffixWidget(QLineEdit):
 
 class cvVarWidget(QLineEdit):
     """ Widget for editing variant CVs for the cvar table.
+
+        params:
+
+        var_id (str): ID of the master associated with this widget.
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, var_id: str, cv_source: cvSource) -> None:
         super().__init__()
@@ -1295,6 +1353,11 @@ class cvVarWidget(QLineEdit):
 
 class cvValueWidget(QLineEdit):
     """ Widget for editing the value of a CV.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
     """
     def __init__(self, cv_source: cvSource):
         super().__init__()
@@ -1341,6 +1404,13 @@ class cvValueWidget(QLineEdit):
 
 class cvPPEMWidget(QLineEdit):
     """ Widget for editing a "ppem" value in the "same as" pane.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
+        above_below (str): Indicating which widget pair is being edited.
+
     """
     def __init__(self, cv_source: cvSource, above_below: str):
         super().__init__()
@@ -1412,6 +1482,17 @@ class cvPPEMWidget(QLineEdit):
 
 class cvNamesWidget(QComboBox):
     """ Widget for choosing a CV name in the "same as" pane.
+
+        params:
+
+        cv_source (cvSource): Data for currently selected CV.
+
+        above_below (str): Indicating which widget pair is being edited.
+
+        yg_font (ygFont): The font being edited.
+
+        ppem_widget: The associated cvPPEMWidget (if any).
+
     """
     def __init__(self, cv_source: cvSource, above_below, yg_font, ppem_widget=None):
         super().__init__()
@@ -1455,6 +1536,13 @@ class cvNamesWidget(QComboBox):
 class masterNameWidget(QLineEdit):
     """ Widget for editing the name of a master. This name is for
         display only: the master is referenced by an immutable id.
+
+        params:
+
+        masters (ygMasters): The collection of masters for this font.
+
+        m_id (str): The ID of the master associated with this widget.
+
     """
     def __init__(self, masters: ygMasters, m_id: str):
         super().__init__()
@@ -1500,6 +1588,15 @@ class masterNameWidget(QLineEdit):
 
 class masterValWidget(QLineEdit):
     """ Widget for editing the value of a master (-1.0 to 1.0)
+
+        params:
+
+        masters (ygMasters): The collection of masters for this font.
+
+        m_id (str): The ID of the master associated with this widget.
+
+        axis: The variation axis associated with this widget.
+
     """
     def __init__(self, masters: ygMasters, m_id: str, axis):
         super().__init__()

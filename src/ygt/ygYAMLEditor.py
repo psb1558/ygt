@@ -180,7 +180,6 @@ class editorPane(QPlainTextEdit):
         save_on_focus_out (bool): Whether to auto-save if user leaves this
         editor.
 
-
     """
 
     sig_error = pyqtSignal(object)

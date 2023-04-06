@@ -4,10 +4,6 @@ import re
 
 _error_message = ""
 
-#DELTA_FLOATS = [4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.875, 0.75, 0.625,
-#                0.5, 0.375, 0.25, 0.125, -0.125, -0.25, -0.375, -0.5, 
-#                -0.625, -0.75, -0.875, -1.0, -1.5, -2.0, -2.5, -3.0, 
-#                -3.5, -4.0]
 DELTA_DIST =   [-8, -7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8]
 DELTA_SHIFT =  [2, 4, 8, 16, 32, 64]
 
@@ -34,7 +30,6 @@ def is_cv_distance_valid(s):
     if type(sss) is float or type(sss) is int:
         f = float(sss)
         return f >= -4.0 and f <= 4.0
-        # return float(sss) in DELTA_FLOATS
     if type(sss) is str:
         ss = sss.split("/", 1)
         try:
