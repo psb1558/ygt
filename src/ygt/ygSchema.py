@@ -1,4 +1,4 @@
-from schema import Or, Optional, Schema, SchemaError, Use, And
+from schema import Or, Optional, Schema, SchemaError, Use, And # type: ignore
 
 # from .ygModel import unicode_categories
 import re

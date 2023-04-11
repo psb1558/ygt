@@ -1,3 +1,4 @@
+from typing import Union, Any, Tuple, Optional
 from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -12,10 +13,21 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QTableView,
     QCheckBox,
+    QListWidgetItem,
 )
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot, QEvent
 from PyQt6.QtGui import QIntValidator, QDoubleValidator
-from .ygModel import unicode_cat_names, reverse_unicode_cat_names, ygMasters, random_id
+from .ygModel import (
+    unicode_cat_names,
+    reverse_unicode_cat_names,
+    ygMasters,
+    random_id,
+    ygFont,
+    ygGlyph,
+    ygPoint,
+    ygcvt
+)
+from .ygPreferences import ygPreferences
 
 NEW_CV_NAME = "New_Control_Value"
 NEW_CV_CONTENT = {"val": 0, "axis": "y", "type": "pos"}
@@ -69,7 +81,7 @@ class cvSource:
     def from_current_cv(self, s: str):
         ...
 
-    def set_in_current_cv(self, k: str, s, fallback: None):
+    def set_in_current_cv(self, k: str, s, fallback: Any):
         ...
 
     def has_key(self, k: str):
@@ -93,13 +105,13 @@ class cvEditPane(QWidget, cvSource):
 
     """
 
-    def __init__(self, owner, yg_font, preferences):
+    def __init__(self, owner, yg_font: ygFont, preferences: ygPreferences) -> None:
         super().__init__()
         self.owner = owner
         self.yg_font = yg_font
         self._cvt = self.yg_font.cvt
         self.preferences = preferences
-        self.layout = QHBoxLayout()
+        self.layout_obj = QHBoxLayout()
 
         # Set up CV list.
 
@@ -128,14 +140,14 @@ class cvEditPane(QWidget, cvSource):
         add_button.clicked.connect(self.add_cv)
         del_button.clicked.connect(self.del_cv)
         self.cv_list_layout.addLayout(self.button_layout)
-        self.layout.addLayout(self.cv_list_layout)
-        self.layout.addWidget(self.edit_pane)
-        self.setLayout(self.layout)
+        self.layout_obj.addLayout(self.cv_list_layout)
+        self.layout_obj.addWidget(self.edit_pane)
+        self.setLayout(self.layout_obj)
 
-    def send_error_message(self, d: dict):
+    def send_error_message(self, d: dict) -> None:
         self.yg_font.send_error_message(d)
 
-    def add_cv(self):
+    def add_cv(self) -> None:
         self._current_cv_name = NEW_CV_NAME
         self._cvt.add_cv(self._current_cv_name, NEW_CV_CONTENT)
         self.cv_list.addItem(self._current_cv_name)
@@ -147,10 +159,10 @@ class cvEditPane(QWidget, cvSource):
             self.cv_list.setCurrentItem(self.current_list_item)
             self.new_item(self.current_list_item, forced=True)
 
-    def change_name_in_list(self, n):
+    def change_name_in_list(self, n) -> None:
         self.current_list_item.setText(n)
 
-    def del_cv(self):
+    def del_cv(self) -> None:
         self._cvt.del_cv(self._current_cv_name)
         self.cv_list.clear()
         try:
@@ -159,7 +171,7 @@ class cvEditPane(QWidget, cvSource):
             return
         self.refresh()
 
-    def refresh(self):
+    def refresh(self) -> None:
         """This is the place to figure out whether the source
         or masters have been changed: if not, we don't have to
         go through all this.
@@ -184,65 +196,65 @@ class cvEditPane(QWidget, cvSource):
                 pass
         self.edit_pane.refresh(self)
 
-    def fixup(self):
+    def fixup(self) -> None:
         self.edit_pane.fixup()
 
-    def new_item(self, list_item, forced=False):
+    def new_item(self, list_item, forced: bool = False) -> None:
         """Switch the view to another cv. Simply delete the
         old cv editing pane and create a new one to put
         in its place.
         """
         new_cv_name = list_item.text()
         if forced or new_cv_name != self._current_cv_name:
-            old_pane = self.layout.itemAt(1)
-            self.layout.removeItem(old_pane)
+            old_pane = self.layout_obj.itemAt(1)
+            self.layout_obj.removeItem(old_pane)
             old_pane.widget().deleteLater()
             self._current_cv_name = new_cv_name
             self._current_cv = self._cvt.get_cv(self._current_cv_name)
             self.edit_pane = cvWidget(self, self.yg_font, self)
-            self.layout.addWidget(self.edit_pane)
+            self.layout_obj.addWidget(self.edit_pane)
 
-    def cvt(self):
+    def cvt(self) -> ygcvt:
         return self._cvt
 
-    def current_cv(self):
+    def current_cv(self) -> Union[int, dict]:
         return self._current_cv
 
-    def current_cv_name(self):
+    def current_cv_name(self) -> str:
         return self._current_cv_name
 
-    def set_cv_name(self, s: str):
+    def set_cv_name(self, s: str) -> None:
         self._current_cv_name = s
 
     def from_current_cv(self, s: str):
         try:
-            return self._current_cv[s]
+            return self._current_cv[s] # type: ignore
         except KeyError:
             return None
 
-    def set_in_current_cv(self, k: str, s, fallback=None):
+    def set_in_current_cv(self, k: str, s: Any, fallback = Optional[str]) -> None:
         if s == "None" or s == "" or s == None:
             if fallback != None:
                 self._cvt.set_cv_property(self.current_cv_name(), k, fallback)
             else:
-                if k in self._current_cv:
+                if k in self._current_cv: # type: ignore
                     self._cvt.del_cv(k)
         else:
             self._cvt.set_cv_property(self.current_cv_name(), k, s)
 
     def has_key(self, k: str) -> bool:
-        return k in self._current_cv
+        return k in self._current_cv # type: ignore
 
-    def del_key(self, k: str):
+    def del_key(self, k: str) -> None:
         self._cvt.del_cv_property(self.current_cv_name(), k)
 
-    def rename_cv(self, old_name, new_name):
+    def rename_cv(self, old_name: str, new_name: str) -> None:
         self._cvt.rename(old_name, new_name)
 
-    def showEvent(self, event):
+    def showEvent(self, event) -> None:
         self.refresh()
 
-    def hideEvent(self, event):
+    def hideEvent(self, event) -> None:
         self.fixup()
 
 
@@ -258,12 +270,12 @@ class fontInfoWindow(QWidget):
 
     """
 
-    def __init__(self, yg_font, preferences):
+    def __init__(self, yg_font: ygFont, preferences: ygPreferences) -> None:
         super().__init__()
         self.yg_font = yg_font
         self.cvt = self.yg_font.cvt
         self.preferences = preferences
-        self.layout = QVBoxLayout()
+        self.layout_obj = QVBoxLayout()
 
         # Set up tabs
 
@@ -278,25 +290,25 @@ class fontInfoWindow(QWidget):
             self.tabs.addTab(self.masters_tab, "Masters")
         self.defaults_pane = defaultsPane(self.yg_font)
         self.tabs.addTab(self.defaults_pane, "Defaults")
-        self.layout.addWidget(self.tabs)
-        self.setLayout(self.layout)
+        self.layout_obj.addWidget(self.tabs)
+        self.setLayout(self.layout_obj)
         self.window().setWindowTitle("Font Info")
 
-    def undo_state_active(self):
+    def undo_state_active(self) -> None:
         if not self.yg_font.undo_stack.isActive():
             self.yg_font.undo_stack.setActive(True)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event) -> None:
         self.hide()
 
     @pyqtSlot()
-    def refresh(self):
+    def refresh(self) -> None:
         self.cv_tab.refresh()
         self.defaults_pane.refresh()
         if self.masters_tab:
             self.masters_tab.refresh()
 
-    def event(self, event):
+    def event(self, event) -> bool:
         if event.type() == event.Type.WindowActivate:
             self.undo_state_active()
             # self.yg_font.undo_stack.setActive(True)
@@ -314,13 +326,13 @@ class mastersWidget(QWidget):
 
     """
 
-    def __init__(self, owner, yg_font):
+    def __init__(self, owner: fontInfoWindow, yg_font: ygFont) -> None:
         super().__init__()
         self.owner = owner
         self.yg_font = yg_font
         self.masters = self.yg_font.masters
 
-        self.layout = QHBoxLayout()
+        self.layout_obj = QHBoxLayout()
         self.master_list_layout = QVBoxLayout()
         self.button_layout = QHBoxLayout()
 
@@ -351,30 +363,30 @@ class mastersWidget(QWidget):
         self.refresh_variants_button = QPushButton("Generate Variant Control Values")
         self.refresh_variants_button.clicked.connect(self.yg_font.refresh_variant_cvs)
         self.master_list_layout.addWidget(self.refresh_variants_button)
-        self.layout.addLayout(self.master_list_layout)
-        self.layout.addWidget(self.edit_pane)
-        self.setLayout(self.layout)
+        self.layout_obj.addLayout(self.master_list_layout)
+        self.layout_obj.addWidget(self.edit_pane)
+        self.setLayout(self.layout_obj)
 
-    def current_master_name(self):
+    def current_master_name(self) -> str:
         return self._current_master[1]["name"]
 
-    def current_master_id(self):
+    def current_master_id(self) -> str:
         return self._current_master[0]
 
-    def new_item(self, list_item, forced=False):
+    def new_item(self, list_item: QListWidgetItem, forced: bool = False) -> None:
         new_master_name = list_item.text()
         new_master = self.masters.master_by_name(new_master_name)
         if forced or new_master_name != self.current_master_name():
-            old_pane = self.layout.itemAt(1)
-            self.layout.removeItem(old_pane)
+            old_pane = self.layout_obj.itemAt(1)
+            self.layout_obj.removeItem(old_pane)
             old_pane.widget().deleteLater()
             self._current_master = new_master
             self.edit_pane = masterWidget(
                 self.masters, self.current_master_id(), self.yg_font
             )
-            self.layout.addWidget(self.edit_pane)
+            self.layout_obj.addWidget(self.edit_pane)
 
-    def add_master(self):
+    def add_master(self) -> None:
         master_dict = {}
         axis_tags = self.yg_font.axis_tags()
         for a in axis_tags:
@@ -384,7 +396,7 @@ class mastersWidget(QWidget):
         self.yg_font.masters.add_master(master_id, master_vals)
         self.refresh()
 
-    def del_master(self):
+    def del_master(self) -> None:
         self.yg_font.masters.del_by_name(self.current_master_name())
         self.master_list.clear()
         try:
@@ -395,7 +407,7 @@ class mastersWidget(QWidget):
             return
         self.refresh()
 
-    def refresh(self):
+    def refresh(self) -> None:
         if not len(self.yg_font.masters):
             return
         self.master_list.clear()
@@ -430,7 +442,7 @@ class masterWidget(QWidget):
 
     """
 
-    def __init__(self, masters, m_id, yg_font):
+    def __init__(self, masters: ygMasters, m_id: str, yg_font: ygFont) -> None:
         super().__init__()
         self.masters = masters
         self.m_id = m_id
@@ -451,7 +463,7 @@ class masterWidget(QWidget):
             self.master_layout.addLayout(axis_val_layout)
         self.setLayout(self.master_layout)
 
-    def refresh(self, m):
+    def refresh(self, m: Tuple[str, dict]) -> None:
         """Where m is a master tuple (id, dict of axis:val)"""
         self.m_id = m[0]
         self.master_name_widget.refresh(m)
@@ -472,7 +484,7 @@ class cvDeltaWidget(QTableView):
 
     """
 
-    def __init__(self, cv_source: cvSource):
+    def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.delta_data = self.cv_source.cvt().get_deltas(
@@ -506,17 +518,17 @@ class cvWidget(QWidget):
     def __init__(
         self,
         cv_source: cvSource,
-        yg_font,
-        owner,
+        yg_font: ygFont,
+        owner: cvEditPane,
         parent=None,
-        delta_pane=True,
-        variant_pane=True,
+        delta_pane: bool = True,
+        variant_pane: bool = True,
     ):
         super().__init__(parent=parent)
         self.yg_font = yg_font
         self.owner = owner
         self.cv_source = cv_source
-        self.layout = QVBoxLayout()
+        self.layout_obj = QVBoxLayout()
 
         # Set up tabs
 
@@ -590,8 +602,8 @@ class cvWidget(QWidget):
         self.cv_above_names_widget = cvNamesWidget(
             self.cv_source, "above", self.yg_font, ppem_widget=self.cv_above_ppem_widget
         )
-        self.cv_below_ppem_widget.name_widget = self.cv_below_names_widget
-        self.cv_above_ppem_widget.name_widget = self.cv_above_names_widget
+        self.cv_below_ppem_widget.name_widget = self.cv_below_names_widget # type: ignore
+        self.cv_above_ppem_widget.name_widget = self.cv_above_names_widget # type: ignore
 
         self.link_widgets = []
 
@@ -625,7 +637,7 @@ class cvWidget(QWidget):
             self.delta_button_layout = QHBoxLayout()
             add_delta_button = QPushButton("Add")
             del_delta_button = QPushButton("Delete")
-            add_delta_button.clicked.connect(self.delta_pane.model().new_row)
+            add_delta_button.clicked.connect(self.delta_pane.model().new_row) # type: ignore
             del_delta_button.clicked.connect(self.del_delta_row)
             self.delta_button_layout.addWidget(add_delta_button)
             self.delta_button_layout.addWidget(del_delta_button)
@@ -639,10 +651,10 @@ class cvWidget(QWidget):
             self.variants_tab_layout = QVBoxLayout()
             self.var_widgets = []
             self.var_layouts = []
-            master_keys = self.masters.keys()
+            master_keys = self.masters.keys() # type: ignore
             for k in master_keys:
                 self.var_layouts.append(QHBoxLayout())
-                self.var_layouts[-1].addWidget(QLabel(self.masters.get_master_name(k)))
+                self.var_layouts[-1].addWidget(QLabel(self.masters.get_master_name(k))) # type: ignore
                 self.var_widgets.append(cvVarWidget(k, self.cv_source))
                 self.var_layouts[-1].addWidget(self.var_widgets[-1])
 
@@ -652,23 +664,23 @@ class cvWidget(QWidget):
             self.link_tab_layout.addLayout(w)
         if self.variants_tab:
             for w in self.var_layouts:
-                self.variants_tab_layout.addLayout(w)
+                self.variants_tab_layout.addLayout(w) # type: ignore
 
         self.general_tab.setLayout(self.general_tab_layout)
         self.link_tab.setLayout(self.link_tab_layout)
         if self.delta_tab:
-            self.delta_tab.setLayout(self.delta_tab_layout)
+            self.delta_tab.setLayout(self.delta_tab_layout) # type: ignore
         if self.variants_tab:
-            self.variants_tab.setLayout(self.variants_tab_layout)
-        self.layout.addWidget(self.tabs)
-        self.setLayout(self.layout)
+            self.variants_tab.setLayout(self.variants_tab_layout) # type: ignore
+        self.layout_obj.addWidget(self.tabs)
+        self.setLayout(self.layout_obj)
 
-    def del_delta_row(self):
+    def del_delta_row(self) -> None:
         i = self.delta_pane.selectedIndexes()
         if len(i) > 0:
-            self.delta_pane.model().deleteRows(i[0].row(), 1)
+            self.delta_pane.model().deleteRows(i[0].row(), 1) # type: ignore
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         """If we're coming from the source pane, every cv in the
         cvt will have been replaced, so references to it have
         got to be refreshed and the widgets updated as needed.
@@ -691,7 +703,7 @@ class cvWidget(QWidget):
             for w in self.var_widgets:
                 w.refresh(self.cv_source)
 
-    def fixup(self):
+    def fixup(self) -> None:
         self.cv_name_widget.fixup()
         self.cv_type_widget.fixup()
         self.cv_axis_widget.fixup()
@@ -722,18 +734,18 @@ class defaultsPane(QWidget):
 
     """
 
-    def __init__(self, yg_font):
+    def __init__(self, yg_font: ygFont) -> None:
         super().__init__()
-        self.layout = QVBoxLayout()
+        self.layout_obj = QVBoxLayout()
         self.tabs = QTabWidget()
         self.round_widget = hintRoundWidget(yg_font)
         self.misc_widget = miscDefaultsWidget(yg_font)
         self.tabs.addTab(self.round_widget, "Rounding")
         self.tabs.addTab(self.misc_widget, "Miscellaneous")
-        self.layout.addWidget(self.tabs)
-        self.setLayout(self.layout)
+        self.layout_obj.addWidget(self.tabs)
+        self.setLayout(self.layout_obj)
 
-    def refresh(self):
+    def refresh(self) -> None:
         self.round_widget.refresh()
         self.misc_widget.refresh()
 
@@ -748,47 +760,47 @@ class hintRoundWidget(QWidget):
 
     """
 
-    def __init__(self, yg_font):
+    def __init__(self, yg_font: ygFont) -> None:
         super().__init__()
         self.yg_font = yg_font
         self.defaults = yg_font.defaults
-        self.layout = QVBoxLayout()
+        self.layout_obj = QVBoxLayout()
         self.ignore_signal = False
 
         self.anchor_layout = QHBoxLayout()
         self.anchor_checkbox = QCheckBox("Anchor")
         self.anchor_layout.addWidget(self.anchor_checkbox)
-        self.layout.addLayout(self.anchor_layout)
+        self.layout_obj.addLayout(self.anchor_layout)
 
         self.blackdist_layout = QHBoxLayout()
         self.blackdist_checkbox = QCheckBox("Black distance")
         self.blackdist_layout.addWidget(self.blackdist_checkbox)
-        self.layout.addLayout(self.blackdist_layout)
+        self.layout_obj.addLayout(self.blackdist_layout)
 
         self.whitedist_layout = QHBoxLayout()
         self.whitedist_checkbox = QCheckBox("White distance")
         self.whitedist_layout.addWidget(self.whitedist_checkbox)
-        self.layout.addLayout(self.whitedist_layout)
+        self.layout_obj.addLayout(self.whitedist_layout)
 
         self.graydist_layout = QHBoxLayout()
         self.graydist_checkbox = QCheckBox("Gray distance")
         self.graydist_layout.addWidget(self.graydist_checkbox)
-        self.layout.addLayout(self.graydist_layout)
+        self.layout_obj.addLayout(self.graydist_layout)
 
         self.shift_layout = QHBoxLayout()
         self.shift_checkbox = QCheckBox("Shift")
         self.shift_layout.addWidget(self.shift_checkbox)
-        self.layout.addLayout(self.shift_layout)
+        self.layout_obj.addLayout(self.shift_layout)
 
         self.align_layout = QHBoxLayout()
         self.align_checkbox = QCheckBox("Align")
         self.align_layout.addWidget(self.align_checkbox)
-        self.layout.addLayout(self.align_layout)
+        self.layout_obj.addLayout(self.align_layout)
 
         self.interpolate_layout = QHBoxLayout()
         self.interpolate_checkbox = QCheckBox("Interpolate")
         self.interpolate_layout.addWidget(self.interpolate_checkbox)
-        self.layout.addLayout(self.interpolate_layout)
+        self.layout_obj.addLayout(self.interpolate_layout)
 
         self.refresh()
 
@@ -800,9 +812,9 @@ class hintRoundWidget(QWidget):
         self.align_checkbox.stateChanged.connect(self.button_state_changed)
         self.interpolate_checkbox.stateChanged.connect(self.button_state_changed)
 
-        self.setLayout(self.layout)
+        self.setLayout(self.layout_obj)
 
-    def button_state_changed(self):
+    def button_state_changed(self) -> None:
         if self.ignore_signal:
             return
         r = {}
@@ -815,10 +827,10 @@ class hintRoundWidget(QWidget):
         r["interpolate"] = self.interpolate_checkbox.isChecked()
         self.defaults.set_rounding_defaults(r)
 
-    def fixup(self):
+    def fixup(self) -> None:
         pass
 
-    def refresh(self):
+    def refresh(self) -> None:
         self.ignore_signal = True
         self.anchor_checkbox.setChecked(self.defaults.rounding_state("anchor"))
         self.blackdist_checkbox.setChecked(self.defaults.rounding_state("blackdist"))
@@ -840,11 +852,11 @@ class miscDefaultsWidget(QWidget):
     yg_font (ygFont): the font now being edited.
     """
 
-    def __init__(self, yg_font):
+    def __init__(self, yg_font: ygFont) -> None:
         super().__init__()
         self.yg_font = yg_font
         self.defaults = yg_font.defaults
-        self.layout = QVBoxLayout()
+        self.layout_obj = QVBoxLayout()
         self.ignore_signal = False
 
         self.tt_defaults = QCheckBox("Use TrueType defaults")
@@ -859,15 +871,15 @@ class miscDefaultsWidget(QWidget):
         self.cleartype = QCheckBox("Cleartype")
         self.cleartype.stateChanged.connect(self.toggle_cleartype)
 
-        self.layout.addWidget(self.tt_defaults)
-        self.layout.addWidget(self.init_graphics)
-        self.layout.addWidget(self.assume_always_y)
-        self.layout.addWidget(self.cleartype)
-        self.setLayout(self.layout)
+        self.layout_obj.addWidget(self.tt_defaults)
+        self.layout_obj.addWidget(self.init_graphics)
+        self.layout_obj.addWidget(self.assume_always_y)
+        self.layout_obj.addWidget(self.cleartype)
+        self.setLayout(self.layout_obj)
 
         self.refresh()
 
-    def toggle_tt_defaults(self):
+    def toggle_tt_defaults(self) -> None:
         if self.ignore_signal:
             return
         if self.tt_defaults.isChecked():
@@ -875,7 +887,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("use-truetype-defaults")
 
-    def toggle_init_graphics(self):
+    def toggle_init_graphics(self) -> None:
         if self.ignore_signal:
             return
         if not self.init_graphics.isChecked():
@@ -883,7 +895,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("init-graphics")
 
-    def toggle_assume_always_y(self):
+    def toggle_assume_always_y(self) -> None:
         if self.ignore_signal:
             return
         if self.assume_always_y.isChecked():
@@ -891,7 +903,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("assume-always-y")
 
-    def toggle_cleartype(self):
+    def toggle_cleartype(self) -> None:
         if self.ignore_signal:
             return
         if self.cleartype.isChecked():
@@ -899,10 +911,10 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("cleartype")
 
-    def fixup(self):
+    def fixup(self) -> None:
         pass
 
-    def refresh(self, ign: bool = True):
+    def refresh(self, ign: bool = True) -> None:
         self.ignore_signal = ign
 
         t = self.defaults.get_default("use-truetype-defaults")
@@ -939,8 +951,7 @@ class makeCVDialog(QDialog, cvSource):
     preferences (ygPreferences): the preferences for this app.
 
     """
-
-    def __init__(self, p1, p2, yg_glyph, preferences):
+    def __init__(self, p1: ygPoint, p2: ygPoint, yg_glyph: ygGlyph, preferences: ygPreferences) -> None:
         super().__init__()
         self.top_window = preferences.top_window()
         self.yg_font = yg_glyph.yg_font
@@ -970,7 +981,7 @@ class makeCVDialog(QDialog, cvSource):
         self.cv["val"] = val
         self.cv["origin"] = {"glyph": yg_glyph.gname, "ptnum": origin_indices}
 
-        self.layout = QVBoxLayout()
+        self.layout_obj = QVBoxLayout()
 
         self.pane = cvWidget(
             self, self.yg_font, None, delta_pane=False, variant_pane=False
@@ -985,58 +996,60 @@ class makeCVDialog(QDialog, cvSource):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
-        self.layout.addWidget(self.pane)
-        self.layout.addWidget(self.buttonBox)
-        self.setLayout(self.layout)
+        self.layout_obj.addWidget(self.pane)
+        self.layout_obj.addWidget(self.buttonBox)
+        self.setLayout(self.layout_obj)
         self.setWindowTitle("Make Control Value")
 
-    def send_error_message(self, d: dict):
+    def send_error_message(self, d: dict) -> None:
         self.yg_font.send_error_message(d)
 
-    def cvt(self):
+    def cvt(self) -> ygcvt:
         return self._cvt
 
-    def current_cv(self):
+    def current_cv(self) -> dict:
         return self.cv
 
-    def current_cv_name(self):
+    def current_cv_name(self) -> str:
         return self.cv_name
 
     def set_cv_name(self, s: str):
         self.cv_name = s
 
-    def from_current_cv(self, s: str):
+    def from_current_cv(self, s: str) -> None:
         try:
             return self.cv[s]
         except KeyError:
-            return None
+            pass
 
-    def set_in_current_cv(self, k: str, s, fallback=None):
+    def set_in_current_cv(self, k: str, s: Any, fallback=None) -> None:
         if s == "None" or s == "" or s == None:
             if fallback != None:
                 self.cv[k] = fallback
             else:
-                if k in self._current_cv:
-                    del self._current_cv[k]
+                if k in self.cv:
+                    del self.cv[k]
+                #if k in self._current_cv:
+                #    del self._current_cv[k]
         else:
             self.cv[k] = s
 
-    def has_key(self, k: str):
+    def has_key(self, k: str) -> bool:
         return k in self.cv
 
-    def del_key(self, k: str):
+    def del_key(self, k: str) -> None:
         try:
             del self.cv[k]
         except KeyError:
             pass
 
-    def accept(self):
+    def accept(self) -> None:
         self.pane.fixup()
         if self.cv_name and len(self.cv) > 0:
             self._cvt.add_cv(self.cv_name, self.cv)
         super().accept()
 
-    def showEvent(self, event):
+    def showEvent(self, event) -> None:
         self.yg_font.undo_stack.setActive(True)
 
 
@@ -1051,7 +1064,7 @@ class cvNameWidget(QLineEdit):
     owner: The owner of this widget.
     """
 
-    def __init__(self, cv_source: cvSource, owner=None):
+    def __init__(self, cv_source: cvSource, owner: Any = None) -> None:
         super().__init__()
         self.owner = owner
         self.cv_source = cv_source
@@ -1066,16 +1079,16 @@ class cvNameWidget(QLineEdit):
             self.textChanged.connect(self.set_dirty)
         self.last_val = self.cv_name
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def fixup(self):
+    def fixup(self) -> None:
         t = self._text()
         if self.isEnabled() and self.dirty and t != self.last_val:
             # If the cv name changes, the original cv in the source tree
@@ -1091,10 +1104,10 @@ class cvNameWidget(QLineEdit):
             self.last_val = t
             self.set_clean()
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         self.fixup()
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         self.setText(self.cv_source.current_cv_name())
         self.set_clean()
@@ -1109,7 +1122,7 @@ class cvTypeWidget(QComboBox):
 
     """
 
-    def __init__(self, cv_source: cvSource):
+    def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.addItem("pos")
@@ -1119,19 +1132,19 @@ class cvTypeWidget(QComboBox):
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
-    def _text(self):
+    def _text(self) -> str:
         return self.currentText()
 
-    def fixup(self):
+    def fixup(self) -> None:
         t = self.currentText()
         if t != self.last_val:
-            self.cv_source.set_in_current_cv("type", self.currentText())
+            self.cv_source.set_in_current_cv("type", self.currentText(), None)
             self.last_val = t
 
-    def text_changed(self, event):
+    def text_changed(self, event) -> None:
         self.fixup()
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         self.setCurrentText(self.cv_source.from_current_cv("type"))
 
@@ -1145,7 +1158,7 @@ class cvColorWidget(QComboBox):
 
     """
 
-    def __init__(self, cv_source):
+    def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.addItem("None")
@@ -1157,23 +1170,23 @@ class cvColorWidget(QComboBox):
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
-    def _text(self):
+    def _text(self) -> str:
         return self.currentText()
 
-    def fixup(self):
+    def fixup(self) -> None:
         new_text = self.currentText()
         if new_text != self.last_val:
             if self.cv_source.current_cv():
                 if new_text != "None":
-                    self.cv_source.set_in_current_cv("col", new_text)
+                    self.cv_source.set_in_current_cv("col", new_text, None)
                 else:
                     self.cv_source.del_key("col")
             self.last_val = new_text
 
-    def text_changed(self, s):
+    def text_changed(self, s) -> None:
         self.fixup()
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         if self.cv_source.has_key("col"):
             self.setCurrentText(self.cv_source.from_current_cv("col"))
@@ -1190,7 +1203,7 @@ class cvAxisWidget(QComboBox):
 
     """
 
-    def __init__(self, cv_source: cvSource):
+    def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.addItem("y")
@@ -1200,19 +1213,19 @@ class cvAxisWidget(QComboBox):
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
-    def _text(self):
+    def _text(self) -> str:
         return self.currentText()
 
-    def fixup(self):
+    def fixup(self) -> None:
         t = self.currentText()
         if t != self.last_val:
-            self.cv_source.set_in_current_cv("axis", self.currentText())
+            self.cv_source.set_in_current_cv("axis", self.currentText(), None)
             self.last_val = t
 
-    def text_changed(self, s):
+    def text_changed(self, s) -> None:
         self.fixup()
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source) -> None:
         self.cv_source = cv_source
         if self.cv_source.has_key("axis"):
             self.setCurrentText(self.cv_source.from_current_cv("axis"))
@@ -1243,24 +1256,24 @@ class cvUCatWidget(QComboBox):
         self.currentTextChanged.connect(self.text_changed)
         self.last_val = self.currentText()
 
-    def _text(self):
+    def _text(self) -> str:
         return self.currentText()
 
-    def fixup(self):
+    def fixup(self) -> None:
         new_text = self.currentText()
         if new_text != self.last_val:
             if not new_text or new_text == "None":
                 self.cv_source.del_key("cat")
             else:
                 self.cv_source.set_in_current_cv(
-                    "cat", reverse_unicode_cat_names[new_text]
+                    "cat", reverse_unicode_cat_names[new_text], None
                 )
             self.last_val = new_text
 
-    def text_changed(self, s):
+    def text_changed(self, s) -> None:
         self.fixup()
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source) -> None:
         self.cv_source = cv_source
         if self.cv_source.has_key("cat"):
             self.setCurrentText(
@@ -1280,7 +1293,7 @@ class cvSuffixWidget(QLineEdit):
 
     """
 
-    def __init__(self, cv_source: cvSource):
+    def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.dirty = False
@@ -1290,27 +1303,27 @@ class cvSuffixWidget(QLineEdit):
         self.textChanged.connect(self.set_dirty)
         self.last_val = self.text()
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def fixup(self):
+    def fixup(self) -> None:
         if self.dirty:
-            self.cv_source.set_in_current_cv("suffix", self._text())
+            self.cv_source.set_in_current_cv("suffix", self._text(), None)
             self.set_clean()
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
             self.fixup()
             self.last_val = t
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         suff = self.cv_source.from_current_cv("suffix")
         self.setText((lambda: "None" if not suff else suff)())
@@ -1343,16 +1356,16 @@ class cvVarWidget(QLineEdit):
         self.textChanged.connect(self.set_dirty)
         self.last_val = str(k)
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def fixup(self):
+    def fixup(self) -> None:
         """The behavior we want is this: if the widget is blank,
         delete the value for this master and display "None"
         in the widget. If widget has a valid integer, plug
@@ -1365,20 +1378,20 @@ class cvVarWidget(QLineEdit):
                 current_vars = {}
             if new_text:
                 current_vars[self.var_id] = int(new_text)
-                self.cv_source.set_in_current_cv("var", current_vars)
+                self.cv_source.set_in_current_cv("var", current_vars, None)
             else:
                 if len(current_vars) == 0:
                     self.cv_source.del_key("var")
-                    self.refresh()
+                    self.refresh(self.cv_source)
             self.set_clean()
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
             self.fixup()
             self.last_val = t
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         v = self.cv_source.from_current_cv("var")
         k = "None"
@@ -1397,7 +1410,7 @@ class cvValueWidget(QLineEdit):
 
     """
 
-    def __init__(self, cv_source: cvSource):
+    def __init__(self, cv_source: cvSource) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.dirty = False
@@ -1407,32 +1420,32 @@ class cvValueWidget(QLineEdit):
         self.textChanged.connect(self.set_dirty)
         self.last_val = self.text()
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def fixup(self):
+    def fixup(self) -> None:
         t = self._text()
         if t != self.last_val:
             try:
                 i = int(t)
             except ValueError:
                 i = 0
-            self.cv_source.set_in_current_cv("val", i, fallback=0)
+            self.cv_source.set_in_current_cv("val", i, fallback = 0)
             self.set_clean()
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
             self.fixup()
             self.last_val = t
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         i = self.cv_source.from_current_cv("val")
         self.setText((lambda: "0" if not i else str(i))())
@@ -1450,11 +1463,11 @@ class cvPPEMWidget(QLineEdit):
 
     """
 
-    def __init__(self, cv_source: cvSource, above_below: str):
+    def __init__(self, cv_source: cvSource, above_below: str) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.above_below = above_below
-        self.name_widget = None
+        self.name_widget: Optional[cvNameWidget] = None
         self.dirty = False
         s = self.cv_source.from_current_cv("same-as")
         v = "40"
@@ -1468,16 +1481,16 @@ class cvPPEMWidget(QLineEdit):
         self.textChanged.connect(self.set_dirty)
         self.last_val = "40"
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def fixup(self):
+    def fixup(self) -> None:
         new_name = self.name_widget._text()
         name_valid = new_name != "None"
         try:
@@ -1491,7 +1504,7 @@ class cvPPEMWidget(QLineEdit):
                 s = {self.above_below: {}}
             s[self.above_below]["cv"] = new_name
             s[self.above_below]["ppem"] = new_val
-            self.cv_source.set_in_current_cv("same-as", s)
+            self.cv_source.set_in_current_cv("same-as", s, None)
         else:
             if self.cv_source.has_key("same-as"):
                 s = self.cv_source.from_current_cv("same-as")
@@ -1501,13 +1514,13 @@ class cvPPEMWidget(QLineEdit):
                     self.cv_source.del_key("same-as")
         self.set_clean()
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
             self.fixup()
             self.last_val = t
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         p = "40"
         s = self.cv_source.from_current_cv("same-as")
@@ -1532,7 +1545,13 @@ class cvNamesWidget(QComboBox):
 
     """
 
-    def __init__(self, cv_source: cvSource, above_below, yg_font, ppem_widget=None):
+    def __init__(
+            self,
+            cv_source: cvSource,
+            above_below: str,
+            yg_font: ygFont,
+            ppem_widget: cvPPEMWidget = None
+        ) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.yg_font = yg_font
@@ -1550,17 +1569,17 @@ class cvNamesWidget(QComboBox):
         self.setCurrentText(n)
         self.currentTextChanged.connect(self.text_changed)
 
-    def _text(self):
+    def _text(self) -> str:
         return self.currentText()
 
-    def fixup(self):
+    def fixup(self) -> None:
         if self.ppem_widget:
             self.ppem_widget.fixup()
 
-    def text_changed(self, s):
+    def text_changed(self, s) -> None:
         self.fixup()
 
-    def refresh(self, cv_source):
+    def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         n = "None"
         if self.cv_source.has_key("same-as"):
@@ -1582,7 +1601,7 @@ class masterNameWidget(QLineEdit):
 
     """
 
-    def __init__(self, masters: ygMasters, m_id: str):
+    def __init__(self, masters: ygMasters, m_id: str) -> None:
         super().__init__()
         self.masters = masters
         self.m_id = m_id
@@ -1593,29 +1612,29 @@ class masterNameWidget(QLineEdit):
         self.textChanged.connect(self.set_dirty)
         self.last_val = master_name
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def refresh(self, m):
+    def refresh(self, m: tuple) -> None:
         """refresh is for updating editing widgets from the model."""
         self.m_id = m[0]
         self.setText(self.masters.get_master_name(self.m_id))
         self.set_clean()
 
-    def fixup(self):
+    def fixup(self) -> None:
         """fixup is for changing the model based on what's in the editing
         widgets.
         """
         self.masters.set_master_name(self.m_id, self._text())
         self.set_clean()
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         t = self._text()
         if self.dirty and t != self.last_val:
             self.fixup()
@@ -1635,7 +1654,7 @@ class masterValWidget(QLineEdit):
 
     """
 
-    def __init__(self, masters: ygMasters, m_id: str, axis):
+    def __init__(self, masters: ygMasters, m_id: str, axis: str) -> None:
         super().__init__()
         self.masters = masters
         self.m_id = m_id
@@ -1650,23 +1669,23 @@ class masterValWidget(QLineEdit):
         self.textChanged.connect(self.set_dirty)
         self.last_val = str(self.init_val)
 
-    def _text(self):
+    def _text(self) -> str:
         return self.text().strip()
 
-    def set_dirty(self):
+    def set_dirty(self) -> None:
         self.dirty = True
 
-    def set_clean(self):
+    def set_clean(self) -> None:
         self.dirty = False
 
-    def refresh(self, m):
+    def refresh(self, m: tuple) -> None:
         """refresh is for updating editing widgets from the model."""
         if m:
             self.m_id = m[0]
         self.setText(str(self.masters.get_axis_value(self.m_id, self.axis)))
         self.set_clean()
 
-    def fixup(self):
+    def fixup(self) -> None:
         """fixup is for changing the model based on what's in the editing
         widgets.
         """
@@ -1685,7 +1704,7 @@ class masterValWidget(QLineEdit):
             print(e)
             pass
 
-    def text_changed(self):
+    def text_changed(self) -> None:
         t = self._text()
         if self.dirty and t != self.last_val:
             self.fixup()

@@ -1,3 +1,4 @@
+from typing import Optional, Callable, Any
 from PyQt6.QtCore import pyqtSignal, Qt, QTimer, pyqtSlot
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox
 from PyQt6.QtGui import QSyntaxHighlighter, QTextCharFormat, QColor
@@ -5,8 +6,10 @@ import yaml
 import re
 from yaml import Dumper
 import copy
-from schema import SchemaError
+from schema import SchemaError # type: ignore
 from .ygSchema import is_valid, set_error_message, error_message, have_error_message
+from .ygModel import ygSourceable
+from .ygPreferences import ygPreferences
 
 
 # From https://stackoverflow.com/questions/8640959/
@@ -36,7 +39,7 @@ class ygYAMLEditor(QPlainTextEdit):
     sig_status = pyqtSignal(object)
     sig_error = pyqtSignal(object)
 
-    def __init__(self, preferences, parent=None):
+    def __init__(self, preferences, parent = None) -> None:
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setStyleSheet(
@@ -51,17 +54,18 @@ class ygYAMLEditor(QPlainTextEdit):
         self.code_valid = True
         self.setup_editor()
 
-    def setup_error_signal(self, f):
+    def setup_error_signal(self, f: Callable) -> None:
         self.sig_error.connect(f)
 
     @pyqtSlot(object)
-    def install_source(self, text):
+    def install_source(self, text: str) -> None:
         self.setPlainText(text)
 
     @pyqtSlot()
-    def yaml_source(self):
+    def yaml_source(self) -> None:
         err = False
-        msg = ""
+        # msg = ""
+        s = ""
         try:
             s = yaml.safe_load(self.toPlainText())
         except Exception as e:
@@ -71,24 +75,24 @@ class ygYAMLEditor(QPlainTextEdit):
         if not err:
             try:
                 err = not is_valid({"points": s})
-            except SchemaError as s:
+            except SchemaError as se:
                 err = True
         if err:
             self.sig_error.emit({"msg": error_message(), "mode": "console"})
         else:
             self.sig_source_from_editor.emit(s)
 
-    def setup_status_indicator(self, o):
+    def setup_status_indicator(self, o: Callable) -> None:
         self.sig_status.connect(o)
 
-    def setup_editor_signals(self, f):
+    def setup_editor_signals(self, f: Callable) -> None:
         self.sig_source_from_editor.connect(f)
 
-    def disconnect_editor_signals(self, f):
+    def disconnect_editor_signals(self, f: Callable) -> None:
         self.sig_source_from_editor.disconnect(f)
 
     @pyqtSlot()
-    def check_valid(self):
+    def check_valid(self) -> None:
         if not self.code_valid:
             if not have_error_message():
                 set_error_message("Source can't be parsed.")
@@ -96,7 +100,7 @@ class ygYAMLEditor(QPlainTextEdit):
             self.sig_status.emit(self.code_valid)
 
     @pyqtSlot()
-    def text_changed(self):
+    def text_changed(self) -> None:
         self.code_valid = True
         y = self.toPlainText()
         if len(y) == 0:
@@ -121,7 +125,7 @@ class ygYAMLEditor(QPlainTextEdit):
         else:
             self._timer.start(2000)
 
-    def setup_editor(self):
+    def setup_editor(self) -> None:
         tags = r"\b(ptid|ref|rel|macro|function|pos|dist|points|round|min)\:"
         twospace = r"(  |\- )"
         fourspace = r"(    |  \- )"
@@ -184,7 +188,13 @@ class editorPane(QPlainTextEdit):
 
     sig_error = pyqtSignal(object)
 
-    def __init__(self, owner, sourceable, validator, save_on_focus_out=False):
+    def __init__(
+            self,
+            owner: "editorDialog",
+            sourceable: ygSourceable,
+            validator: Callable,
+            save_on_focus_out: bool = False
+        ) -> None:
         super().__init__()
         self.save_on_focus_out = save_on_focus_out
         self.owner = owner
@@ -200,14 +210,14 @@ class editorPane(QPlainTextEdit):
         self._timer = QTimer()
         self._timer.timeout.connect(self.check_valid)
 
-    def setup_error_signal(self, f):
+    def setup_error_signal(self, f: Callable):
         self.sig_error.connect(f)
 
-    def install_text(self, text):
+    def install_text(self, text: str) -> None:
         self.setPlainText(text)
         self.watching_for_changes = True
 
-    def install_yaml(self, y):
+    def install_yaml(self, y: Any) -> None:
         try:
             t = yaml.dump(y, sort_keys=False, Dumper=Dumper)
         except Exception as e:
@@ -215,7 +225,7 @@ class editorPane(QPlainTextEdit):
             t = self.owner._empty_string
         self.install_text(t)
 
-    def set_style(self):
+    def set_style(self) -> None:
         if self.error_state:
             self.setStyleSheet(
                 "QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: rgb(252,227,242);  }"
@@ -225,27 +235,28 @@ class editorPane(QPlainTextEdit):
                 "QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: white;  }"
             )
 
-    def set_error_state(self, b):
+    def set_error_state(self, b: bool) -> None:
         if self.error_state != b:
             self.error_state = b
             self.set_style()
 
-    def yaml_source(self):
+    def yaml_source(self) -> Any:
         try:
             t = yaml.safe_load(self.toPlainText())
             self.set_error_state(False)
-            return t
         except Exception as e:
             self.set_error_state(True)
             self.sig_error.emit({"msg": "Source can't be parsed.", "mode": "console"})
+            t = self.owner._empty_string
+        return t
 
     @pyqtSlot()
-    def check_valid(self):
+    def check_valid(self) -> None:
         self.set_error_state(True)
         self.sig_error.emit({"msg": error_message(), "mode": "console"})
 
     @pyqtSlot()
-    def text_changed(self):
+    def text_changed(self) -> None:
         if not self.watching_for_changes:
             return
         self.sourceable.set_clean(False)
@@ -265,7 +276,7 @@ class editorPane(QPlainTextEdit):
             self.owner.set_dialog_title(False)
         self.dirty = True
 
-    def focusOutEvent(self, event):
+    def focusOutEvent(self, event) -> None:
         if self.save_on_focus_out and self.dirty:
             c = self.yaml_source()
             if c != None:
@@ -280,15 +291,22 @@ class editorPane(QPlainTextEdit):
             if self.error_state:
                 self.sig_error.emit({"msg": error_message(), "mode": "console"})
 
-    def showEvent(self, event):
+    def showEvent(self, event) -> None:
         self.install_yaml(copy.copy(self.sourceable.source()))
 
-    def refresh(self):
+    def refresh(self) -> None:
         self.install_yaml(copy.copy(self.sourceable.source()))
 
 
 class editorDialog(QDialog):
-    def __init__(self, preferences, sourceable, title, validator, top_structure="dict"):
+    def __init__(
+            self,
+            preferences: ygPreferences,
+            sourceable: ygSourceable,
+            title: str,
+            validator: Callable,
+            top_structure: str = "dict"
+        ):
         super().__init__()
         self.title = title
         self.set_dialog_title(True)
@@ -300,37 +318,35 @@ class editorDialog(QDialog):
         else:
             self._empty_string = "[]\n"
         self.setMinimumSize(500, 500)
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
+        self._layout = QVBoxLayout()
+        self.setLayout(self._layout)
         self.edit_pane = editorPane(self, sourceable, validator)
         self.edit_pane.setup_error_signal(
             self.preferences.top_window().error_manager.new_message
         )
-        self.layout.addWidget(self.edit_pane)
+        self._layout.addWidget(self.edit_pane)
         QBtn = (
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self.buttonBox = QDialogButtonBox(QBtn)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
-        self.layout.addWidget(self.buttonBox)
+        self._layout.addWidget(self.buttonBox)
 
-    def set_dialog_title(self, is_valid):
+    def set_dialog_title(self, is_valid: bool) -> None:
         v = " (Invalid)"
         if is_valid:
             v = " (Valid)"
         self.setWindowTitle(self.title + v)
 
-    def reject(self):
+    def reject(self) -> None:
         self.done(QDialog.DialogCode.Rejected)
 
-    def accept(self):
-        print("Accept")
+    def accept(self) -> None:
         err = False
         c = self.edit_pane.yaml_source()
         if c != None:
             if self.edit_pane.is_valid(c):
-                print("running save")
                 self.sourceable.save(c)
             else:
                 err = True
@@ -343,14 +359,14 @@ class editorDialog(QDialog):
 
 
 class ygGlyphHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent=None):
+    def __init__(self, parent = None):
         QSyntaxHighlighter.__init__(self, parent)
         self._mappings = {}
 
-    def add_mapping(self, pattern, format):
+    def add_mapping(self, pattern: str, format: QTextCharFormat) -> None:
         self._mappings[pattern] = format
 
-    def highlightBlock(self, text):
+    def highlightBlock(self, text: str) -> None:
         for pattern, format in self._mappings.items():
             matches = re.finditer(pattern, text)
             for match in matches:

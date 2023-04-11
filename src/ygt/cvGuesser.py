@@ -1,4 +1,4 @@
-from fontTools.varLib import instancer
+from fontTools.varLib import instancer  # type: ignore
 
 
 class instanceChecker:

@@ -1,5 +1,5 @@
 # import inspect
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar, Union, Optional
 import sys
 import os
 import copy
@@ -22,8 +22,8 @@ from .ygSchema import (
 )
 from .ygError import ygErrorMessages
 from .makeCVDialog import fontInfoWindow
-from xgridfit import compile_list, compile_all
-from fontTools import ufoLib
+from xgridfit import compile_list, compile_all # type: ignore
+from fontTools import ufoLib # type: ignore
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
 from PyQt6.QtWidgets import (
     QWidget,
@@ -40,6 +40,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QProgressBar,
     QVBoxLayout,
+    QMenu,
 )
 from PyQt6.QtGui import (
     QKeySequence,
@@ -49,7 +50,9 @@ from PyQt6.QtGui import (
     QUndoStack,
     QUndoGroup,
     QCloseEvent,
+    QAction,
 )
+from fontTools import ttLib, ufoLib # type: ignore
 
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
@@ -74,14 +77,14 @@ class ygPreviewFontMaker(QThread):
     sig_preview_ready = pyqtSignal(object)
     sig_preview_error = pyqtSignal()
 
-    def __init__(self, font, source, glyph_list):
+    def __init__(self, font: ttLib.TTFont, source: dict, glyph_list: list) -> None:
         super().__init__()
         self.ft_font = font
         self.source = source
         self.glyph_list = glyph_list
         self.error = False
 
-    def run(self):
+    def run(self) -> None:
         try:
             font = copy.deepcopy(self.ft_font)
             tmp_font, glyph_index, failed_glyph_list = compile_list(
@@ -100,14 +103,14 @@ class ygFontGenerator(QThread):
     sig_font_gen_done = pyqtSignal(object)
     sig_font_gen_error = pyqtSignal()
 
-    def __init__(self, font, source, output_font):
+    def __init__(self, font: ttLib.TTFont, source: dict, output_font: str) -> None:
         super().__init__()
         self.ft_font = font
         self.source = source
         self.output_font = output_font
         self.error = False
 
-    def run(self):
+    def run(self) -> None:
         try:
             font = copy.deepcopy(self.ft_font)
             failed_glyph_list = compile_all(font, self.source, self.output_font)
@@ -117,7 +120,13 @@ class ygFontGenerator(QThread):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, app, win_list=None, prefs=None, parent=None):
+    def __init__(
+            self,
+            app: QApplication,
+            win_list: Optional[list] = None,
+            prefs: Optional[ygPreferences] = None,
+            parent = None
+        ):
         super(MainWindow, self).__init__(parent=parent)
         self.undo_group = QUndoGroup()
         self.undo_group.cleanChanged.connect(self.clean_changed)
@@ -129,16 +138,16 @@ class MainWindow(QMainWindow):
             self.win_list = [self]
         else:
             self.win_list = win_list
-        self.filename = None
-        self.filename_extension = None
-        self.font_info_editor = None
-        self.cvt_editor = None
+        self.filename = ""
+        # self.filename_extension = ""
+        self.font_info_editor: Optional[fontInfoWindow] = None
+        self.cvt_editor: Optional[editorDialog] = None
         # self.cvar_editor = None
-        self.prep_editor = None
-        self.function_editor = None
-        self.macro_editor = None
-        self.default_editor = None
-        self.font_viewer = None
+        self.prep_editor: Optional[editorDialog] = None
+        self.function_editor: Optional[editorDialog] = None
+        self.macro_editor: Optional[editorDialog] = None
+        self.default_editor: Optional[editorDialog] = None
+        self.font_viewer: Optional[fontViewDialog] = None
         self.statusbar = self.statusBar()
         self.statusbar_label = QLabel()
         self.statusbar_label.setStyleSheet(
@@ -152,8 +161,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("YGT")
         self.toolbar = self.addToolBar("Tools")
         self.toolbar.setIconSize(QSize(32, 32))
-        self.progress_bar = None
-        self.progress_bar_action = None
+        self.progress_bar: Optional[QProgressBar] = None
+        self.progress_bar_action: Optional[QAction] = None
         self.spacer = QWidget()
         self.spacer.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
@@ -161,19 +170,19 @@ class MainWindow(QMainWindow):
         self.spacer_action = self.toolbar.addWidget(self.spacer)
         self.preview_container = QVBoxLayout()
         self.qs = QSplitter(self)
-        self.glyph_pane = None
-        self.preview_glyph_name = None
-        self.preview_glyph_name_list = []
-        self.yg_font = None
-        self.source_editor = None
-        self.preview_scroller = None
-        self.yg_preview = None
-        self.yg_string_preview = None
+        self.glyph_pane: Optional[ygGlyphView] = None
+        self.preview_glyph_name: Optional[str] = None
+        self.preview_glyph_name_list: list = []
+        self.yg_font: Optional[ygFont] = None
+        self.source_editor: Optional[ygYAMLEditor] = None
+        self.preview_scroller: Optional[QScrollArea] = None
+        self.yg_preview = None # type: Optional[ygPreview]
+        self.yg_string_preview: Optional[ygStringPreview] = None
         self.app = app
 
         # Stuff that's stored in the preference file
-        self.preferences = None
-        self.points_as_coords = None
+        self.preferences: Optional[ygPreferences] = None
+        self.points_as_coords = False
         self.zoom_factor = None
         self.show_off_curve_points = None
         self.show_point_numbers = None
@@ -183,13 +192,13 @@ class MainWindow(QMainWindow):
         else:
             self.get_preferences(prefs)
 
-        self.recents_display = []
-        self.recents_actions = []
-        self.instance_actions = []
-        self.window_list = []
-        self.thread = None
-        self.preview_maker = None
-        self.font_generator = None
+        self.recents_display: list = []
+        self.recents_actions: list = []
+        self.instance_actions: list = []
+        self.window_list: list = []
+        # self.thread = None
+        self.preview_maker: Optional[ygPreviewFontMaker] = None
+        self.font_generator: Optional[ygFontGenerator] = None
         self.auto_preview_update = True
 
         self.menu = self.menuBar()
@@ -289,7 +298,7 @@ class MainWindow(QMainWindow):
 
         self.pv_bigger_ten_action = self.preview_menu.addAction("Grow by Ten")
         self.pv_bigger_ten_action.setShortcut(
-            QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up)
+            QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Up) # type: ignore
         )
         self.pv_bigger_ten_action.setEnabled(False)
 
@@ -299,7 +308,7 @@ class MainWindow(QMainWindow):
 
         self.pv_smaller_ten_action = self.preview_menu.addAction("Shrink by Ten")
         self.pv_smaller_ten_action.setShortcut(
-            QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down)
+            QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Down) # type: ignore
         )
         self.pv_smaller_ten_action.setEnabled(False)
 
@@ -314,7 +323,7 @@ class MainWindow(QMainWindow):
         self.pv_show_grid_action.setChecked(True)
         self.pv_show_grid_action.setEnabled(False)
 
-        self.instance_menu = None
+        self.instance_menu: Optional[QMenu] = None
 
         self.preview_menu.addSeparator()
 
@@ -488,9 +497,9 @@ class MainWindow(QMainWindow):
         self.black_action.setShortcuts(
             [
                 QKeySequence(Qt.Key.Key_B),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B),
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_B),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_B),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B), # type: ignore
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_B), # type: ignore
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_B), # type: ignore
             ]
         )
         self.black_action.setEnabled(False)
@@ -502,9 +511,9 @@ class MainWindow(QMainWindow):
         self.white_action.setShortcuts(
             [
                 QKeySequence(Qt.Key.Key_W),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W),
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_W),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_W),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W), # type: ignore
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_W), # type: ignore
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_W), # type: ignore
             ]
         )
         self.white_action.setEnabled(False)
@@ -514,9 +523,9 @@ class MainWindow(QMainWindow):
         self.gray_action.setShortcuts(
             [
                 QKeySequence(Qt.Key.Key_G),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G),
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_G),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_G),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G), # type: ignore
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_G), # type: ignore
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_G), # type: ignore
             ]
         )
         self.gray_action.setEnabled(False)
@@ -524,14 +533,14 @@ class MainWindow(QMainWindow):
         self.shift_action = self.toolbar.addAction("Shift (S)")
         self.shift_action.setIcon(QIcon(QPixmap(self.icon_path + "shift.png")))
         self.shift_action.setShortcuts(
-            [QKeySequence(Qt.Key.Key_S), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_S)]
+            [QKeySequence(Qt.Key.Key_S), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_S)] # type: ignore
         )
         self.shift_action.setEnabled(False)
 
         self.align_action = self.toolbar.addAction("Align (L)")
         self.align_action.setIcon(QIcon(QPixmap(self.icon_path + "align.png")))
         self.align_action.setShortcuts(
-            [QKeySequence(Qt.Key.Key_L), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_L)]
+            [QKeySequence(Qt.Key.Key_L), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_L)] # type: ignore
         )
         self.align_action.setEnabled(False)
 
@@ -540,7 +549,7 @@ class MainWindow(QMainWindow):
             QIcon(QPixmap(self.icon_path + "interpolate.png"))
         )
         self.interpolate_action.setShortcuts(
-            [QKeySequence(Qt.Key.Key_I), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_I)]
+            [QKeySequence(Qt.Key.Key_I), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_I)] # type: ignore
         )
         self.interpolate_action.setEnabled(False)
 
@@ -549,9 +558,9 @@ class MainWindow(QMainWindow):
         self.anchor_action.setShortcuts(
             [
                 QKeySequence(Qt.Key.Key_A),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A),
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_A),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_A),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_A), # type: ignore
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_A), # type: ignore
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_A), # type: ignore
             ]
         )
         self.anchor_action.setEnabled(False)
@@ -1046,7 +1055,7 @@ class MainWindow(QMainWindow):
         glyph.gsource.clear()
         for k in glyph_backup.keys():
             glyph.gsource[k] = glyph_backup[k]
-        self.undo_group.set_all_clean()
+        self.set_all_clean()
 
     @pyqtSlot()
     def export_font(self) -> None:
@@ -1108,7 +1117,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def open_recent(self) -> None:
-        f = self.sender().text()
+        f = self.sender().text() # type: ignore
         ff = None
         try:
             i = self.recents_display.index(f)
@@ -1264,7 +1273,8 @@ class MainWindow(QMainWindow):
             self.preferences.add_recent(filename)
             split_fn = os.path.splitext(filename)
             fn_base = split_fn[0]
-            self.filename_extension = extension = split_fn[1]
+            # self.filename_extension = extension = split_fn[1]
+            extension = split_fn[1]
             yaml_source = {}
             # If file is .ttf, create a skeleton yaml_source and a ygt_filename.
             # If file is .ufo, read yaml source if possible, or if not create skeleton.
@@ -1324,7 +1334,7 @@ class MainWindow(QMainWindow):
     # GUI management
     #
 
-    def selection_changed(self, selection_profile):
+    def selection_changed(self, selection_profile: list):
         total_selected = selection_profile[0] + selection_profile[1]
         # fix up make cv button
         if total_selected >= 1 and total_selected <= 2:
@@ -1648,7 +1658,7 @@ class MainWindow(QMainWindow):
     def moveEvent(self, event):
         self.preferences.set_top_window_pos(event.pos().x(), event.pos().y())
 
-    def get_preferences(self, prefs: ygPreferences) -> None:
+    def get_preferences(self, prefs: Optional[ygPreferences]) -> None:
         self.preferences = prefs
         self.points_as_coords = self.preferences.points_as_coords()
         self.zoom_factor = self.preferences.zoom_factor()

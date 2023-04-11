@@ -1,4 +1,4 @@
-import freetype as ft
+import freetype as ft # type: ignore
 import numpy
 import copy
 from tempfile import SpooledTemporaryFile
