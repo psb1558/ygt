@@ -1004,9 +1004,7 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
         for m in markers:
             if not min_x:
                 min_x = m._x
-            #else:
-            #    print(type(min_x))
-            #    print(type(m._x))
+            else:
                 min_x = min(min_x, m._x)
             if not min_y:
                 min_y = m._y
