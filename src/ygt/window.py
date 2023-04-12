@@ -492,48 +492,24 @@ class MainWindow(QMainWindow):
         self.cursor_action.setEnabled(False)
         self.hand_action.setEnabled(False)
 
-        self.black_action = self.toolbar.addAction("Black Distance (B)")
-        self.black_action.setIcon(QIcon(QPixmap(self.icon_path + "black_distance.png")))
-        self.black_action.setShortcuts(
+        self.stem_action = self.toolbar.addAction("Stem (T)")
+        self.stem_action.setIcon(QIcon(QPixmap(self.icon_path + "stem_distance.png")))
+        self.stem_action.setShortcuts(
             [
-                QKeySequence(Qt.Key.Key_B),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_B), # type: ignore
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_B), # type: ignore
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_B), # type: ignore
+                QKeySequence(Qt.Key.Key_T),
+                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_T), # type: ignore
+                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_T), # type: ignore
+                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_T), # type: ignore
             ]
         )
-        self.black_action.setEnabled(False)
+        self.stem_action.setEnabled(False)
 
-        self.toolbar.insertSeparator(self.black_action)
+        self.toolbar.insertSeparator(self.stem_action)
 
-        self.white_action = self.toolbar.addAction("White Distance (W)")
-        self.white_action.setIcon(QIcon(QPixmap(self.icon_path + "white_distance.png")))
-        self.white_action.setShortcuts(
-            [
-                QKeySequence(Qt.Key.Key_W),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_W), # type: ignore
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_W), # type: ignore
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_W), # type: ignore
-            ]
-        )
-        self.white_action.setEnabled(False)
-
-        self.gray_action = self.toolbar.addAction("Gray Distance (G)")
-        self.gray_action.setIcon(QIcon(QPixmap(self.icon_path + "gray_distance.png")))
-        self.gray_action.setShortcuts(
-            [
-                QKeySequence(Qt.Key.Key_G),
-                QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_G), # type: ignore
-                QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_G), # type: ignore
-                QKeySequence(Qt.Modifier.CTRL | Qt.Modifier.SHIFT | Qt.Key.Key_G), # type: ignore
-            ]
-        )
-        self.gray_action.setEnabled(False)
-
-        self.shift_action = self.toolbar.addAction("Shift (S)")
+        self.shift_action = self.toolbar.addAction("Shift (H)")
         self.shift_action.setIcon(QIcon(QPixmap(self.icon_path + "shift.png")))
         self.shift_action.setShortcuts(
-            [QKeySequence(Qt.Key.Key_S), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_S)] # type: ignore
+            [QKeySequence(Qt.Key.Key_H), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_H)] # type: ignore
         )
         self.shift_action.setEnabled(False)
 
@@ -840,9 +816,7 @@ class MainWindow(QMainWindow):
             a.triggered.disconnect(self.open_recent)
 
     def setup_hint_connections(self) -> None:
-        self.black_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
-        self.white_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
-        self.gray_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
+        self.stem_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.anchor_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.interpolate_action.triggered.connect(
             self.glyph_pane.make_hint_from_selection
@@ -1334,6 +1308,9 @@ class MainWindow(QMainWindow):
     # GUI management
     #
 
+    def setup_stem_buttons(self, axis):
+        pass
+
     def selection_changed(self, selection_profile: list):
         total_selected = selection_profile[0] + selection_profile[1]
         # fix up make cv button
@@ -1348,9 +1325,7 @@ class MainWindow(QMainWindow):
         if selection_profile[0] == 0 and selection_profile[1] == 1:
             # enable anchor button
             self.anchor_action.setEnabled(True)
-            self.black_action.setEnabled(False)
-            self.white_action.setEnabled(False)
-            self.gray_action.setEnabled(False)
+            self.stem_action.setEnabled(False)
             self.shift_action.setEnabled(False)
             self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
@@ -1363,15 +1338,11 @@ class MainWindow(QMainWindow):
                 self.make_set_action.setEnabled(False)
             if selection_profile[1] == 1:
                 # Enable link buttons
-                self.black_action.setEnabled(True)
-                self.white_action.setEnabled(True)
-                self.gray_action.setEnabled(True)
+                self.stem_action.setEnabled(True)
                 self.shift_action.setEnabled(True)
                 self.align_action.setEnabled(True)
             else:
-                self.black_action.setEnabled(False)
-                self.white_action.setEnabled(False)
-                self.gray_action.setEnabled(False)
+                self.stem_action.setEnabled(False)
                 self.shift_action.setEnabled(False)
                 self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
@@ -1379,18 +1350,14 @@ class MainWindow(QMainWindow):
         elif selection_profile[0] == 2 and selection_profile[1] == 1:
             # Enable interpolation button
             self.interpolate_action.setEnabled(True)
-            self.black_action.setEnabled(False)
-            self.white_action.setEnabled(False)
-            self.gray_action.setEnabled(False)
+            self.stem_action.setEnabled(False)
             self.shift_action.setEnabled(False)
             self.align_action.setEnabled(False)
             self.anchor_action.setEnabled(False)
             self.make_set_action.setEnabled(False)
         else:
             # "Disable all hint editing buttons
-            self.black_action.setEnabled(False)
-            self.white_action.setEnabled(False)
-            self.gray_action.setEnabled(False)
+            self.stem_action.setEnabled(False)
             self.shift_action.setEnabled(False)
             self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)

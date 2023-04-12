@@ -359,7 +359,7 @@ class editorDialog(QDialog):
 
 
 class ygGlyphHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent = None):
+    def __init__(self, parent = None) -> None:
         QSyntaxHighlighter.__init__(self, parent)
         self._mappings = {}
 

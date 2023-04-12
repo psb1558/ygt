@@ -18,6 +18,7 @@ from .ygModel import (
     ygGlyph,
     unicode_cat_names,
 )
+from .ygStems import stemFinder
 from PyQt6.QtCore import (
     Qt,
     QPoint,
@@ -1003,9 +1004,9 @@ class ygPointCollectionView(QGraphicsItem, ygGraphicalHintComponent, ygPointable
         for m in markers:
             if not min_x:
                 min_x = m._x
-            else:
-                print(type(min_x))
-                print(type(m._x))
+            #else:
+            #    print(type(min_x))
+            #    print(type(m._x))
                 min_x = min(min_x, m._x)
             if not min_y:
                 min_y = m._y
@@ -2169,6 +2170,13 @@ class ygGlyphScene(QGraphicsScene):
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num in [1, 3]:
             if pplen >= 2:
+                try:
+                    if hint_type_num == 3:
+                        hint_type = stemFinder(self._model_point(pp[0]), self._model_point(pp[1]), self.yg_glyph).get_color()
+                except Exception as e:
+                    print(e)
+                #print("hint type is " + hint_type)
+                #
                 # ref should be a touched point and target an untouched point.
                 # If it's the other way around, reverse them.
                 if pp[1].touched and not pp[0].touched:
@@ -2841,7 +2849,8 @@ class ygGlyphView(QGraphicsView):
             if checked and self.viewer.yg_glyph.current_axis() != "x":
                 # self.viewer.axis = "x"
                 self.viewer.yg_glyph.switch_to_axis("x")
-                self.parent().parent().set_window_title() # type: ignore
+                win = self.parent().parent()
+                win.set_window_title() # type: ignore
 
     @pyqtSlot(bool)
     def switch_to_y(self, checked: bool) -> None:
@@ -2849,7 +2858,8 @@ class ygGlyphView(QGraphicsView):
             if checked and self.viewer.yg_glyph.current_axis() != "y":
                 # self.viewer.axis = "y"
                 self.viewer.yg_glyph.switch_to_axis("y")
-                self.parent().parent().set_window_title() # type: ignore
+                win = self.parent().parent()
+                win.set_window_title() # type: ignore
 
     @pyqtSlot()
     def cleanup_yaml_code(self) -> None:
@@ -2860,11 +2870,9 @@ class ygGlyphView(QGraphicsView):
         menu_to_hint_type = {
             "Anchor (A)": "anchor",
             "Align (L)": "align",
-            "Shift (S)": "shift",
+            "Shift (H)": "shift",
             "Interpolate (I)": "interpolate",
-            "White Distance (W)": "whitedist",
-            "Black Distance (B)": "blackdist",
-            "Gray Distance (G)": "graydist",
+            "Stem (T)": "graydist",
         }
         with_ctrl = (
             QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier

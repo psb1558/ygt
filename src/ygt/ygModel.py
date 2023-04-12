@@ -909,7 +909,7 @@ class ygPoint:
 
     def preferred_label(
         self, normalized: bool = False, name_allowed: bool = True
-    ) -> str:
+    ) -> str | int:
         if name_allowed:
             if len(self.preferred_name) > 0:
                 return self.preferred_name
@@ -921,7 +921,7 @@ class ygPoint:
                 return t
             else:
                 return self.coord
-        return str(self.index)
+        return self.index
 
     def set_preferred_name(self, n: str) -> None:
         self.preferred_name = n
@@ -933,7 +933,7 @@ class ygPoint:
             return False
         
     def __str__(self):
-        return str(index)
+        return str(self.index)
 
 
 class ygParams:
