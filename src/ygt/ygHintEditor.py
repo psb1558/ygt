@@ -72,7 +72,7 @@ HINT_COLLECTION_SELECT_COLOR = QColor(0, 205, 0, 128)
 HINT_ANCHOR_COLOR = QColor(255, 0, 255, 128)
 HINT_ANCHOR_SELECT_COLOR = QColor(175, 0, 175, 128)
 HINT_STEM_COLOR = QColor(255, 0, 0, 128)
-HINT_STEM_SELECT_COLOR = QColor(205, 0, 0, 128)
+HINT_STEM_SELECT_COLOR = QColor(175, 0, 0, 128)
 HINT_SHIFT_COLOR = QColor(100, 100, 255, 128)
 HINT_SHIFT_SELECT_COLOR = QColor(0, 0, 150, 128)
 HINT_ALIGN_COLOR = QColor(0, 255, 0, 128)
@@ -462,8 +462,7 @@ class ygHintView(QGraphicsItem, ygSelectable):
 
 
 class ygGraphicalHintComponent:
-    def _prepare_graphics(self, **kwargs) -> None:
-        pass
+    def _prepare_graphics(self, **kwargs) -> None: ...
 
 
 class ygArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
@@ -577,11 +576,33 @@ class ygBorderLine(QGraphicsLineItem, ygGraphicalHintComponent):
 class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
     """Line for connecting related points
 
-    The connecting line with arrow represents a hint. There are different kinds,
-    which will be represented by different colors.
+        The connecting line with arrow represents a hint. There are different kinds,
+        which will be represented by different colors.
+
+        params:
+
+        p1 (ygPointable): point for one end of the stem.
+
+        p2 (ygPointable): point for the other end of the stem.
+
+        axis: Not sure if this is ever used.
+
+        hint_type (str): The type of this hint.
+
+        id: A unique id for this object.
+
+        parent: The parent of this item.
     """
 
-    def __init__(self, p1, p2, axis, hint_type, id=None, parent=None):
+    def __init__(
+            self,
+            p1: "ygPointable",
+            p2: "ygPointable",
+            axis: str,
+            hint_type: str,
+            id: Any = None,
+            parent = None
+        ) -> None:
         # "axis" param not used. Get rid of it.
         super().__init__()
         #
@@ -620,27 +641,27 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             box_ratio = 0
         # Generate a keyword to describe the shape of the box.
         if xdistance == 0 and ydistance == 0:
-            self.shape = "invisible"
+            self._shape = "invisible"
             self.arrow_axis = None
         # elif box_ratio < 0.05:
         elif xdistance < 10:
-            self.shape = "y only"
+            self._shape = "y only"
             self.arrow_axis = "y"
         # elif box_ratio >= 1.0 and box_ratio <= 1.5:
         elif ydistance < 10:
-            self.shape = "x only"
+            self._shape = "x only"
             self.arrow_axis = "x"
         elif box_ratio < 0.3333:
-            self.shape = "tall"
+            self._shape = "tall"
             self.arrow_axis = "y"
         elif box_ratio > 3:
-            self.shape = "flat"
+            self._shape = "flat"
             self.arrow_axis = "x"
         elif ydistance > xdistance:
-            self.shape = "tallish"
+            self._shape = "tallish"
             self.arrow_axis = "y"
         else:
-            self.shape = "flattish"
+            self._shape = "flattish"
             self.arrow_axis = "x"
         self.arrowhead_direction = None
         # Should these direction words be "positive" and "negative"?
@@ -684,15 +705,15 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
                 bottomPoint = self.lineBegin
                 topPoint = self.lineEnd
         # The "0.25" that governs the length of the handles for the cubic drawing
-        # needs to be abstracted, so it can change with the shape of the box.
+        # needs to be abstracted, so it can change with the _shape of the box.
         partial_y_distance = ydistance * 0.25
         partial_x_distance = xdistance * 0.25
-        if self.shape == "invisible":
+        if self._shape == "invisible":
             path = QPainterPath()
-        elif self.shape in ["tall", "tallish", "y only"]:
+        elif self._shape in ["tall", "tallish", "y only"]:
             top_point_x = topPoint.x()
             bottom_point_x = bottomPoint.x()
-            if self.shape == "y only":
+            if self._shape == "y only":
                 flat_adjust = round(ydistance * 0.05)
                 if flat_adjust > 15:
                     flat_adjust = 15
@@ -709,10 +730,10 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
                 path = QPainterPath(topPoint)
                 path.quadTo(handle1, self._center_point)
                 path.quadTo(handle2, bottomPoint)
-        elif self.shape in ["flat", "flattish", "x only"]:
+        elif self._shape in ["flat", "flattish", "x only"]:
             left_point_y = leftPoint.y()
             right_point_y = rightPoint.y()
-            if self.shape == "x only":
+            if self._shape == "x only":
                 flat_adjust = round(xdistance * 0.05)
                 if flat_adjust > 15:
                     flat_adjust = 15
@@ -1323,8 +1344,6 @@ class ygGlyphScene(QGraphicsScene):
     sig_round_hint = pyqtSignal(object)
     sig_min_dist = pyqtSignal(object)
     sig_swap_macfunc_points = pyqtSignal(object)
-    # sig_macfunc_target = pyqtSignal(object)
-    # sig_macfunc_ref = pyqtSignal(object)
     sig_toggle_point_numbers = pyqtSignal()
     sig_set_category = pyqtSignal(object)
     sig_name_points = pyqtSignal(object)
@@ -2048,7 +2067,7 @@ class ygGlyphScene(QGraphicsScene):
                 print("Warning: ref is None (target is " + str(target) + ")")
             ref = self.resolve_point_identifier(hint.ref())
             gref = self.yg_point_view_index[ref.id]
-            ha = ygHintStem(gref, gtarget, 0, hint_type, parent=self)
+            ha = ygHintStem(gref, gtarget, self.yg_glyph.current_axis(), hint_type, parent=self)
             hb = ygHintButton(self, ha.center_point(), hint)
             ah = ygArrowHead(
                 ha.endPoint(), ha.arrowhead_direction, hint_type, ha.id, parent=self
@@ -2082,9 +2101,9 @@ class ygGlyphScene(QGraphicsScene):
             ref_two = self.resolve_point_identifier(ref_list.point_list()[1])
             gref.append(self.yg_point_view_index[ref_one.id])
             gref.append(self.yg_point_view_index[ref_two.id])
-            ha1 = ygHintStem(gref[0], gtarget, 0, hint_type, parent=self)
+            ha1 = ygHintStem(gref[0], gtarget, self.yg_glyph.current_axis(), hint_type, parent=self)
             hb1 = ygHintButton(self, ha1.center_point(), hint)
-            ha2 = ygHintStem(gref[1], gtarget, 0, hint_type, parent=self)
+            ha2 = ygHintStem(gref[1], gtarget, self.yg_glyph.current_axis(), hint_type, parent=self)
             ah1 = ygArrowHead(
                 ha1.endPoint(), ha1.arrowhead_direction, hint_type, ha1.id, parent=self
             )

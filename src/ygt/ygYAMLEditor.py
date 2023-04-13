@@ -361,7 +361,7 @@ class editorDialog(QDialog):
 class ygGlyphHighlighter(QSyntaxHighlighter):
     def __init__(self, parent = None) -> None:
         QSyntaxHighlighter.__init__(self, parent)
-        self._mappings = {}
+        self._mappings: dict = {}
 
     def add_mapping(self, pattern: str, format: QTextCharFormat) -> None:
         self._mappings[pattern] = format

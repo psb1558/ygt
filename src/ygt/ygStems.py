@@ -5,7 +5,7 @@ from .ygModel import ygPoint, ygGlyph
 
 
 class stemFinder:
-    def __init__(self, p1: ygPoint, p2: ygPoint, yg_glyph: ygGlyph):
+    def __init__(self, p1: ygPoint, p2: ygPoint, yg_glyph: ygGlyph) -> None:
         self.yg_glyph = yg_glyph
         self.contours = []
         contour = []
@@ -30,6 +30,7 @@ class stemFinder:
         for p in c:
             if p.index == i:
                 return p
+        return None
 
     def next_point(self, p: ygPoint, c: List[ygPoint]) -> ygPoint:
         """ p a ygPoint object; c a contour
@@ -63,8 +64,7 @@ class stemFinder:
                 return "right"
             elif this_x > next_x:
                 return "left"
-            else:
-                return "same"
+        return "same"
         
     def y_direction(self, pt: ygPoint) -> str:
         """ Find the y direction of a line or curve at the location of
