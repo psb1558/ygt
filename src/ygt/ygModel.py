@@ -1740,6 +1740,7 @@ class swapMacFuncPointsCommand(glyphEditCommand):
 class cleanupGlyphCommand(glyphEditCommand):
     def __init__(self, glyph: "ygGlyph") -> None:
         super().__init__(glyph)
+        self.setText("Clean up code")
 
     def redo(self) -> None:
         if self.redo_state:
@@ -1756,6 +1757,7 @@ class changeDistanceTypeCommand(glyphEditCommand):
         super().__init__(glyph)
         self.hint = hint
         self.new_color = new_color
+        self.setText("Change distance type")
 
     def redo(self) -> None:
         if self.redo_state:
