@@ -1878,7 +1878,7 @@ class ygGlyphScene(QGraphicsScene):
         qp (QPos): The current position of the mouse
 
         Returns:
-        bool: True if the mouse is over a point; False otherwise
+        ygPointView if the mouse is over a point; otherwise None
 
         """
         pt_keys = self.yg_point_view_index.keys()
@@ -1894,7 +1894,7 @@ class ygGlyphScene(QGraphicsScene):
         qp (QPos): The current position of the mouse
 
         Returns:
-        bool: True if the mouse is over a hint; False otherwise
+        ygHintView if the mouse is over a hint; otherwise None
         """
         for h in self.yg_hint_view_list:
             if h.contains(qp):
