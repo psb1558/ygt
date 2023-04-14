@@ -47,7 +47,8 @@ class freetypeFont:
     """
 
     def __init__(
-        self, font,
+        self,
+        font: SpooledTemporaryFile | str,
         size: int = 30,
         render_mode: int = RENDER_LCD_1,
         hinting_on: bool = True,
