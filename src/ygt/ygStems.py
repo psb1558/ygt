@@ -36,11 +36,20 @@ class stemFinder:
         """ p a ygPoint object; c a contour. Returns the next point
             on the contour, wrapping if necessary.
         """
-        last_point = c[-1].index
-        if p.index < last_point:
+        last_point = c[-1]
+        first_point = c[0]
+        if p.index < last_point.index:
             return self.find_point_by_index(p.index + 1, c)
         else:
-            return c[0]
+            return first_point
+        
+    def prev_point(self, p: ygPoint, c: List[ygPoint]) -> ygPoint:
+        last_point = c[-1]
+        first_point = c[0]
+        if p.index > first_point.index:
+            return self.find_point_by_index(p.index - 1, c)
+        else:
+            return last_point
 
     def which_contour(self, pt: ygPoint) -> Optional[List[ygPoint]]:
         """ Return the contour (list of ygPoint objects) containing pt.
@@ -54,31 +63,48 @@ class stemFinder:
         """ Find the x direction of a line or curve at the location of
             point pt. Returns "left," "right," or "same" if this pt
             has the same x location as the next pt.
+
+            To do: if the result is going to be "same," try with a
+            prev_point function (to be supplied).
         """
-        next_point = self.next_point(pt, self.which_contour(pt))
-        if self.yg_glyph.current_axis() == "y":
-            next_x = next_point.font_x
-            this_x = pt.font_x
-            if next_x > this_x:
-                return "right"
-            elif this_x > next_x:
-                return "left"
+        contour = self.which_contour(pt)
+        next_point = self.next_point(pt, contour)
+        this_x = pt.font_x
+        next_x = next_point.font_x
+        if next_x > this_x:
+            return "right"
+        elif this_x > next_x:
+            return "left"
+        # If the points are aligned on this axis we're probably at the end of a stem.
+        prev_point = self.prev_point(pt, contour)
+        prev_x = prev_point.font_x
+        if prev_x < this_x:
+            return "right"
+        elif this_x < prev_x:
+            return "left"
         return "same"
+
         
     def y_direction(self, pt: ygPoint) -> str:
         """ Find the y direction of a line or curve at the location of
             point pt. Returns "up," "down," or "same" if this pt
             has the same y location as the next pt.
         """
-        next_point = self.next_point(pt, self.which_contour(pt))
+        contour = self.which_contour(pt)
+        next_point = self.next_point(pt, contour)
         next_y = next_point.font_y
         this_y = pt.font_y
         if next_y > this_y:
             return "up"
         elif this_y > next_y:
             return "down"
-        else:
-            return "same"
+        prev_point = self.prev_point(pt, contour)
+        prev_y = prev_point.font_y
+        if prev_y > this_y:
+            return "right"
+        elif this_y > prev_y:
+            return "left"
+        return "same"
         
     def get_color(self) -> str:
         """ Recommends a distance type for the stem formed by self.high_point
@@ -88,6 +114,8 @@ class stemFinder:
         if self.yg_glyph.current_axis() == "x":
             high_y_dir = self.y_direction(self.high_point)
             low_y_dir = self.y_direction(self.low_point)
+            print(str(self.high_point.index) + " " + high_y_dir)
+            print(str(self.low_point.index) + " " + low_y_dir)
             if high_y_dir == "up" and low_y_dir == "down":
                 result = "blackdist"
             elif high_y_dir == "down" and low_y_dir == "up":
@@ -95,6 +123,8 @@ class stemFinder:
         else:
             high_x_dir = self.x_direction(self.high_point)
             low_x_dir  = self.x_direction(self.low_point)
+            print(str(self.high_point.index) + " " + high_x_dir)
+            print(str(self.low_point.index) + " " + low_x_dir)
             if high_x_dir == "right" and low_x_dir == "left":
                 result = "blackdist"
             elif high_x_dir == "left" and low_x_dir == "right":
