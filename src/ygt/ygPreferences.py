@@ -1,3 +1,4 @@
+from typing import Optional, Any
 import yaml
 import platform
 
@@ -10,7 +11,7 @@ from yaml import Loader, Dumper
 
 
 class ygPreferences(dict):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super(ygPreferences, self).__init__(*args, **kwargs)
         self["top_window"] = None
         self["show_off_curve_points"] = True
@@ -47,34 +48,34 @@ class ygPreferences(dict):
         except Exception:
             return False
 
-    def current_axis(self):
+    def current_axis(self) -> str:
         return self["current_axis"]
 
-    def set_current_axis(self, a):
+    def set_current_axis(self, a: str) -> None:
         self["current_axis"] = a
 
-    def points_as_coords(self):
+    def points_as_coords(self) -> bool:
         return self["points_as_coords"]
 
-    def set_points_as_coords(self, b):
+    def set_points_as_coords(self, b: bool) -> None:
         self["points_as_coords"] = b
 
-    def auto_preview(self):
+    def auto_preview(self) -> bool:
         return self["auto_preview"]
 
-    def set_auto_preview(self, p):
+    def set_auto_preview(self, p: bool) -> None:
         self["auto_preview"] = p
 
-    def zoom_factor(self):
+    def zoom_factor(self) -> float:
         return self["zoom_factor"]
 
-    def set_zoom_factor(self, z):
+    def set_zoom_factor(self, z: float) -> None:
         self["zoom_factor"] = z
 
-    def recents(self):
+    def recents(self) -> dict:
         return self["recents"]
 
-    def add_recent(self, f):
+    def add_recent(self, f: str) -> None:
         if os.path.splitext(f)[1] in [".yaml", ".ufo"]:
             fl = self["recents"]
             if not f in fl:
@@ -83,44 +84,44 @@ class ygPreferences(dict):
                 fl.pop()
             self["recents"] = fl
 
-    def top_window(self):
+    def top_window(self) -> Any:
         return self["top_window"]
 
-    def show_off_curve_points(self):
+    def show_off_curve_points(self) -> bool:
         return self["show_off_curve_points"]
 
-    def set_show_off_curve_points(self, b):
+    def set_show_off_curve_points(self, b: bool): # type: ignore
         self["show_off_curve_points"] = b
 
-    def show_point_numbers(self):
+    def show_point_numbers(self) -> bool:
         return self["show_point_numbers"]
 
-    def set_show_point_numbers(self, b):
+    def set_show_point_numbers(self, b: bool) -> None:
         self["show_point_numbers"] = b
 
-    def current_glyph(self, fontfile):
+    def current_glyph(self, fontfile: str) -> str:
         try:
             return self["current_glyph"][fontfile]
         except Exception:
             return "A"
 
-    def set_current_glyph(self, k, gname):
+    def set_current_glyph(self, k: str, gname: str) -> None:
         self["current_glyph"][k] = gname
 
-    def current_font(self):
+    def current_font(self) -> str:
         return self["current_font"]
 
-    def set_current_font(self, f):
+    def set_current_font(self, f: str) -> None:
         self["current_font"] = f
 
-    def points_as(self):
+    def points_as(self) -> str:
         return self["save_points_as"]
 
-    def set_points_as(self, val):
+    def set_points_as(self, val: str) -> None:
         if val in ["indices", "coordinates"]:
             self["points_as"] = val
 
-    def save_config(self):
+    def save_config(self) -> None:
         if platform.system() == "Windows":
             write_win_registry(self)
         config_dir = os.path.expanduser("~/.ygt/")
@@ -141,7 +142,7 @@ class ygPreferences(dict):
             f.write(yaml.dump(save_dict, sort_keys=False, Dumper=Dumper))
 
 
-def open_config(top_window):
+def open_config(top_window: Any) -> ygPreferences:
     if platform.system() == "Windows":
         return read_win_registry(top_window)
     try:
@@ -163,8 +164,11 @@ def open_config(top_window):
         return p
 
 
+# Not doing types for the winreg functions because the winreg module
+# can't be imported on the Mac, where checking is being done.
+
 def read_win_registry(top_window):
-    path = winreg.HKEY_CURRENT_USER
+    path = winreg.HKEY_CURRENT_USER # type: ignore
     p = ygPreferences()
     try:
         key = winreg.OpenKeyEx(path, r"SOFTWARE\\ygt\\")

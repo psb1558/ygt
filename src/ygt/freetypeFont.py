@@ -1,3 +1,4 @@
+from typing import Optional
 import freetype as ft # type: ignore
 import numpy
 import copy
@@ -46,8 +47,12 @@ class freetypeFont:
     """
 
     def __init__(
-        self, font, size=30, render_mode=RENDER_LCD_1, hinting_on=True, instance=None
-    ):
+        self, font,
+        size: int = 30,
+        render_mode: int = RENDER_LCD_1,
+        hinting_on: bool = True,
+        instance: str = None
+    ) -> None:
         self.valid = True
         try:
             if type(font) is SpooledTemporaryFile:
@@ -65,7 +70,7 @@ class freetypeFont:
         self.descender = 0
         self.face_height = 0
         self.advance = 0
-        self.glyph_slot = None
+        self.glyph_slot: Optional[ft.GlyphSlot] = None
         self.glyph_index = 0
         self.bitmap_top = 0
         self.bitmap_left = 0
@@ -78,7 +83,7 @@ class freetypeFont:
         self.face.set_char_size(self.char_size)
         self._get_font_metrics()
         self.last_glyph_index = None
-        self.rect_list = []
+        self.rect_list: list = []
 
     def mk_bw_color_list(self):
         l = [0] * 256

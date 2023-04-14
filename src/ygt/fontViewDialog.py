@@ -1,4 +1,5 @@
 from .freetypeFont import freetypeFont, RENDER_GRAYSCALE
+from .ygModel import ygFont
 from math import ceil
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea
@@ -6,8 +7,14 @@ from PyQt6.QtGui import QPainter, QBrush, QPen, QColor
 import numpy
 
 
-class fontViewDialog(QWidget):
-    """This dialog presents a grid showing all the glyphs in glyph_list--
+# A window (not a dialog, despite the filename, retained to avoid complicating
+# the history in the repository) that displays all the non-composite glyphs
+# in the font, with those already hinted highlighted in blue. Click on any
+# glyph in the window to navigate to that glyph.
+
+
+class fontViewWindow(QWidget):
+    """This window presents a grid showing all the glyphs in glyph_list--
     that is, those glyphs that are not made of composites. This display
     indicates which characters are hinted (their cells have blue backgrounds).
     It also works as a navigation aid: just click on any character.
@@ -16,7 +23,9 @@ class fontViewDialog(QWidget):
 
     sig_switch_to_glyph = pyqtSignal(object)
 
-    def __init__(self, filename, yg_font, glyph_list, top_window):
+    def __init__(
+            self, filename: str, yg_font: ygFont, glyph_list: list, top_window
+        ) -> None:
         super().__init__()
         self.valid = True
         self.top_window = top_window
@@ -28,55 +37,55 @@ class fontViewDialog(QWidget):
         self.yg_font = yg_font
         self.glyph_list = glyph_list
 
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
+        self._layout = QVBoxLayout()
+        self.setLayout(self._layout)
         fvp = fontViewPanel(self)
         scroll_area = QScrollArea()
         scroll_area.setWidget(fvp)
-        self.layout.addWidget(scroll_area)
+        self._layout.addWidget(scroll_area)
 
         self.sig_switch_to_glyph.connect(
             self.top_window.glyph_pane.switch_from_font_viewer
         )
 
-    def clicked_glyph(self, g):
+    def clicked_glyph(self, g: str) -> None:
         self.sig_switch_to_glyph.emit(g)
 
 
 class fontViewPanel(QWidget):
-    def __init__(self, dialog):
+    def __init__(self, dialog: fontViewWindow) -> None:
         super().__init__()
         gl = dialog.glyph_list
         numchars = len(gl)
         cols = 10
         rows = ceil(numchars / 10)
         self.setMinimumSize(cols * 36, rows * 36)
-        self.layout = QGridLayout()
-        self.layout.setHorizontalSpacing(0)
-        self.layout.setVerticalSpacing(0)
+        self._layout = QGridLayout()
+        self._layout.setHorizontalSpacing(0)
+        self._layout.setVerticalSpacing(0)
         self.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self.layout)
+        self.setLayout(self._layout)
         row = 0
         col = 0
-        self.layout.setRowMinimumHeight(row, 36)
+        self._layout.setRowMinimumHeight(row, 36)
         for g in gl:
-            self.layout.addWidget(fontViewCell(dialog, g), row, col)
+            self._layout.addWidget(fontViewCell(dialog, g), row, col)
             col += 1
             if col == 10:
                 row += 1
-                self.layout.setRowMinimumHeight(row, 36)
+                self._layout.setRowMinimumHeight(row, 36)
                 col = 0
         self.setStyleSheet("background-color: white;")
 
 
 class fontViewCell(QWidget):
-    def __init__(self, dialog, glyph):
+    def __init__(self, dialog: fontViewWindow, glyph: list) -> None:
         super().__init__()
         self.dialog = dialog
         self.glyph = glyph[1]
         self.setFixedSize(36, 36)
 
-    def paintEvent(self, event):
+    def paintEvent(self, event) -> None:
         painter = QPainter(self)
 
         brush = QBrush()
@@ -97,5 +106,5 @@ class fontViewCell(QWidget):
 
         painter.end()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
         self.dialog.clicked_glyph(self.glyph)

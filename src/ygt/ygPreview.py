@@ -1,3 +1,4 @@
+from typing import Callable, List, Optional
 from .freetypeFont import freetypeFont, RENDER_GRAYSCALE, RENDER_LCD_1, RENDER_LCD_2
 from PyQt6.QtWidgets import (
     QWidget,
@@ -21,21 +22,22 @@ PREVIEW_VERT_MARGIN = 50
 class ygPreviewContainer(QWidget):
     def __init__(self, preview, string_preview):
         super().__init__()
-        self.layout = QVBoxLayout()
-        self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.addWidget(preview)
-        self.layout.addWidget(string_preview)
-        self.setLayout(self.layout)
+        self._layout = QVBoxLayout()
+        self._layout.setSpacing(0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.addWidget(preview)
+        self._layout.addWidget(string_preview)
+        self.setLayout(self._layout)
 
 
 class ygPreview(QWidget):
+
     sig_preview_paint_done = pyqtSignal(object)
 
-    def __init__(self, top_window):
+    def __init__(self, top_window) -> None:
         super().__init__()
         self.top_window = top_window
-        self.face = None
+        self.face: Optional[freetypeFont] = None
         self.hinting = "on"
         self.glyph_index = 0
         self.char_size = 30
@@ -71,23 +73,24 @@ class ygPreview(QWidget):
         self.top_char_margin = 0
         self.show_grid = True
         # Two- or three-dimensional array shaped by numpy.
-        self.Z = []
-        self.instance_dict = None
-        self.instance = None
+        self.Z: list = []
+        self.instance_dict: Optional[dict] = None
+        self.instance: Optional[str] = None
         self.colors = self.mk_color_list()
         self.render_mode = RENDER_LCD_1
         self.hinting_on = True
-        self.paintEvent = self.paintEvent_b
+        self.paintEvent = self.paintEvent_b # type: ignore
 
-    def set_up_signal(self, func):
+    def set_up_signal(self, func: Callable) -> None:
         self.sig_preview_paint_done.connect(func)
 
-    def mk_color_list(self):
+    def mk_color_list(self) -> List[QColor]:
         """Pre-build a list of grayscale colors--for the big preview."""
         l = [0] * 256
         for count, c in enumerate(l):
-            l[count] = QColor(101, 53, 15, count)
-        return l
+            # Mypy complains about this, and I have no idea what is actually wrong.
+            l[count] = QColor(101, 53, 15, count) # type: ignore
+        return l # type: ignore
 
     def fetch_glyph(self, font, glyph_index):
         """Get a temporary FreeType font, then build the specified glyph.
@@ -103,7 +106,7 @@ class ygPreview(QWidget):
         self.face = freetypeFont(font)
         self._build_glyph()
 
-    def _build_glyph(self):
+    def _build_glyph(self) -> bool:
         """Shape the point array and figure some key values."""
         if self.face == None:
             return False
@@ -158,42 +161,42 @@ class ygPreview(QWidget):
         return True
 
     @pyqtSlot()
-    def toggle_show_hints(self):
+    def toggle_show_hints(self) -> None:
         self.hinting_on = not self.hinting_on
         self.face.set_hinting_on(self.hinting_on)
         # self._build_glyph()
         self.update()
 
     @pyqtSlot()
-    def toggle_grid(self):
+    def toggle_grid(self) -> None:
         self.show_grid = not self.show_grid
         # self._build_glyph()
         self.update()
 
     @pyqtSlot()
-    def render1(self):
+    def render1(self) -> None:
         self.set_render_mode(RENDER_GRAYSCALE)
 
     @pyqtSlot()
-    def render2(self):
+    def render2(self) -> None:
         self.set_render_mode(RENDER_LCD_1)
 
     @pyqtSlot()
-    def render3(self):
+    def render3(self) -> None:
         self.set_render_mode(RENDER_LCD_2)
 
-    def set_render_mode(self, m):
+    def set_render_mode(self, m: int) -> None:
         self.render_mode = m
         if self.render_mode == RENDER_GRAYSCALE:
-            self.paintEvent = self.paintEvent_a
+            self.paintEvent = self.paintEvent_a # type: ignore
         elif self.render_mode == RENDER_LCD_1:
-            self.paintEvent = self.paintEvent_b
+            self.paintEvent = self.paintEvent_b # type: ignore
         else:
-            self.paintEvent = self.paintEvent_c
+            self.paintEvent = self.paintEvent_c # type: ignore
         # self._build_glyph()
         self.update()
 
-    def set_size(self, n):
+    def set_size(self, n: str | int) -> None:
         n = int(n)
         if self.face != None:
             try:
@@ -208,24 +211,24 @@ class ygPreview(QWidget):
             # self._build_glyph()
             self.update()
 
-    def resize_by(self, n):
+    def resize_by(self, n: int) -> None:
         if self.face != None and self.glyph_index != 0:
             # self.char_size += n
             # self.set_label_text()
             self.set_size(self.char_size + n)
             self.update()
 
-    def set_label_text(self):
+    def set_label_text(self) -> None:
         t = str(self.char_size) + "ppem"
         if self.instance != None:
             t += " — " + self.instance
         self.label.setText(t)
         self.label.adjustSize()
 
-    def add_instances(self, instances):
+    def add_instances(self, instances: dict) -> None:
         self.instance_dict = instances
 
-    def instance_list(self):
+    def instance_list(self) -> list:
         l = []
         if self.instance_dict:
             kk = self.instance_dict.keys()
@@ -234,7 +237,7 @@ class ygPreview(QWidget):
         return l
 
     @pyqtSlot()
-    def next_instance(self):
+    def next_instance(self) -> None:
         if self.instance and self.instance_dict:
             kk = self.instance_dict.keys()
             il = self.instance_list()
@@ -247,7 +250,7 @@ class ygPreview(QWidget):
             self._set_instance()
 
     @pyqtSlot()
-    def prev_instance(self):
+    def prev_instance(self) -> None:
         if self.instance and self.instance_dict:
             kk = self.instance_dict.keys()
             il = self.instance_list()
@@ -260,35 +263,35 @@ class ygPreview(QWidget):
             self._set_instance()
 
     @pyqtSlot()
-    def set_instance(self):
-        self.instance = self.sender().text()
+    def set_instance(self) -> None:
+        self.instance = self.sender().text() # type: ignore
         self._set_instance()
 
-    def _set_instance(self):
+    def _set_instance(self) -> None:
         self.face.set_instance(self.instance)
         self.set_label_text()
         # self._build_glyph()
         self.update()
 
     @pyqtSlot()
-    def bigger_one(self):
+    def bigger_one(self) -> None:
         self.resize_by(1)
 
     @pyqtSlot()
-    def bigger_ten(self):
+    def bigger_ten(self) -> None:
         self.resize_by(10)
 
     @pyqtSlot()
-    def smaller_one(self):
+    def smaller_one(self) -> None:
         if self.char_size > 10:
             self.resize_by(-1)
 
     @pyqtSlot()
-    def smaller_ten(self):
+    def smaller_ten(self) -> None:
         if self.char_size > 20:
             self.resize_by(-10)
 
-    def draw_grid(self, painter):
+    def draw_grid(self, painter: QPainter) -> None:
         if self.pixel_size < 5:
             return
         top = self.vertical_margin + (self.top_grid_offset * self.pixel_size)
@@ -323,7 +326,7 @@ class ygPreview(QWidget):
                 painter.drawLine(QLine(left, y_top, left, y_bot))
                 left += self.pixel_size
 
-    def paintEvent_a(self, event):
+    def paintEvent_a(self, event) -> None:
         """Paint grayscale glyph."""
         painter = QPainter(self)
         brush = QBrush()
@@ -352,7 +355,7 @@ class ygPreview(QWidget):
         painter.end()
         self.sig_preview_paint_done.emit(None)
 
-    def paintEvent_b(self, event):
+    def paintEvent_b(self, event) -> None:
         """Paint subpixel rendering with solid pixels."""
         painter = QPainter(self)
         brush = QBrush()
@@ -384,7 +387,7 @@ class ygPreview(QWidget):
         painter.end()
         self.sig_preview_paint_done.emit(None)
 
-    def paintEvent_c(self, event):
+    def paintEvent_c(self, event) -> None:
         """Paint subpixel rendering with rgb pixel trios."""
         painter = QPainter(self)
         brush = QBrush()
@@ -416,7 +419,7 @@ class ygPreview(QWidget):
                         int(self.pixel_size),
                     )
                     painter.fillRect(qr, qc)
-                    xposition += self.pixel_size / 3
+                    xposition += int(self.pixel_size / 3)
             yposition += self.pixel_size
             xposition = self.horizontal_margin
         if self.show_grid:
@@ -428,7 +431,7 @@ class ygPreview(QWidget):
 class ygStringPreviewPanel(QWidget):
     sig_go_to_glyph = pyqtSignal(object)
 
-    def __init__(self, yg_preview, top_window):
+    def __init__(self, yg_preview: ygPreview, top_window) -> None:
         super().__init__()
         self.yg_preview = yg_preview
         self.top_window = top_window
@@ -437,19 +440,19 @@ class ygStringPreviewPanel(QWidget):
         self.minimum_x = PREVIEW_WIDTH
         self.minimum_y = 200
         self.setMinimumSize(self.minimum_x, self.minimum_y)
-        self.paintEvent = self.paintEvent_a
-        self.rect_list = []
+        self.paintEvent = self.paintEvent_a # type: ignore
+        self.rect_list: list = []
 
-    def set_go_to_signal(self, func):
+    def set_go_to_signal(self, func: Callable) -> None:
         self.sig_go_to_glyph.connect(func)
 
-    def set_face(self, face):
+    def set_face(self, face) -> None:
         self.face = face
 
-    def set_text(self, t):
+    def set_text(self, t: str) -> None:
         self._text = t
 
-    def string_to_glyph_list(self, s):
+    def string_to_glyph_list(self, s: str) -> list:
         """Get a list of glyph names needed for string s."""
         yg_font = self.top_window.glyph_pane.viewer.yg_glyph.yg_font
         result = []
@@ -461,14 +464,14 @@ class ygStringPreviewPanel(QWidget):
                 result.append(".notdef")
         return result
 
-    def _fill_background(self, painter):
+    def _fill_background(self, painter: QPainter) -> None:
         brush = QBrush()
         brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
 
-    def paintEvent_a(self, event):
+    def paintEvent_a(self, event) -> None:
         painter = QPainter(self)
         self._fill_background(painter)
         if self.face == None:
@@ -500,7 +503,7 @@ class ygStringPreviewPanel(QWidget):
         self.rect_list = self.face.rect_list
         painter.end()
 
-    def paintEvent_b(self, event):
+    def paintEvent_b(self, event) -> None:
         painter = QPainter(self)
         self._fill_background(painter)
         if not self.yg_preview:
@@ -513,7 +516,7 @@ class ygStringPreviewPanel(QWidget):
         )
         painter.end()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event) -> None:
         qp = event.position()
         x = int(qp.x())
         y = int(qp.y())
@@ -530,9 +533,10 @@ class ygStringPreviewPanel(QWidget):
 
 
 class ygStringPreview(QWidget):
+
     sig_string_changed = pyqtSignal(object)
 
-    def __init__(self, yg_preview, top_window):
+    def __init__(self, yg_preview: ygPreview, top_window) -> None:
         super().__init__()
         self.yg_preview = yg_preview
         self.top_window = top_window
@@ -559,19 +563,19 @@ class ygStringPreview(QWidget):
 
         self.setLayout(self._layout)
 
-    def set_go_to_signal(self, func):
+    def set_go_to_signal(self, func: Callable) -> None:
         self.panel.set_go_to_signal(func)
 
-    def set_string_preview(self):
-        self.panel.paintEvent = self.panel.paintEvent_b
+    def set_string_preview(self) -> None:
+        self.panel.paintEvent = self.panel.paintEvent_b # type: ignore
 
-    def set_size_array(self):
-        self.panel.paintEvent = self.panel.paintEvent_a
+    def set_size_array(self) -> None:
+        self.panel.paintEvent = self.panel.paintEvent_a # type: ignore
 
-    def set_face(self, f):
+    def set_face(self, f: freetypeFont) -> None:
         if self.panel != None:
             self.panel.face = f
 
-    def got_string(self):
+    def got_string(self) -> None:
         self.panel.set_text(self.qle.text())
         self.sig_string_changed.emit(self.panel._text)

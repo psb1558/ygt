@@ -1,3 +1,4 @@
+from typing import Optional, Any
 from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -7,15 +8,16 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QLabel,
 )
+# from .ygHintEditor import ygHintView
 
 
 class macfuncDialog(QDialog):
-    def __init__(self, _hint):
+    def __init__(self, _hint) -> None:
         super(macfuncDialog, self).__init__(
             _hint.yg_hint.yg_glyph.preferences.top_window()
         )
         self.yg_hint = _hint.yg_hint
-        self.result_dict = None
+        self.result_dict: Optional[dict] = None
         self.setWindowTitle("Parameters for " + str(self.yg_hint.name))
         self.yg_font = self.yg_hint.yg_glyph.yg_font
         self.yg_callable = None
@@ -33,7 +35,7 @@ class macfuncDialog(QDialog):
                 # print("Error: " + str(e))
                 pass
         self.hint_type = _hint.yg_hint.hint_type()
-        self.layout = QVBoxLayout()
+        self._layout = QVBoxLayout()
         QBtn = (
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -73,9 +75,9 @@ class macfuncDialog(QDialog):
                         default_value = self.yg_callable[kk]["val"]
                     else:
                         default_value = None
-                    self.widgets[-1].itemAt(1).widget().setInputMask("####")
+                    self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
                     if default_value:
-                        self.widgets[-1].itemAt(1).widget().setText(str(default_value))
+                        self.widgets[-1].itemAt(1).widget().setText(str(default_value)) # type: ignore
                 elif self.yg_callable[kk]["type"] == "float":
                     self.widgets.append(QHBoxLayout())
                     self.widgets[-1].addWidget(QLabel(kk))
@@ -86,22 +88,22 @@ class macfuncDialog(QDialog):
                         default_value = self.yg_callable[kk]["val"]
                     else:
                         default_value = None
-                    self.widgets[-1].itemAt(1).widget().setInputMask("####")
+                    self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
                     if default_value:
-                        self.widgets[-1].itemAt(1).widget().setText(str(default_value))
+                        self.widgets[-1].itemAt(1).widget().setText(str(default_value)) # type: ignore
                 else:
                     pass
         for w in self.widgets:
-            self.layout.addLayout(w)
-        self.layout.addWidget(self.buttonBox)
-        self.setLayout(self.layout)
+            self._layout.addLayout(w)
+        self._layout.addWidget(self.buttonBox)
+        self.setLayout(self._layout)
 
-    def accept(self):
+    def accept(self) -> None:
         self.result_dict = {"nm": self.yg_hint.macfunc_name()}
         for w in self.widgets:
-            if w.itemAt(1).widget().text() != "None":
-                self.result_dict[w.itemAt(0).widget().text()] = (
-                    w.itemAt(1).widget().text()
+            if w.itemAt(1).widget().text() != "None": # type: ignore
+                self.result_dict[w.itemAt(0).widget().text()] = ( # type: ignore
+                    w.itemAt(1).widget().text() # type: ignore
                 )
         # So param_list is the answer from this dialog. Don't plug it into the
         # hint here, but rather in a QUndoCommand.
@@ -110,7 +112,7 @@ class macfuncDialog(QDialog):
 
 
 class ygCVTWidget(QComboBox):
-    def __init__(self, hint, _type, default):
+    def __init__(self, hint: Any, _type: str, default: str) -> None:
         super().__init__()
         self.addItem("None")
         # self.setInsertPolicy(QComboBox.InsertPolicy.InsertAlphabetically)
@@ -130,5 +132,5 @@ class ygCVTWidget(QComboBox):
         if hint.cv():
             self.setCurrentText(hint.cv())
 
-    def text(self):
+    def text(self) -> str:
         return self.currentText()

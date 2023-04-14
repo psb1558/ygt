@@ -5,7 +5,7 @@ import os
 import copy
 import yaml
 from .ygModel import ygFont, ygGlyph, unicode_cat_names
-from .fontViewDialog import fontViewDialog
+from .fontViewDialog import fontViewWindow
 from .ygPreview import ygPreview, ygStringPreview, ygPreviewContainer
 from .ygYAMLEditor import ygYAMLEditor, editorDialog
 from .ygHintEditor import ygGlyphScene, ygGlyphView
@@ -147,7 +147,7 @@ class MainWindow(QMainWindow):
         self.function_editor: Optional[editorDialog] = None
         self.macro_editor: Optional[editorDialog] = None
         self.default_editor: Optional[editorDialog] = None
-        self.font_viewer: Optional[fontViewDialog] = None
+        self.font_viewer: Optional[fontViewWindow] = None
         self.statusbar = self.statusBar()
         self.statusbar_label = QLabel()
         self.statusbar_label.setStyleSheet(
@@ -183,9 +183,9 @@ class MainWindow(QMainWindow):
         # Stuff that's stored in the preference file
         self.preferences: Optional[ygPreferences] = None
         self.points_as_coords = False
-        self.zoom_factor = None
-        self.show_off_curve_points = None
-        self.show_point_numbers = None
+        self.zoom_factor: Optional[float] = None
+        self.show_off_curve_points: Optional[bool] = None
+        self.show_point_numbers: Optional[bool] = None
         self.current_axis = "y"
         if prefs == None:
             self.get_preferences(ygPreferences())
@@ -679,11 +679,11 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_font_view(self) -> None:
-        """Display the modeless dialog in fontViewDialog.py."""
+        """Display the modeless dialog in fontViewWindow.py."""
         if not self.font_viewer:
             font_name = self.yg_font.font_files.in_font()
             glyph_list = self.yg_font.glyph_list
-            self.font_viewer = fontViewDialog(font_name, self.yg_font, glyph_list, self)
+            self.font_viewer = fontViewWindow(font_name, self.yg_font, glyph_list, self)
         if self.font_viewer.valid:
             self.font_viewer.show()
             self.font_viewer.raise_()

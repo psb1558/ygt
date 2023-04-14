@@ -1,3 +1,4 @@
+from typing import Any, Optional
 from collections import deque
 from PyQt6.QtWidgets import QPlainTextEdit
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
@@ -12,29 +13,29 @@ class ygErrorWindow(QPlainTextEdit):
             self.fill_in(init_text)
         self.window().setWindowTitle("Error Console")
 
-    def fill_in(self, msg_list):
+    def fill_in(self, msg_list: list) -> None:
         self.clear()
         for m in msg_list:
             self.appendPlainText(m)
         self.centerCursor()
 
-    def add_message(self, m):
+    def add_message(self, m: str) -> None:
         self.appendPlainText("")
         self.appendPlainText(m)
         self.centerCursor()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event) -> None:
         self.hide()
 
 
 class ygErrorMessages:
-    def __init__(self, top_window):
-        self.error_pane = None
+    def __init__(self, top_window: Any) -> None:
+        self.error_pane: Optional[ygErrorWindow] = None
         self.top_window = top_window
         self.last_message = ""
 
     # @pyqtSlot(object)
-    def new_message(self, m: dict):
+    def new_message(self, m: dict) -> None:
         msg = m["msg"]
         if msg and (msg != self.last_message):
             self.last_message = msg

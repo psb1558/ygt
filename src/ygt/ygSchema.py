@@ -1,3 +1,4 @@
+from typing import Any
 from schema import Or, Optional, Schema, SchemaError, Use, And # type: ignore
 
 # from .ygModel import unicode_categories
@@ -9,7 +10,7 @@ DELTA_DIST = [-8, -7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8]
 DELTA_SHIFT = [2, 4, 8, 16, 32, 64]
 
 
-def set_error_message(t):
+def set_error_message(t: str) -> None:
     global _error_message
     if not _error_message:
         _error_message = t
@@ -23,11 +24,11 @@ def error_message(reset: bool = True) -> str:
     return r
 
 
-def have_error_message():
+def have_error_message() -> bool:
     return bool(_error_message)
 
 
-def is_cv_distance_valid(s):
+def is_cv_distance_valid(s: Any) -> bool:
     try:
         sss = float(s)
     except Exception:
@@ -36,7 +37,7 @@ def is_cv_distance_valid(s):
         f = float(sss)
         return f >= -4.0 and f <= 4.0
     if type(sss) is str:
-        ss = sss.split("/", 1)
+        ss = sss.split("/", 1) # type: ignore
         try:
             left = int(ss[0])
             right = int(ss[1])
@@ -46,7 +47,7 @@ def is_cv_distance_valid(s):
     return False
 
 
-def is_point_valid_1(pt):
+def is_point_valid_1(pt: int | str | list | dict) -> bool:
     if type(pt) is int:
         return True
     if type(pt) is str:
@@ -72,7 +73,7 @@ def is_point_valid_1(pt):
     return False
 
 
-def is_point_valid_2(pt):
+def is_point_valid_2(pt: int | str | list) -> bool:
     if type(pt) is int:
         return True
     if type(pt) is str:
@@ -91,7 +92,7 @@ def is_point_valid_2(pt):
     return False
 
 
-def validate_points(pt):
+def validate_points(pt: list) -> bool:
     try:
         for p in pt:
             nested_point_schema.validate(p)
@@ -101,7 +102,7 @@ def validate_points(pt):
     return False
 
 
-def is_round_valid(r):
+def is_round_valid(r: bool | str) -> bool:
     if type(r) is bool:
         return True
     return r in [
@@ -313,11 +314,11 @@ properties_struct = {
 names_struct = {str: is_point_valid_2}
 
 
-def tag_checker(s):
+def tag_checker(s: str) -> bool:
     return bool(re.match("^[A-Za-z]{4}$", s))
 
 
-def name_checker(s):
+def name_checker(s: str) -> bool:
     return bool(re.match("^[a-zA-Z][0-9A-Za-z-_]*$", s))
 
 
@@ -333,7 +334,7 @@ nested_point_schema = Schema(nested_point_struct)
 defaults_schema = Schema(defaults_struct)
 
 
-def is_valid(t):
+def is_valid(t: Any) -> bool:
     try:
         point_schema.validate(t)
         return True
@@ -352,7 +353,7 @@ props_schema = Schema(properties_struct)
 names_schema = Schema(names_struct)
 
 
-def is_cv_delta_valid(c):
+def is_cv_delta_valid(c: dict) -> bool:
     try:
         cv_delta_schema.validate(c)
         return True
@@ -361,7 +362,7 @@ def is_cv_delta_valid(c):
     return False
 
 
-def is_cvt_valid(t):
+def is_cvt_valid(t: dict) -> bool:
     try:
         k = t.keys()
         for kk in k:
@@ -372,7 +373,7 @@ def is_cvt_valid(t):
     return False
 
 
-def is_cvar_valid(t):
+def is_cvar_valid(t: dict) -> bool:
     try:
         cvar_schema.validate(t)
         return True
@@ -381,7 +382,7 @@ def is_cvar_valid(t):
     return False
 
 
-def is_prep_valid(t):
+def is_prep_valid(t: dict) -> bool:
     try:
         prep_schema.validate(t)
         return True
@@ -390,7 +391,7 @@ def is_prep_valid(t):
     return False
 
 
-def are_functions_valid(t):
+def are_functions_valid(t: dict) -> bool:
     try:
         for k in t.keys():
             function_schema.validate(t[k])
@@ -400,7 +401,7 @@ def are_functions_valid(t):
     return False
 
 
-def are_macros_valid(t):
+def are_macros_valid(t: dict) -> bool:
     try:
         for k in t.keys():
             macro_schema.validate(t[k])
@@ -410,7 +411,7 @@ def are_macros_valid(t):
     return False
 
 
-def are_defaults_valid(t):
+def are_defaults_valid(t: dict) -> bool:
     try:
         defaults_schema.validate(t)
         return True
@@ -419,7 +420,7 @@ def are_defaults_valid(t):
     return False
 
 
-def are_names_valid(t):
+def are_names_valid(t: dict) -> bool:
     try:
         names_schema.validate(t)
         return True
@@ -428,13 +429,14 @@ def are_names_valid(t):
     return False
 
 
-def are_properties_valid(t):
+def are_properties_valid(t: dict) -> bool:
     try:
         props_schema.validate(t)
         return True
     except SchemaError as s:
         set_error_message("Error in glyph properties: " + str(s))
+    return False
 
 
-def always_valid(t):
+def always_valid(t) -> bool:
     return True

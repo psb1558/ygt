@@ -1,6 +1,4 @@
-# import copy
 from typing import Optional, List, TYPE_CHECKING
-# if TYPE_CHECKING:
 from .ygModel import ygPoint, ygGlyph
 
 
@@ -18,9 +16,11 @@ class stemFinder:
         self.high_point = p1
         self.low_point = p2
         if self.yg_glyph.current_axis() == "y":
+            # self.high_point must have a higher y value than self.low_point.
             if self.high_point.font_y < self.low_point.font_y:
                 self.high_point, self.low_point = self.low_point, self.high_point
         else:
+            # self.high_point must have a lower x value than self.low_point.
             if self.high_point.font_x > self.low_point.font_x:
                 self.high_point, self.low_point = self.low_point, self.high_point
 
@@ -33,7 +33,8 @@ class stemFinder:
         return None
 
     def next_point(self, p: ygPoint, c: List[ygPoint]) -> ygPoint:
-        """ p a ygPoint object; c a contour
+        """ p a ygPoint object; c a contour. Returns the next point
+            on the contour, wrapping if necessary.
         """
         last_point = c[-1].index
         if p.index < last_point:
@@ -55,8 +56,6 @@ class stemFinder:
             has the same x location as the next pt.
         """
         next_point = self.next_point(pt, self.which_contour(pt))
-        # print("This point index: " + str(pt.index))
-        # print("Next point index: " + str(next_point.index))
         if self.yg_glyph.current_axis() == "y":
             next_x = next_point.font_x
             this_x = pt.font_x
@@ -82,12 +81,13 @@ class stemFinder:
             return "same"
         
     def get_color(self) -> str:
+        """ Recommends a distance type for the stem formed by self.high_point
+            and self.low_point, based on this class's analysis of the stem.
+        """
         result = "graydist"
         if self.yg_glyph.current_axis() == "x":
             high_y_dir = self.y_direction(self.high_point)
             low_y_dir = self.y_direction(self.low_point)
-            print("high_y_dir: " + high_y_dir)
-            print("low_y_dir: " + low_y_dir)
             if high_y_dir == "up" and low_y_dir == "down":
                 result = "blackdist"
             elif high_y_dir == "down" and low_y_dir == "up":

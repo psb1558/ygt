@@ -306,7 +306,7 @@ class editorDialog(QDialog):
             title: str,
             validator: Callable,
             top_structure: str = "dict"
-        ):
+        ) -> None:
         super().__init__()
         self.title = title
         self.set_dialog_title(True)

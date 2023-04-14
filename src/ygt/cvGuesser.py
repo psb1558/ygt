@@ -1,4 +1,6 @@
+from typing import Optional
 from fontTools.varLib import instancer  # type: ignore
+from fontTools.ttLib.ttFont import TTFont # type: ignore
 
 
 class instanceChecker:
@@ -8,19 +10,19 @@ class instanceChecker:
     recorded and reported.
     """
 
-    def __init__(self, ft_font, cvt, masters):
+    def __init__(self, ft_font, cvt, masters) -> None:
         self.ft_font = ft_font
         self.cvt = cvt
         self.masters = masters
         self.axes = self.masters.yg_font.axes
-        self.current_instance = None
+        self.current_instance: Optional[TTFont] = None
 
-    def refresh(self):
+    def refresh(self) -> None:
         self.delete_all_vars()
         d = self.get_all_variant_cvs()
         self.add_variants_to_cvt(d)
 
-    def delete_all_vars(self):
+    def delete_all_vars(self) -> None:
         k = self.cvt.keys()
         for kk in k:
             cv = self.cvt.get_cv(kk)
@@ -31,10 +33,10 @@ class instanceChecker:
             except Exception:
                 pass
 
-    def make_instance(self, vals):
+    def make_instance(self, vals: dict) -> None:
         self.current_instance = instancer.instantiateVariableFont(self.ft_font, vals)
 
-    def get_all_variant_cvs(self):
+    def get_all_variant_cvs(self) -> dict:
         # We end up with a dict:
         # {master_id: {cv_name: val, ...}, ...}
         result = {}
@@ -45,7 +47,7 @@ class instanceChecker:
                 result[kk] = c
         return result
 
-    def add_variants_to_cvt(self, d):
+    def add_variants_to_cvt(self, d: dict) -> None:
         # d is a dict in the format produced by get_all_variant_cvs.
         ck = self.cvt.keys()
         dk = d.keys()
@@ -57,7 +59,7 @@ class instanceChecker:
                         cv["var"] = {}
                     cv["var"][dkk] = d[dkk][ckk]
 
-    def get_cvs_for_master(self, master_id):
+    def get_cvs_for_master(self, master_id: str) -> dict:
         # Get the glyph name and point index (or indices) from the
         # "origin" field. Get the list of y values (function below) and
         # use those to figure out the value of the cv for this glyph.
@@ -85,7 +87,7 @@ class instanceChecker:
                         result[kk] = y_diff
         return result
 
-    def y_list(self, glyph_name):
+    def y_list(self, glyph_name: str) -> list:
         gl = self.current_instance["glyf"][glyph_name].getCoordinates(
             self.ft_font["glyf"][glyph_name]
         )
