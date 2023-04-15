@@ -1,4 +1,5 @@
 from typing import Optional, Any
+from PyQt6.QtGui import QIntValidator, QDoubleValidator
 from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
@@ -75,7 +76,8 @@ class macfuncDialog(QDialog):
                         default_value = self.yg_callable[kk]["val"]
                     else:
                         default_value = None
-                    self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
+                    # self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
+                    self.widgets[-1].itemAt(1).widget().setValidator(QIntValidator())
                     if default_value:
                         self.widgets[-1].itemAt(1).widget().setText(str(default_value)) # type: ignore
                 elif self.yg_callable[kk]["type"] == "float":
@@ -88,7 +90,8 @@ class macfuncDialog(QDialog):
                         default_value = self.yg_callable[kk]["val"]
                     else:
                         default_value = None
-                    self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
+                    # self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
+                    self.widgets[-1].itemAt(1).widget().setValidator(QDoubleValidator())
                     if default_value:
                         self.widgets[-1].itemAt(1).widget().setText(str(default_value)) # type: ignore
                 else:
