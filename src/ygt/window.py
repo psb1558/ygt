@@ -1543,8 +1543,8 @@ class MainWindow(QMainWindow):
 
     def save_query(self) -> int:
         msg_box = QMessageBox()
-        msg_box.setText("The YAML source has been modified.")
-        msg_box.setInformativeText("Do you want to save it?")
+        msg_box.setText("This font’s hints have been modified.")
+        msg_box.setInformativeText("Do you want to save your work?")
         msg_box.setStandardButtons(
             QMessageBox.StandardButton.Discard
             | QMessageBox.StandardButton.Cancel
@@ -1624,6 +1624,11 @@ class MainWindow(QMainWindow):
 
     def moveEvent(self, event):
         self.preferences.set_top_window_pos(event.pos().x(), event.pos().y())
+
+    def event(self, event) -> bool:
+        if event.type() == event.Type.WindowActivate and self.glyph_pane:
+                self.glyph_pane.viewer.yg_glyph.undo_stack.setActive(True)
+        return super().event(event)
 
     def get_preferences(self, prefs: Optional[ygPreferences]) -> None:
         self.preferences = prefs
