@@ -169,7 +169,7 @@ def random_id(s):
 # roundingDefaultCommand(fontInfoEditCommand): Set all rounding defaults.
 # editCVDeltaCommand(fontInfoEditCommand): change existing CV deltas.
 # addCVDeltaCommand(fontInfoEditCommand): add a CV delta.
-# deleteCVDeltaCommanddeleteCVDeltaCommand Delete a CV delta key/value pair.
+# deleteCVDeltaCommand(fontInfoEditCommand): Delete a CV delta key/value pair.
 # addMasterCommand(fontInfoEditCommand): Add a master.
 # deleteMasterCommand(fontInfoEditCommand): Delete a master.
 # setMasterNameCommand(fontInfoEditCommand): Change a master's display name.
@@ -2092,7 +2092,6 @@ class ygGlyph(QObject):
 
         # Work with the glyph from the fontTools representation of the font.
 
-        # print(list(yg_font.ft_font.getGlyphSet()))
         try:
             self.ft_glyph = yg_font.ft_font["glyf"][self.gname]
         except KeyError:
@@ -2143,6 +2142,15 @@ class ygGlyph(QObject):
             self._current_axis = self.preferences.top_window().current_axis
         else:
             self._current_axis = "y"
+
+        # A little fix
+
+        backup_axis = self._current_axis
+        self._current_axis = "y"
+        self.fix_hint_types(self.current_block())
+        self._current_axis = "x"
+        self.fix_hint_types(self.current_block())
+        self._current_axis = backup_axis
 
         # Fix up the source to make it more usable.
         self._yaml_add_parents(self.current_block())
@@ -2371,6 +2379,13 @@ class ygGlyph(QObject):
     def coords_to_indices(self) -> None:
         """Change point indices in current block to coordinates."""
         self.undo_stack.push(changePointNumbersCommand(self, False))
+
+    def fix_hint_types(self, block):
+        for ppt in block:
+            if "rel" in ppt and "space" in ppt["rel"]:
+                ppt["rel"] = ppt["rel"].replace("space", "dist")
+            if "points" in ppt:
+                self.fix_hint_types(ppt["points"])
 
     def sub_coords(self, block: list, to_coords: bool = True) -> None:
         """Helper for indices_to_coords and coords_to_indices"""
