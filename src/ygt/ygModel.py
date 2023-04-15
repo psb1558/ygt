@@ -2087,12 +2087,29 @@ class ygGlyph(QObject):
             self.undo_stack.setActive(True)
         self.yaml_editor = None
         self.yg_font = yg_font
-        self.gsource = yg_font.get_glyph(gname)
+        # The next few lines have to come *after* loading the ft_font (below)
         self.gname = gname
+
+        # Work with the glyph from the fontTools representation of the font.
+
+        # print(list(yg_font.ft_font.getGlyphSet()))
+        try:
+            self.ft_glyph = yg_font.ft_font["glyf"][self.gname]
+        except KeyError:
+            l = list(yg_font.ft_font.getGlyphSet())
+            if "A" in l:
+                self.gname = "A"
+            elif len(l) >= 2:
+                self.gname = l[1]
+            else:
+                raise Exception("Tried to load nonexistent glyph " + self.gname)
+            self.ft_glyph = yg_font.ft_font["glyf"][self.gname]
+
+        # Initialize the source for this glyph.
+
+        self.gsource = yg_font.get_glyph(self.gname)
         self.props = ygGlyphProperties(self)
         self.error = 0
-
-        # Initialize:
 
         if not "y" in self.gsource:
             self.gsource["y"] = {"points": []}
@@ -2100,15 +2117,6 @@ class ygGlyph(QObject):
             self.gsource["x"] = {"points": []}
 
         self.set_clean()
-
-        # Work with the glyph from the fontTools representation of the font.
-
-        try:
-            self.ft_glyph = yg_font.ft_font["glyf"][gname]
-        except KeyError:
-            # This shouldn't happen: we should intercept bad gnames before we
-            # get here.
-            raise Exception("Tried to load nonexistent glyph " + gname)
 
         # Going to run several indexes for this glyph's points. This is because
         # Xgridfit is permissive about naming, so we need several ways to look
