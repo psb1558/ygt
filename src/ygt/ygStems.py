@@ -114,8 +114,6 @@ class stemFinder:
         if self.yg_glyph.current_axis() == "x":
             high_y_dir = self.y_direction(self.high_point)
             low_y_dir = self.y_direction(self.low_point)
-            print(str(self.high_point.index) + " " + high_y_dir)
-            print(str(self.low_point.index) + " " + low_y_dir)
             if high_y_dir == "up" and low_y_dir == "down":
                 result = "blackdist"
             elif high_y_dir == "down" and low_y_dir == "up":
@@ -123,8 +121,6 @@ class stemFinder:
         else:
             high_x_dir = self.x_direction(self.high_point)
             low_x_dir  = self.x_direction(self.low_point)
-            print(str(self.high_point.index) + " " + high_x_dir)
-            print(str(self.low_point.index) + " " + low_x_dir)
             if high_x_dir == "right" and low_x_dir == "left":
                 result = "blackdist"
             elif high_x_dir == "left" and low_x_dir == "right":
