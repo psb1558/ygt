@@ -373,7 +373,8 @@ class ygHintView(QGraphicsItem, ygSelectable):
                         macfunc_name
                     ]
                 else:
-                    raise Exception(str(macfunc_name) + " not function or macro!")
+                    # raise Exception(str(macfunc_name) + " not function or macro!")
+                    return plist
                 k = p.point_dict.keys()
                 for kk in k:
                     if (
@@ -1361,7 +1362,8 @@ class ygGlyphScene(QGraphicsScene):
 
         self.yg_point_view_index: dict = {}
         self.yg_point_view_list: list = []
-        self.yg_hint_view_index: dict = {}
+        # No use for this one (right now)
+        # self.yg_hint_view_index: dict = {}
         self.yg_hint_view_list: list = []
         super(ygGlyphScene, self).__init__()
         self.cv_error_msg = "Error while looking for a control value."
@@ -2154,7 +2156,7 @@ class ygGlyphScene(QGraphicsScene):
                 )
         else:
             raise Exception("Unknown hint type " + str(hint_type_num))
-        self.yg_hint_view_index[hint.id] = yg_hint_view
+        # self.yg_hint_view_index[hint.id] = yg_hint_view
         self.yg_hint_view_list.append(yg_hint_view)
         return yg_hint_view
 
@@ -2213,8 +2215,6 @@ class ygGlyphScene(QGraphicsScene):
                         ).get_color()
                 except Exception as e:
                     print(e)
-                # print("hint type is " + hint_type)
-                #
                 # ref should be a touched point and target an untouched point.
                 # If it's the other way around, reverse them.
                 if pp[1].touched and not pp[0].touched:
