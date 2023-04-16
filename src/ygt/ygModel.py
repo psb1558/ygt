@@ -373,7 +373,8 @@ class ygFont(QObject):
             try:
                 ufo = defcon.Font(fontfile)
                 self.ft_font = compileTTF(ufo)
-            except Exception:
+            except Exception as e:
+                print(e)
                 ft_open_error = True
         if ft_open_error:
             raise Exception("Can't find font file " + str(fontfile))
@@ -1042,7 +1043,7 @@ class ygSet:
     
     def __str__(self):
         result = "["
-        for count, p in enumerate(self.point_list):
+        for count, p in enumerate(self._point_list):
             if count > 0:
                 result += ", "
             result += str(p.index)
