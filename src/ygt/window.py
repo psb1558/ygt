@@ -51,6 +51,7 @@ from PyQt6.QtGui import (
     QUndoGroup,
     QCloseEvent,
     QAction,
+    QFontDatabase,
 )
 from fontTools import ttLib, ufoLib # type: ignore
 
@@ -1660,10 +1661,13 @@ class mainWinEventFilter(QObject):
 
 
 def main():
-    # print(dir(Qt))
+    # print(dir(QFont.StyleHint))
     # print(inspect.getargspec(freetype.Face.get_glyph_name))
 
     app = QApplication([])
+    font_id = QFontDatabase.addApplicationFont(os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf")
+    if font_id == -1:
+        print("Can't find Source Code Pro. Consider installing the font on your system.")
     top_window = MainWindow(app)
     top_window.get_preferences(open_config(top_window))
     app.setWindowIcon(QIcon(top_window.icon_path + "program.png"))
