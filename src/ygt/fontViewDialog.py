@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt, QRect, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea
 from PyQt6.QtGui import QPainter, QBrush, QPen, QColor
 import numpy
+from tempfile import SpooledTemporaryFile
 
 
 # A window (not a dialog, despite the filename, retained to avoid complicating
@@ -30,11 +31,18 @@ class fontViewWindow(QWidget):
         self.valid = True
         self.top_window = top_window
         self.setWindowTitle("Font View")
-        self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
+        self.yg_font = yg_font
+        if self.yg_font.source_file.source_type == "yaml":
+            self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
+        else:
+            tf = SpooledTemporaryFile(max_size=3000000, mode='b')
+            self.yg_font.preview_font.save(tf, 1)
+            tf.seek(0)
+            self.face = freetypeFont(tf, size=24, render_mode=RENDER_GRAYSCALE)
+            tf.close()
         if not self.face.valid:
             self.valid = False
             return
-        self.yg_font = yg_font
         self.glyph_list = glyph_list
 
         self._layout = QVBoxLayout()
