@@ -25,6 +25,7 @@ dependencies = [
     "PyYAML >= 6.0",
     "schema >= 0.7.5",
     "fs >= 2.4.15",
+    "ufo2ft >= 2.28.0",
     "numpy",
 ]
 
