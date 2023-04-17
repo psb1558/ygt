@@ -229,11 +229,11 @@ class editorPane(QPlainTextEdit):
     def set_style(self) -> None:
         if self.error_state:
             self.setStyleSheet(
-                "QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: rgb(252,227,242);  }"
+                "QPlainTextEdit {font-family: Source Code Pro, monospace; color: black; background-color: rgb(252,227,242);  }"
             )
         else:
             self.setStyleSheet(
-                "QPlainTextEdit {font-family: Source Code Pro, monospace; background-color: white;  }"
+                "QPlainTextEdit {font-family: Source Code Pro, monospace; color: black; background-color: white;  }"
             )
 
     def set_error_state(self, b: bool) -> None:

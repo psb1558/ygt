@@ -3,7 +3,7 @@ from .ygModel import ygFont
 from math import ceil
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea
-from PyQt6.QtGui import QPainter, QBrush, QPen, QColor
+from PyQt6.QtGui import QPainter, QBrush, QPen, QColor, QPalette
 import numpy
 from tempfile import SpooledTemporaryFile
 
@@ -45,6 +45,10 @@ class fontViewWindow(QWidget):
             return
         self.glyph_list = glyph_list
 
+        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        self.dark_theme = text_hsv_value > bg_hsv_value
+
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
         fvp = fontViewPanel(self)
@@ -83,7 +87,10 @@ class fontViewPanel(QWidget):
                 row += 1
                 self._layout.setRowMinimumHeight(row, 36)
                 col = 0
-        self.setStyleSheet("background-color: white;")
+        if dialog.dark_theme:
+            self.setStyleSheet("background-color: black;")
+        else:
+            self.setStyleSheet("background-color: white;")
 
 
 class fontViewCell(QWidget):
@@ -96,11 +103,19 @@ class fontViewCell(QWidget):
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
 
+        dark_theme = self.dialog.dark_theme
+
         brush = QBrush()
         if self.dialog.yg_font.has_hints(self.glyph):
-            brush.setColor(QColor(186, 255, 255, 128))
+            if dark_theme:
+                brush.setColor(QColor(0, 0, 186, 128))
+            else:
+                brush.setColor(QColor(186, 255, 255, 128))
         else:
-            brush.setColor(QColor("white"))
+            if dark_theme:
+                brush.setColor(QColor("black"))
+            else:
+                brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -110,7 +125,7 @@ class fontViewCell(QWidget):
             round((36 - self.dialog.face.face_height) / 2) + self.dialog.face.ascender
         )
         xpos = round((36 - self.dialog.face.advance) / 2)
-        self.dialog.face.draw_char(painter, xpos, baseline)
+        self.dialog.face.draw_char(painter, xpos, baseline, dark_theme = dark_theme)
 
         painter.end()
 

@@ -91,7 +91,7 @@ class freetypeFont:
         l = [0] * 256
         for count, c in enumerate(l):
             if dark:
-                l[count] = QColor(255, 255, 255, 255 - count)
+                l[count] = QColor(255, 255, 255, count)
             else:
                 l[count] = QColor(0, 0, 0, count)
         return l
@@ -280,9 +280,9 @@ class freetypeFont:
             xpos = starting_xpos
             for col in row:
                 if dark_theme:
-                    qp.setColor(self.bw_colors[col])
-                else:
                     qp.setColor(self.bw_colors_dark[col])
+                else:
+                    qp.setColor(self.bw_colors[col])
                 painter.setPen(qp)
                 painter.drawPoint(xpos, ypos)
                 xpos += 1
