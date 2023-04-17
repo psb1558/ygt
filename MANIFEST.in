@@ -1,4 +1,5 @@
 include src/ygt/icons/*.png
+include src/ygt/fonts/*.ttf
 exclude build/ dist/ doc/ example/ images/ webfiles/ src/ygt/__pycache__
 exclude index.html
 global-exclude xgridfit.egg-info
