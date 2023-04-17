@@ -76,9 +76,12 @@ class ygPreview(QWidget):
         self.Z: list = []
         self.instance_dict: Optional[dict] = None
         self.instance: Optional[str] = None
+        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        self.dark_theme = text_hsv_value > bg_hsv_value
+        print(self.dark_theme)
         self.colors = self.mk_color_list()
         self.render_mode = RENDER_LCD_1
-        self.dark_theme = False
         self.hinting_on = True
         self.paintEvent = self.paintEvent_b # type: ignore
 
@@ -90,7 +93,10 @@ class ygPreview(QWidget):
         l = [0] * 256
         for count, c in enumerate(l):
             # Mypy complains about this, and I have no idea what is actually wrong.
-            l[count] = QColor(101, 53, 15, count) # type: ignore
+            if self.dark_theme:
+                l[count] = QColor(255, 255, 255, count) # type: ignore
+            else:
+                l[count] = QColor(101, 53, 15, count) # type: ignore
         return l # type: ignore
 
     def fetch_glyph(self, font, glyph_index):
@@ -337,7 +343,13 @@ class ygPreview(QWidget):
         """Paint grayscale glyph."""
         painter = QPainter(self)
         brush = QBrush()
-        brush.setColor(QColor("white"))
+        #text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+        #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        #self.dark_theme = text_hsv_value > bg_hsv_value
+        if self.dark_theme:
+            brush.setColor(QColor("black"))
+        else:
+            brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -366,9 +378,9 @@ class ygPreview(QWidget):
         """Paint subpixel rendering with solid pixels."""
         painter = QPainter(self)
         brush = QBrush()
-        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
-        self.dark_theme = text_hsv_value > bg_hsv_value
+        #text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+        #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        #self.dark_theme = text_hsv_value > bg_hsv_value
         if self.dark_theme:
             brush.setColor(QColor("black"))
         else:
@@ -407,7 +419,10 @@ class ygPreview(QWidget):
         """Paint subpixel rendering with rgb pixel trios."""
         painter = QPainter(self)
         brush = QBrush()
-        brush.setColor(QColor("white"))
+        if self.dark_theme:
+            brush.setColor(QColor("black"))
+        else:
+            brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -422,12 +437,20 @@ class ygPreview(QWidget):
         for row in self.Z:
             for col in row:
                 for n, elem in enumerate(col):
-                    if n == 0:
-                        qc = QColor(255 - elem, 0, 0)
-                    elif n == 1:
-                        qc = QColor(0, 255 - elem, 0)
-                    elif n == 2:
-                        qc = QColor(0, 0, 255 - elem)
+                    if self.dark_theme:
+                        if n == 0:
+                            qc = QColor(elem, 0, 0)
+                        elif n == 1:
+                            qc = QColor(0, elem, 0)
+                        elif n == 2:
+                            qc = QColor(0, 0, elem)
+                    else:
+                        if n == 0:
+                            qc = QColor(255 - elem, 0, 0)
+                        elif n == 1:
+                            qc = QColor(0, 255 - elem, 0)
+                        elif n == 2:
+                            qc = QColor(0, 0, 255 - elem)
                     qr = QRect(
                         int(xposition),
                         int(yposition),
