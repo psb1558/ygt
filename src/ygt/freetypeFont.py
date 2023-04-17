@@ -79,6 +79,7 @@ class freetypeFont:
         self.instance = instance
         self.hinting_on = hinting_on
         self.bw_colors = self.mk_bw_color_list()
+        self.bw_colors_dark = self.mk_bw_color_list(dark = True)
         self.draw_char = self._draw_char_lcd
         self.set_render_mode(render_mode)
         self.face.set_char_size(self.char_size)
@@ -86,10 +87,13 @@ class freetypeFont:
         self.last_glyph_index = None
         self.rect_list: list = []
 
-    def mk_bw_color_list(self):
+    def mk_bw_color_list(self, dark: bool = False) -> list:
         l = [0] * 256
         for count, c in enumerate(l):
-            l[count] = QColor(0, 0, 0, count)
+            if dark:
+                l[count] = QColor(255, 255, 255, 255 - count)
+            else:
+                l[count] = QColor(0, 0, 0, count)
         return l
 
     def reset_rect_list(self):
@@ -183,7 +187,7 @@ class freetypeFont:
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
 
-    def _draw_char_lcd(self, painter, x, y, spacing_mark=False):
+    def _draw_char_lcd(self, painter, x, y, spacing_mark = False, dark_theme = False):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
         Params:
@@ -206,16 +210,23 @@ class freetypeFont:
             gdata["advance"] = self.advance = round(gdata["width"] / 3) + 4
         else:
             starting_xpos = xpos = x + gdata["bitmap_left"]
-        qp = QPen(QColor("black"))
+        if dark_theme:
+            qp = QPen(QColor("white"))
+            white_color = QColor("black")
+        else:
+            qp = QPen(QColor("black"))
+            white_color = QColor("white")
         qp.setWidth(1)
-        white_color = QColor("white")
         for row in Z:
             xpos = starting_xpos
             for col in row:
                 rgb = []
                 for elem in col:
                     rgb.append(elem)
-                qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
+                if dark_theme:
+                    qc = QColor(rgb[0], rgb[1], rgb[2])
+                else:
+                    qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
                 if qc != white_color:
                     qp.setColor(qc)
                     painter.setPen(qp)
@@ -240,7 +251,7 @@ class freetypeFont:
         )
         return gdata["advance"]
 
-    def _draw_char_grayscale(self, painter, x, y, spacing_mark=False):
+    def _draw_char_grayscale(self, painter, x, y, spacing_mark=False, dark_theme = False):
         """Draws a bitmap with grayscale rendering
 
         Params:
@@ -268,7 +279,10 @@ class freetypeFont:
         for row in Z:
             xpos = starting_xpos
             for col in row:
-                qp.setColor(self.bw_colors[col])
+                if dark_theme:
+                    qp.setColor(self.bw_colors[col])
+                else:
+                    qp.setColor(self.bw_colors_dark[col])
                 painter.setPen(qp)
                 painter.drawPoint(xpos, ypos)
                 xpos += 1
@@ -325,7 +339,7 @@ class freetypeFont:
                 pass
         return indices
 
-    def draw_string(self, painter, s, x, y, x_limit=200, y_increment=67):
+    def draw_string(self, painter, s, x, y, x_limit = 200, y_increment = 67, dark_theme = False):
         self.last_glyph_index = None
         self.reset_rect_list()
         indices = self.string_to_indices(s)
@@ -338,7 +352,7 @@ class freetypeFont:
                     self.last_glyph_index, i, ft.FT_KERNING_DEFAULT
                 )
                 xpos += k.x
-            xpos += self.draw_char(painter, xpos, ypos)
+            xpos += self.draw_char(painter, xpos, ypos, dark_theme = dark_theme)
             if xpos >= x_limit:
                 xpos = x
                 ypos += y_increment

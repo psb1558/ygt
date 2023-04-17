@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
 )
-from PyQt6.QtGui import QPainter, QBrush, QColor
+from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
 
 
@@ -78,6 +78,7 @@ class ygPreview(QWidget):
         self.instance: Optional[str] = None
         self.colors = self.mk_color_list()
         self.render_mode = RENDER_LCD_1
+        self.dark_theme = False
         self.hinting_on = True
         self.paintEvent = self.paintEvent_b # type: ignore
 
@@ -309,7 +310,10 @@ class ygPreview(QWidget):
             if i == baseline:
                 pen.setColor(QColor("red"))
             else:
-                pen.setColor(QColor(50, 50, 50, 50))
+                if self.dark_theme:
+                    pen.setColor(QColor(200, 200, 200, 50))
+                else:
+                    pen.setColor(QColor(50, 50, 50, 50))
             painter.setPen(pen)
             painter.drawLine(QLine(left, top, left + line_length, top))
             top += self.pixel_size
@@ -320,7 +324,10 @@ class ygPreview(QWidget):
                 grid_width = round(grid_width / 3) + 1
             y_top = self.vertical_margin + (self.top_grid_offset * self.pixel_size)
             y_bot = top - self.pixel_size
-            pen.setColor(QColor(50, 50, 50, 50))
+            if self.dark_theme:
+                pen.setColor(QColor(200, 200, 200, 50))
+            else:
+                pen.setColor(QColor(50, 50, 50, 50))
             painter.setPen(pen)
             for i, r in enumerate(range(grid_width)):
                 painter.drawLine(QLine(left, y_top, left, y_bot))
@@ -359,7 +366,13 @@ class ygPreview(QWidget):
         """Paint subpixel rendering with solid pixels."""
         painter = QPainter(self)
         brush = QBrush()
-        brush.setColor(QColor("white"))
+        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        self.dark_theme = text_hsv_value > bg_hsv_value
+        if self.dark_theme:
+            brush.setColor(QColor("black"))
+        else:
+            brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -376,7 +389,10 @@ class ygPreview(QWidget):
                 rgb = []
                 for elem in col:
                     rgb.append(elem)
-                qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
+                if self.dark_theme:
+                    qc = QColor(rgb[0], rgb[1], rgb[2])
+                else:
+                    qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
                 painter.fillRect(qr, qc)
                 xposition += self.pixel_size
@@ -466,7 +482,10 @@ class ygStringPreviewPanel(QWidget):
 
     def _fill_background(self, painter: QPainter) -> None:
         brush = QBrush()
-        brush.setColor(QColor("white"))
+        if self.yg_preview.dark_theme:
+            brush.setColor(QColor("black"))
+        else:
+            brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -491,7 +510,11 @@ class ygStringPreviewPanel(QWidget):
                 instance=self.yg_preview.instance,
             )
             advance = self.face.draw_char(
-                painter, xposition, yposition, spacing_mark=True
+                painter,
+                xposition,
+                yposition,
+                spacing_mark=True,
+                dark_theme=self.yg_preview.dark_theme
             )
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):
@@ -512,7 +535,12 @@ class ygStringPreviewPanel(QWidget):
         yposition = 66
         self.face = self.yg_preview.face
         self.rect_list = self.face.draw_string(
-            painter, self._text, xposition, yposition, x_limit=PREVIEW_WIDTH - 50
+            painter,
+            self._text,
+            xposition,
+            yposition,
+            x_limit = PREVIEW_WIDTH - 50,
+            dark_theme = self.yg_preview.dark_theme
         )
         painter.end()
 

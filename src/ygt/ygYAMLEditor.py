@@ -43,8 +43,9 @@ class ygYAMLEditor(QPlainTextEdit):
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setStyleSheet(
-            "ygYAMLEditor {font-family: Source Code Pro, monospace; background-color: white; }"
+            "ygYAMLEditor {font-family: Source Code Pro, monospace; }"
         )
+        # ; background-color: white
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.preferences = preferences
         self.textChanged.connect(self.text_changed)
@@ -134,12 +135,12 @@ class ygYAMLEditor(QPlainTextEdit):
         tenspace = r"(          |        \- )"
 
         keytwo_format = QTextCharFormat()
-        keytwo_format.setForeground(QColor(122, 6, 70, 255))
+        keytwo_format.setForeground(QColor(182, 6, 70, 255))
         pattern = twospace + tags
         self._highlighter.add_mapping(pattern, keytwo_format)
 
         keyfour_format = QTextCharFormat()
-        keyfour_format.setForeground(QColor("blue"))
+        keyfour_format.setForeground(QColor(75, 75, 255, 255))
         pattern = fourspace + tags
         self._highlighter.add_mapping(pattern, keyfour_format)
 
@@ -159,7 +160,7 @@ class ygYAMLEditor(QPlainTextEdit):
         self._highlighter.add_mapping(pattern, keyten_format)
 
         list_format = QTextCharFormat()
-        list_format.setForeground(QColor("red"))
+        list_format.setForeground(QColor(255, 75, 75, 255))
         pattern = r"^(\- |  \- |    \- |      \- |        \- |          \- )"
         self._highlighter.add_mapping(pattern, list_format)
 
