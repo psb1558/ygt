@@ -157,6 +157,10 @@ class freetypeFont:
             flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD
         if not self.hinting_on:
             flags = flags | ft.FT_LOAD_NO_HINTING | ft.FT_LOAD_NO_AUTOHINT
+        # For some UFOs, font view is hanging here (with load_glyph). It doesn't
+        # hang except with
+        # UFOs, and it generates the preview well from the same in-memory TTFont.
+        # So what are we doing differently when generating the font view?
         self.face.load_glyph(self.glyph_index, flags=flags)
         self.glyph_slot = self.face.glyph
         self.advance = round(self.glyph_slot.advance.x / 64)

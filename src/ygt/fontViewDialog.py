@@ -1,4 +1,5 @@
 from .freetypeFont import freetypeFont, RENDER_GRAYSCALE
+from fontTools import subset
 from .ygModel import ygFont
 from math import ceil
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
@@ -6,6 +7,7 @@ from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollA
 from PyQt6.QtGui import QPainter, QBrush, QPen, QColor, QPalette
 import numpy
 from tempfile import SpooledTemporaryFile
+import copy
 
 
 # A window (not a dialog, despite the filename, retained to avoid complicating
@@ -31,12 +33,23 @@ class fontViewWindow(QWidget):
         self.valid = True
         self.top_window = top_window
         self.setWindowTitle("Font View")
+        self.glyph_name_list = []
+        self.name_to_index = {}
+        for g in glyph_list:
+            self.glyph_name_list.append(g[1])
+            self.name_to_index[g[1]] = g[0]
         self.yg_font = yg_font
         if self.yg_font.source_file.source_type == "yaml":
             self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
         else:
+            temp_font = copy.deepcopy(self.yg_font.preview_font)
             tf = SpooledTemporaryFile(max_size=3000000, mode='b')
-            self.yg_font.preview_font.save(tf, 1)
+            options = subset.Options(glyph_names=True)
+            options.layout_features = []
+            subsetter = subset.Subsetter(options)
+            subsetter.populate(glyphs=self.glyph_name_list)
+            subsetter.subset(temp_font)
+            temp_font.save(tf, 1)
             tf.seek(0)
             self.face = freetypeFont(tf, size=24, render_mode=RENDER_GRAYSCALE)
             tf.close()
@@ -120,7 +133,9 @@ class fontViewCell(QWidget):
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
 
-        self.dialog.face.set_char(self.dialog.face.name_to_index(self.glyph))
+        # self.dialog.face.set_char(self.dialog.face.name_to_index(self.glyph))
+        ind = self.dialog.face.name_to_index(self.glyph)
+        self.dialog.face.set_char(ind)
         baseline = (
             round((36 - self.dialog.face.face_height) / 2) + self.dialog.face.ascender
         )
