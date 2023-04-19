@@ -18,7 +18,17 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
-Version 0.1.23 (2023-4-17) changes three keywords in Ygt’s YAML-based hinting language: `blackspace`, `whitespace`, and `grayspace` become `blackdist`, `whitedist`, and `graydist`. If you have created a hinting file for earlier versions, run this sed script:
+### Version 0.1.24 (2023-4-19)
+
+When we read a UFO, we do not rename glyphs. This prevents incompatibilities between in-memory font and font on disk, and it simplifies export. However, it may complicate shifting back and forth between UFO and YAML modes.
+
+Ygt sometimes hung when summoning a Font View window for fonts read from UFO. This is now fixed.
+
+Program now (partly) honors dark themes on various platforms.
+
+### Version 0.1.23 (2023-4-17)
+
+changes three keywords in Ygt’s YAML-based hinting language: `blackspace`, `whitespace`, and `grayspace` become `blackdist`, `whitedist`, and `graydist`. If you have created a hinting file for earlier versions, run this sed script:
 ```
 s/blackspace/blackdist/g
 s/whitesapce/whitedist/g
