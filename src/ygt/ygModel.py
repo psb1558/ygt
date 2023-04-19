@@ -372,7 +372,7 @@ class ygFont(QObject):
         elif extension == ".ufo":
             try:
                 ufo = defcon.Font(fontfile)
-                self.ft_font = compileTTF(ufo)
+                self.ft_font = compileTTF(ufo, useProductionNames=False)
             except Exception as e:
                 print(e)
                 ft_open_error = True
