@@ -34,10 +34,8 @@ class fontViewWindow(QWidget):
         self.top_window = top_window
         self.setWindowTitle("Font View")
         self.glyph_name_list = []
-        self.name_to_index = {}
         for g in glyph_list:
             self.glyph_name_list.append(g[1])
-            self.name_to_index[g[1]] = g[0]
         self.yg_font = yg_font
         if self.yg_font.source_file.source_type == "yaml":
             self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
