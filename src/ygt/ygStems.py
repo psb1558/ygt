@@ -5,6 +5,7 @@ from .ygModel import ygPoint, ygGlyph
 class stemFinder:
     def __init__(self, p1: ygPoint, p2: ygPoint, yg_glyph: ygGlyph) -> None:
         self.yg_glyph = yg_glyph
+        self.counter_clockwise = bool(self.yg_glyph.yg_font.defaults.get_default("counterclockwise"))
         self.contours = []
         contour = []
         points = yg_glyph.points()
@@ -72,16 +73,28 @@ class stemFinder:
         this_x = pt.font_x
         next_x = next_point.font_x
         if next_x > this_x:
-            return "right"
+            if self.counter_clockwise:
+                return("left")
+            else:
+                return "right"
         elif this_x > next_x:
-            return "left"
+            if self.counter_clockwise:
+                return "right"
+            else:
+                return "left"
         # If the points are aligned on this axis we're probably at the end of a stem.
         prev_point = self.prev_point(pt, contour)
         prev_x = prev_point.font_x
         if prev_x < this_x:
-            return "right"
+            if self.counter_clockwise:
+                return("left")
+            else:
+                return "right"
         elif this_x < prev_x:
-            return "left"
+            if self.counter_clockwise:
+                return "right"
+            else:
+                return "left"
         return "same"
 
         
@@ -95,15 +108,27 @@ class stemFinder:
         next_y = next_point.font_y
         this_y = pt.font_y
         if next_y > this_y:
-            return "up"
+            if self.counter_clockwise:
+                return "down"
+            else:
+                return "up"
         elif this_y > next_y:
-            return "down"
+            if self.counter_clockwise:
+                return "up"
+            else:
+                return "down"
         prev_point = self.prev_point(pt, contour)
         prev_y = prev_point.font_y
         if prev_y > this_y:
-            return "right"
+            if self.counter_clockwise:
+                return "up"
+            else:
+                return "down"
         elif this_y > prev_y:
-            return "left"
+            if self.counter_clockwise:
+                return "down"
+            else:
+                return "up"
         return "same"
         
     def get_color(self) -> str:
