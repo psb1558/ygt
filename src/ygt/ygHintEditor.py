@@ -2931,6 +2931,7 @@ class ygGlyphView(QGraphicsView):
         self.parent().parent().set_window_title()  # type: ignore
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
+        new_glyph.sig_hints_changed.emit(new_glyph.hints())
 
     @pyqtSlot()
     def guess_cv(self) -> None:

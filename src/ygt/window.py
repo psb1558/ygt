@@ -621,6 +621,9 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def preview_current_glyph(self) -> None:
+        self._preview_current_glyph()
+
+    def _preview_current_glyph(self) -> None:
         try:
             if self.preview_maker != None and self.preview_maker.isRunning():
                 return
@@ -1304,6 +1307,8 @@ class MainWindow(QMainWindow):
             self.setup_editor_connections()
             self.setup_preview_instance_connections()
             self.setup_point_label_connections()
+            # Should we send a signal for preview update from here?
+            self._preview_current_glyph()
         return 0
 
     #
