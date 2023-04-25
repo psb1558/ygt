@@ -79,7 +79,6 @@ class ygPreview(QWidget):
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
         bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
         self.dark_theme = text_hsv_value > bg_hsv_value
-        print(self.dark_theme)
         self.colors = self.mk_color_list()
         self.render_mode = RENDER_LCD_1
         self.hinting_on = True
@@ -343,9 +342,6 @@ class ygPreview(QWidget):
         """Paint grayscale glyph."""
         painter = QPainter(self)
         brush = QBrush()
-        #text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
-        #self.dark_theme = text_hsv_value > bg_hsv_value
         if self.dark_theme:
             brush.setColor(QColor("black"))
         else:
@@ -378,9 +374,6 @@ class ygPreview(QWidget):
         """Paint subpixel rendering with solid pixels."""
         painter = QPainter(self)
         brush = QBrush()
-        #text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
-        #self.dark_theme = text_hsv_value > bg_hsv_value
         if self.dark_theme:
             brush.setColor(QColor("black"))
         else:
