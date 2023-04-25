@@ -868,16 +868,28 @@ class miscDefaultsWidget(QWidget):
         self.assume_always_y = QCheckBox("Assume axis always y")
         self.assume_always_y.stateChanged.connect(self.toggle_assume_always_y)
 
+        self.counterclockwise = QCheckBox("Outer contours counter-clockwise")
+        self.counterclockwise.stateChanged.connect(self.toggle_counterclockwise)
+
         self.cleartype = QCheckBox("Cleartype")
         self.cleartype.stateChanged.connect(self.toggle_cleartype)
 
         self.layout_obj.addWidget(self.tt_defaults)
         self.layout_obj.addWidget(self.init_graphics)
         self.layout_obj.addWidget(self.assume_always_y)
+        self.layout_obj.addWidget(self.counterclockwise)
         self.layout_obj.addWidget(self.cleartype)
         self.setLayout(self.layout_obj)
 
         self.refresh()
+
+    def toggle_counterclockwise(self) -> None:
+        if self.ignore_signal:
+            return
+        if self.counterclockwise.isChecked():
+            self.defaults.set_default({"counterclockwise": True})
+        else:
+            self.defaults.del_default("counterclockwise")
 
     def toggle_tt_defaults(self) -> None:
         if self.ignore_signal:
