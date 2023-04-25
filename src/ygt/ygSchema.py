@@ -258,6 +258,7 @@ defaults_struct = {
     Optional("init-graphics"): bool,
     Optional("assume-always-y"): bool,
     Optional("cleartype"): bool,
+    Optional("counterclockwise"): bool,
     Optional("round"): hint_types,
     Optional("no-round"): hint_types,
     Optional("cv_vars_generated"): bool,
