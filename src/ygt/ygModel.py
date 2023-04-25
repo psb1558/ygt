@@ -372,7 +372,7 @@ class ygFont(QObject):
         elif extension == ".ufo":
             try:
                 ufo = defcon.Font(fontfile)
-                self.ft_font = compileTTF(ufo, useProductionNames=False)
+                self.ft_font = compileTTF(ufo, useProductionNames=False, reverseDirection=False)
             except Exception as e:
                 print(e)
                 ft_open_error = True
@@ -648,22 +648,7 @@ class ygFont(QObject):
 
     def extreme_points(self, glyph_name: str) -> tuple[tuple, tuple]:
         """Helper for setting up an initial cvt."""
-        g = ygGlyph(ygPreferences(), self, glyph_name)
-        last_highest = highest = -10000
-        last_lowest = lowest = 10000
-        highest_point = -1
-        lowest_point = -1
-        plist = g.point_list
-        for i, p in enumerate(plist):
-            highest = max(highest, p.font_y)
-            if highest != last_highest:
-                last_highest = highest
-                highest_point = i
-            lowest = min(lowest, p.font_y)
-            if lowest != last_lowest:
-                last_lowest = lowest
-                lowest_point = i
-        return (highest_point, highest), (lowest_point, lowest)
+        return ygGlyph(ygPreferences(), self, glyph_name).extreme_points_y()
 
     def family_name(self) -> str:
         return self.ft_font["name"].getName(1, 3, 1, 0x409)
@@ -2345,6 +2330,47 @@ class ygGlyph(QObject):
     #
     # Accessing glyph data
     #
+
+    def extreme_points_y(self):
+        last_highest = highest = -100000
+        last_lowest = lowest = 100000
+        highest_point = -1
+        lowest_point = -1
+        for i, p in enumerate(self.point_list):
+            highest = max(highest, p.font_y)
+            if highest != last_highest:
+                last_highest = highest
+                highest_point = i
+            lowest = min(lowest, p.font_y)
+            if lowest != last_lowest:
+                last_lowest = lowest
+                lowest_point = i
+        return (highest_point, highest), (lowest_point, lowest)
+
+    def extreme_points_x(self):
+        last_right = right = -100000
+        last_left = left = 100000
+        rightmost_point = -1
+        leftmost_point = -1
+        for i, p in enumerate(self.point_list):
+            right = max(right, p.font_x)
+            if right != last_right:
+                last_right = right
+                rightmost_point = i
+            left = min(left, p.font_x)
+            if left != last_left:
+                last_left = left
+                leftmost_point = i
+        return (rightmost_point, right), (leftmost_point, left)
+    
+    def dimensions(self):
+        if len(self.point_list) == 0:
+            return 0, 0
+        x_right, x_left = self.extreme_points_x()
+        y_top, y_bottom = self.extreme_points_y()
+        x_dim = x_right[1] - x_left[1]
+        y_dim = y_top[1] - y_bottom[1]
+        return x_dim, y_dim
 
     def get_category(self, long_name: bool = False) -> str:
         cat = self.props.get_property("category")
