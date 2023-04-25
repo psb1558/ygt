@@ -39,6 +39,7 @@ from PyQt6.QtGui import (
     QPolygonF,
     QAction,
     QPainter,
+    QPalette,
 )
 from PyQt6.QtWidgets import (
     QWidget,
@@ -60,6 +61,7 @@ from PyQt6.QtWidgets import (
     QStyleOptionGraphicsItem,
 )
 from fontTools.pens.basePen import BasePen  # type: ignore
+from fontTools.pens.boundsPen import BoundsPen
 from .ygPreferences import ygPreferences
 
 
@@ -1356,9 +1358,17 @@ class ygGlyphScene(QGraphicsScene):
     sig_set_category = pyqtSignal(object)
     sig_name_points = pyqtSignal(object)
 
-    def __init__(self, preferences: ygPreferences, yg_glyph: ygGlyph) -> None:
+    def __init__(
+            self, preferences: ygPreferences,
+            yg_glyph: ygGlyph,
+            owner: Optional["ygGlyphView"] = None) -> None:
         """yg_glyph is a ygGlyph object from ygModel."""
         self.preferences = preferences
+
+        # Set up glyph info
+
+        self.yg_glyph = yg_glyph
+        self.owner = owner
 
         self.yg_point_view_index: dict = {}
         self.yg_point_view_list: list = []
@@ -1370,13 +1380,18 @@ class ygGlyphScene(QGraphicsScene):
 
         # Current display preferences
 
-        self.off_curve_points_showing = self.preferences.show_off_curve_points()
+        if self.preferences.top_window().show_off_curve_points != None:
+            self.off_curve_points_showing = self.preferences.top_window().show_off_curve_points
+        else:
+            self.off_curve_points_showing = self.preferences.show_off_curve_points()
         self.point_numbers_showing = self.preferences.top_window().show_point_numbers
-        self.zoom_factor = self.preferences.zoom_factor()
+        self.zoom_factor = 1.0
+        self.initial_zoom_factor = None
+        self.canvas_size = self._calc_canvas_size()
+        self.setSceneRect(QRectF(0, 0, self.canvas_size[0], self.canvas_size[1]))
+        self.xTranslate = self.canvas_size[2]
+        self.yTranslate = self.canvas_size[3]
 
-        # Set up glyph info
-
-        self.yg_glyph = yg_glyph
 
         # Try to get rid of ref to this scene in the model's ygGlyph class.
         # For now, we've got to ignore the type so as to avoid circular imports.
@@ -1395,10 +1410,7 @@ class ygGlyphScene(QGraphicsScene):
         self.lsb = 0
         self.xTranslate = 0
         self.yTranslate = 0
-        # Not gonna mess with types from fontTools.
         self.original_coordinates: Any = None
-        self.scale_glyph()
-        self.center_x = self.xTranslate + round(self.adv / 2)
         self.center_x = self.xTranslate + round(self.adv / 2)
 
         # Setup for selecting
@@ -1459,14 +1471,18 @@ class ygGlyphScene(QGraphicsScene):
             self.yg_glyph.gname, ft_font["hmtx"].metrics
         )[0]
         print("First point: " + str(oc[0]))
-        print("Canvas rect: " + str(self.sceneRect()))
+        qr = self.sceneRect()
+        #print("Canvas rect: " + str(self.sceneRect()))
+        print("Canvas rect: " + str(qr.x()) + " " + str(qr.y()) + " " + str(qr.width()) + " " + str(qr.height()))
         print("")
 
     def set_zoom_factor(self, new_zoom: float) -> None:
         self.zoom_factor = new_zoom
+        # We are ignoring the zoom_factor setting in the preferences now, in favor
+        # of setting an optimal zoom factor in the __init__ of ygGlyphScene. Survey
+        # uses of the preferences object to make sure this is so.
         self.preferences.top_window().zoom_factor = self.zoom_factor
         self.scale_glyph()
-        self.center_x = self.xTranslate + round(self.adv / 2)
         self.center_x = self.xTranslate + round(self.adv / 2)
         self.update()
         self.install_hints(self.yg_glyph.hints())
@@ -1561,6 +1577,17 @@ class ygGlyphScene(QGraphicsScene):
         # print("x: " + str(thisx - adjust))
         # print("y: " + str(thisy - adjust))
         return QPointF(thisx - adjust, thisy - adjust)
+    
+    def mid_point_y(self):
+        if len(self.yg_point_view_list) > 0:
+            highest, lowest = self.yg_glyph.extreme_points_y()
+            highest_coord = self.yg_point_view_list[highest[0]].glocation.y()
+            lowest_coord = self.yg_point_view_list[lowest[0]].glocation.y()
+            return lowest_coord - round((lowest_coord - highest_coord) / 2)
+        else:
+            if self.owner:
+                return self.owner.sceneRect().center().y()
+            return 500
 
     #
     # Overrides
@@ -1571,14 +1598,42 @@ class ygGlyphScene(QGraphicsScene):
         Points and hints are drawn in the item layer, and the foreground
         layer is not used at this time.
         """
+        if not self.initial_zoom_factor:
+            visible_x = rect.width()
+            visible_y = rect.height()
+            optimal_x = round(visible_x * 0.8)
+            optimal_y = round(visible_y * 0.8)
+            width, height = self.yg_glyph.dimensions()
+            if width != 0:
+                x_ratio = optimal_x / width
+            else:
+                x_ratio = 1
+            if height != 0:
+                y_ratio = optimal_y / height
+            else:
+                y_ratio = 1
+            # Limit the initial zoom factor to max of 2.0. This prevents little glyphs
+            # like period from becoming disconcertingly large.
+            self.initial_zoom_factor = min(2.0, min(x_ratio, y_ratio))
+            self.set_zoom_factor(self.initial_zoom_factor)
+            if self.owner:
+                self.owner.centerOn(self.center_x, self.mid_point_y())
+
+
         painter.scale(1.0, -1.0)
         painter.translate(QPointF(self.xTranslate, self.yTranslate * -1))
 
         pen = painter.pen()
 
         if self.preferences["show_metrics"]:
+            text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+            bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+            dark_theme = text_hsv_value > bg_hsv_value
             pen.setWidth(1)
-            pen.setColor(QColor(50, 50, 50, 50))
+            if dark_theme:
+                pen.setColor(QColor(200, 200, 200, 50))
+            else:
+                pen.setColor(QColor(50, 50, 50, 50))
             painter.setPen(pen)
             painter.drawLine(QLine(-abs(self.xTranslate), 0, round(self.width()), 0))
             ya = -abs(self.yTranslate)
@@ -1656,7 +1711,6 @@ class ygGlyphScene(QGraphicsScene):
         r = ed_dialog.exec()
         if r == QDialog.DialogCode.Accepted:
             hint.yg_hint.set_macfunc_other_args(ed_dialog.result_dict)
-            # hint.yg_hint.hint_has_changed(hint.yg_hint)
 
     @pyqtSlot()
     def toggle_off_curve_visibility(self) -> None:
@@ -1708,6 +1762,8 @@ class ygGlyphScene(QGraphicsScene):
         self.yg_glyph.hint_changed(hint_model)
 
     def make_control_value(self) -> None:
+        """ With one or two points selected, launch a dialog for making a pos or dist CV.
+        """
         sel = self.selected_objects(True)
         if len(sel) == 0:
             return
@@ -2868,7 +2924,7 @@ class ygGlyphView(QGraphicsView):
             new_glyph.restore_gsource()
         else:
             new_glyph = ygGlyph(self.preferences, self.yg_font, gname)
-            self.viewer = ygGlyphScene(self.preferences, new_glyph)
+            self.viewer = ygGlyphScene(self.preferences, new_glyph, owner = self)
         self.preferences.set_current_glyph(self.yg_font.full_name(), gname)
         self.setScene(self.viewer)
         self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
@@ -2937,7 +2993,8 @@ class ygGlyphView(QGraphicsView):
     def zoom(self, sender_text: str) -> None:
         sender_text = self.sender().text()  # type: ignore
         if sender_text == "Original Size":
-            self.viewer.set_zoom_factor(1)
+            #self.viewer.set_zoom_factor(1)
+            self.viewer.set_zoom_factor(self.viewer.initial_zoom_factor)
         elif sender_text == "Zoom In":
             if self.viewer.zoom_factor <= 5.75:
                 self.viewer.set_zoom_factor(self.viewer.zoom_factor + 0.25)
@@ -2954,7 +3011,8 @@ class ygGlyphView(QGraphicsView):
         # qp = QPoint(round(v.x() + (v.width() / 2)), round(v.y() + (v.height() / 2)))
         # self.centerOn(self.mapToScene(qp))
 
-        self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
+        # self.centerOn(self.viewer.center_x, self.sceneRect().center().y())
+        self.centerOn(self.viewer.center_x, self.viewer.mid_point_y())
 
     def keyPressEvent(self, event) -> None:
         if event.key() in [16777219, 16777223]:
