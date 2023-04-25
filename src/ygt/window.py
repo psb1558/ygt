@@ -1296,6 +1296,7 @@ class MainWindow(QMainWindow):
             modelGlyph.set_yaml_editor(self.source_editor)
             viewer = ygGlyphScene(self.preferences, modelGlyph)
             view = ygGlyphView(self.preferences, viewer, self.yg_font)
+            viewer.owner = view
             self.add_glyph_pane(view)
             view.centerOn(view.viewer.center_x, view.sceneRect().center().y())
             self.set_window_title()
@@ -1532,11 +1533,16 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_ppem_dialog(self):
-        text, ok = QInputDialog().getText(
-            self, "Set Points per Em", "Points per em:", QLineEdit.EchoMode.Normal
+        i, ok = QInputDialog().getInt(
+            self,
+            "Set Points per Em",
+            "Points per em:",
+            value = 30,
+            min = 10,
+            max = 400,
         )
-        if ok and text:
-            self.yg_preview.set_size(text)
+        if ok:
+            self.yg_preview.set_size(i)
 
     #
     # Program exit
