@@ -2846,6 +2846,7 @@ class ygGlyphView(QGraphicsView):
     """
 
     sig_goto = pyqtSignal(object)
+    sig_toggle_drag_mode = pyqtSignal(object)
 
     def __init__(
         self,
@@ -2860,6 +2861,8 @@ class ygGlyphView(QGraphicsView):
         self.yg_font = font
         self.preferences = preferences
         self.visited_glyphs: Dict[str, ygGlyphScene] = {}
+        self.drag_mode_backup = QGraphicsView.DragMode.NoDrag
+
 
     @pyqtSlot()
     def make_control_value(self) -> None:
@@ -2867,6 +2870,9 @@ class ygGlyphView(QGraphicsView):
 
     def setup_goto_signal(self, o: Callable) -> None:
         self.sig_goto.connect(o)
+
+    def setup_toggle_drag_mode_signal(self, o: Callable) -> None:
+        self.sig_toggle_drag_mode.connect(o)
 
     def _current_index(self) -> int:
         return self.yg_font.get_glyph_index(
@@ -3018,6 +3024,16 @@ class ygGlyphView(QGraphicsView):
     def keyPressEvent(self, event) -> None:
         if event.key() in [16777219, 16777223]:
             self.viewer.delete_selected_hints()
+        elif event.key() == 32 and not event.isAutoRepeat():
+            self.drag_mode_backup = self.dragMode()
+            if self.drag_mode_backup == QGraphicsView.DragMode.NoDrag:
+                self.sig_toggle_drag_mode.emit(QGraphicsView.DragMode.ScrollHandDrag)
+
+    def keyReleaseEvent(self, event):
+        if event.key() == 32 and not event.isAutoRepeat():
+            if self.drag_mode_backup != self.dragMode():
+                self.sig_toggle_drag_mode.emit(self.drag_mode_backup)
+
 
     def focusInEvent(self, event) -> None:
         self.viewer.yg_glyph.undo_stack.setActive(True)

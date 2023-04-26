@@ -40,7 +40,7 @@ class ygPreview(QWidget):
         self.face: Optional[freetypeFont] = None
         self.hinting = "on"
         self.glyph_index = 0
-        self.char_size = 30
+        self.char_size = 25
         self.label = QLabel()
         self.label.setStyleSheet("QLabel {background-color: transparent; color: red;}")
         self.label.setText(str(self.char_size) + "ppem")
@@ -507,6 +507,7 @@ class ygStringPreviewPanel(QWidget):
         painter.fillRect(rect, brush)
 
     def paintEvent_a(self, event) -> None:
+        target_size = self.yg_preview.char_size
         painter = QPainter(self)
         self._fill_background(painter)
         if self.face == None:
@@ -518,6 +519,7 @@ class ygStringPreviewPanel(QWidget):
         xposition = 25
         yposition = 66
         for s in range(10, 100):
+            this_is_target = (s == target_size)
             self.face.set_params(
                 glyph=self.yg_preview.glyph_index,
                 render_mode=self.yg_preview.render_mode,
@@ -530,7 +532,8 @@ class ygStringPreviewPanel(QWidget):
                 xposition,
                 yposition,
                 spacing_mark=True,
-                dark_theme=self.yg_preview.dark_theme
+                dark_theme=self.yg_preview.dark_theme,
+                is_target=this_is_target
             )
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):

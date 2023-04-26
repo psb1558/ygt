@@ -587,6 +587,13 @@ class MainWindow(QMainWindow):
             if editing_on:
                 self.glyph_pane.setDragMode(QGraphicsView.DragMode.NoDrag)
 
+    @pyqtSlot(object)
+    def set_panning_editing(self, mode) -> None:
+        if mode == QGraphicsView.DragMode.ScrollHandDrag:
+            self.hand_action.setChecked(True)
+        else:
+            self.cursor_action.setChecked(True)
+
     #
     # Preview panes
     #
@@ -880,6 +887,7 @@ class MainWindow(QMainWindow):
         self.previous_glyph_action.triggered.connect(self.glyph_pane.previous_glyph)
         self.goto_action.triggered.connect(self.show_goto_dialog)
         self.glyph_pane.setup_goto_signal(self.show_goto_dialog)
+        self.glyph_pane.setup_toggle_drag_mode_signal(self.set_panning_editing)
         self.font_view_action.triggered.connect(self.show_font_view)
 
     def setup_undo_connections(self) -> None:

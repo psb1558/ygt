@@ -4,7 +4,7 @@ import numpy
 import copy
 from tempfile import SpooledTemporaryFile
 from PyQt6.QtGui import QColor, QPen
-from PyQt6.QtCore import QRect
+from PyQt6.QtCore import QRect, QLine
 
 
 RENDER_GRAYSCALE = 1
@@ -191,7 +191,15 @@ class freetypeFont:
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
 
-    def _draw_char_lcd(self, painter, x, y, spacing_mark = False, dark_theme = False):
+    def _draw_char_lcd(
+            self,
+            painter,
+            x,
+            y,
+            spacing_mark = False,
+            dark_theme = False,
+            is_target = False
+        ):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
         Params:
@@ -239,6 +247,12 @@ class freetypeFont:
             ypos += 1
         ending_xpos = starting_xpos + round(gdata["advance"])
         ending_ypos = starting_ypos + gdata["rows"]
+        if is_target:
+            ul_y = ending_ypos + 4
+            qc = QPen(QColor("red"))
+            qc.setWidth(2)
+            painter.setPen(qc)
+            painter.drawLine(QLine(starting_xpos, ul_y, ending_xpos, ul_y))
         if abs(ending_ypos - starting_ypos) <= 5:
             starting_ypos -= 3
             ending_ypos += 3
@@ -255,7 +269,14 @@ class freetypeFont:
         )
         return gdata["advance"]
 
-    def _draw_char_grayscale(self, painter, x, y, spacing_mark=False, dark_theme = False):
+    def _draw_char_grayscale(
+            self,
+            painter,
+            x,
+            y,
+            spacing_mark=False,
+            dark_theme = False,
+            is_target = False):
         """Draws a bitmap with grayscale rendering
 
         Params:
@@ -293,6 +314,12 @@ class freetypeFont:
             ypos += 1
         ending_xpos = starting_xpos + round(gdata["advance"])
         ending_ypos = starting_ypos + gdata["rows"]
+        if is_target:
+            ul_y = ending_ypos + 4
+            qc = QPen(QColor("red"))
+            qc.setWidth(2)
+            painter.setPen(qc)
+            painter.drawLine(QLine(starting_xpos, ul_y, ending_xpos, ul_y))
         if abs(ending_ypos - starting_ypos) <= 5:
             starting_ypos -= 3
             ending_ypos += 3

@@ -131,7 +131,6 @@ class fontViewCell(QWidget):
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
 
-        # self.dialog.face.set_char(self.dialog.face.name_to_index(self.glyph))
         ind = self.dialog.face.name_to_index(self.glyph)
         self.dialog.face.set_char(ind)
         baseline = (
