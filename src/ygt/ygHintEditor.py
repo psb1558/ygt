@@ -61,7 +61,7 @@ from PyQt6.QtWidgets import (
     QStyleOptionGraphicsItem,
 )
 from fontTools.pens.basePen import BasePen  # type: ignore
-from fontTools.pens.boundsPen import BoundsPen
+# from fontTools.pens.boundsPen import BoundsPen
 from .ygPreferences import ygPreferences
 
 
@@ -69,25 +69,51 @@ HINT_ARROW_WIDTH = 3
 HINT_ANCHOR_WIDTH = 3
 HINT_LINK_WIDTH = 1
 HINT_ARROWHEAD_WIDTH = 2
-HINT_COLLECTION_COLOR = QColor(0, 255, 0, 128)
-HINT_COLLECTION_SELECT_COLOR = QColor(0, 205, 0, 128)
+
+#HINT_COLLECTION_COLOR = QColor(0, 255, 0, 128)
+#HINT_COLLECTION_DARK = QColor(173, 204, 181, 128)
+#HINT_COLLECTION_SELECT_COLOR = QColor(0, 205, 0, 128)
+#HINT_COLLECTION_SELECT_DARK = QColor(38, 191, 74, 128)
+
 HINT_ANCHOR_COLOR = QColor(255, 0, 255, 128)
+HINT_ANCHOR_DARK = QColor(255, 182, 193, 128)
 HINT_ANCHOR_SELECT_COLOR = QColor(175, 0, 175, 128)
+HINT_ANCHOR_SELECT_DARK = QColor(255, 77, 103, 128)
+
 HINT_STEM_COLOR = QColor(255, 0, 0, 128)
+HINT_STEM_DARK = QColor(255, 128, 176, 128)
 HINT_STEM_SELECT_COLOR = QColor(175, 0, 0, 128)
+HINT_STEM_SELECT_DARK = QColor(191, 0, 74, 128)
+
 HINT_SHIFT_COLOR = QColor(100, 100, 255, 128)
+HINT_SHIFT_DARK = QColor(96, 159, 191, 128)
 HINT_SHIFT_SELECT_COLOR = QColor(0, 0, 150, 128)
+HINT_SHIFT_SELECT_DARK = QColor(51, 186, 255, 128)
+
 HINT_ALIGN_COLOR = QColor(0, 255, 0, 128)
+HINT_ALIGN_DARK = QColor(191, 255, 209, 128)
 HINT_ALIGN_SELECT_COLOR = QColor(0, 205, 0, 128)
-HINT_LINK_COLOR = QColor(127, 127, 255, 255)
-HINT_LINK_SELECT_COLOR = QColor(87, 87, 215, 255)
+HINT_ALIGN_SELECT_DARK = QColor(96, 191, 122, 128)
+
+#HINT_LINK_COLOR = QColor(127, 127, 255, 255)
+#HINT_LINK_DARK = QColor(153, 153, 204, 255)
+#HINT_LINK_SELECT_COLOR = QColor(87, 87, 215, 255)
+#HINT_LINK_SELECT_DARK = QColor(102, 102, 255, 255)
+
 HINT_FUNC_COLOR = QColor(0, 205, 0, 128)
+HINT_FUNC_DARK = QColor(173, 204, 181, 128)
 HINT_FUNC_SELECT_COLOR = QColor(0, 105, 0, 128)
+HINT_FUNC_SELECT_DARK = QColor(38, 191, 74, 128)
+
 HINT_INTERPOLATE_COLOR = QColor(255, 127, 0, 128)
+HINT_INTERPOLATE_DARK = QColor(212, 187, 106, 128)
 HINT_INTERPOLATE_SELECT_COLOR = QColor(215, 87, 0, 128)
+HINT_INTERPOLATE_SELECT_DARK = QColor(255, 195, 0, 128)
+
 SET_COLOR = QColor(128, 128, 128, 128)
 SET_SELECT_COLOR = QColor(128, 128, 128, 225)
-POINT_OFFCURVE_SELECTED = QColor(127, 127, 255, 255)
+
+#POINT_OFFCURVE_SELECTED = QColor(127, 127, 255, 255)
 POINT_ONCURVE_OUTLINE = QColor("red")
 POINT_OFFCURVE_FILL = QColor("white")
 POINT_ONCURVE_FILL = QColor("white")
@@ -104,7 +130,9 @@ POINT_ONCURVE_DIA = 8
 POINT_OFFCURVE_DIA = 6
 HINT_BUTTON_DIA = 6
 
-HINT_COLOR = {
+HINT_COLOR = {}
+
+_HINT_COLOR = {
     "anchor": HINT_ANCHOR_COLOR,
     "align": HINT_ALIGN_COLOR,
     "shift": HINT_SHIFT_COLOR,
@@ -119,7 +147,24 @@ HINT_COLOR = {
     "set": SET_COLOR,
 }
 
-SELECTED_HINT_COLOR = {
+_HINT_DARK = {
+    "anchor": HINT_ANCHOR_DARK,
+    "align": HINT_ALIGN_DARK,
+    "shift": HINT_SHIFT_DARK,
+    "interpolate": HINT_INTERPOLATE_DARK,
+    "stem": HINT_STEM_DARK,
+    "whitedist": HINT_STEM_DARK,
+    "blackdist": HINT_STEM_DARK,
+    "graydist": HINT_STEM_DARK,
+    "move": HINT_STEM_DARK,
+    "macro": HINT_FUNC_DARK,
+    "function": HINT_FUNC_DARK,
+    "set": SET_COLOR,
+}
+
+SELECTED_HINT_COLOR = {}
+
+_SELECTED_HINT_COLOR = {
     "anchor": HINT_ANCHOR_SELECT_COLOR,
     "align": HINT_ALIGN_SELECT_COLOR,
     "shift": HINT_SHIFT_SELECT_COLOR,
@@ -131,6 +176,21 @@ SELECTED_HINT_COLOR = {
     "move": HINT_STEM_SELECT_COLOR,
     "macro": HINT_FUNC_SELECT_COLOR,
     "function": HINT_FUNC_SELECT_COLOR,
+    "set": SET_SELECT_COLOR,
+}
+
+_SELECTED_HINT_DARK = {
+    "anchor": HINT_ANCHOR_SELECT_DARK,
+    "align": HINT_ALIGN_SELECT_DARK,
+    "shift": HINT_SHIFT_SELECT_DARK,
+    "interpolate": HINT_INTERPOLATE_SELECT_DARK,
+    "stem": HINT_STEM_SELECT_DARK,
+    "whitedist": HINT_STEM_SELECT_DARK,
+    "blackdist": HINT_STEM_SELECT_DARK,
+    "graydist": HINT_STEM_SELECT_DARK,
+    "move": HINT_STEM_SELECT_DARK,
+    "macro": HINT_FUNC_SELECT_DARK,
+    "function": HINT_FUNC_SELECT_DARK,
     "set": SET_SELECT_COLOR,
 }
 
@@ -1363,6 +1423,8 @@ class ygGlyphScene(QGraphicsScene):
             yg_glyph: ygGlyph,
             owner: Optional["ygGlyphView"] = None) -> None:
         """yg_glyph is a ygGlyph object from ygModel."""
+        global HINT_COLOR, SELECTED_HINT_COLOR, POINT_OFFCURVE_FILL, POINT_ONCURVE_FILL, POINT_OFFCURVE_SELECTED, POINT_ONCURVE_SELECTED
+
         self.preferences = preferences
 
         # Set up glyph info
@@ -1380,6 +1442,20 @@ class ygGlyphScene(QGraphicsScene):
 
         # Current display preferences
 
+        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        self.dark_theme = text_hsv_value > bg_hsv_value
+        # self.dark_theme = False
+        if self.dark_theme:
+            HINT_COLOR = _HINT_DARK
+            SELECTED_HINT_COLOR = _SELECTED_HINT_DARK
+            POINT_OFFCURVE_FILL = QColor("black")
+            POINT_ONCURVE_FILL = QColor("black")
+            POINT_OFFCURVE_SELECTED = QColor("white")
+            POINT_ONCURVE_SELECTED = QColor("white")
+        else:
+            HINT_COLOR = _HINT_COLOR
+            SELECTED_HINT_COLOR = _SELECTED_HINT_COLOR
         if self.preferences.top_window().show_off_curve_points != None:
             self.off_curve_points_showing = self.preferences.top_window().show_off_curve_points
         else:
@@ -1598,6 +1674,9 @@ class ygGlyphScene(QGraphicsScene):
         Points and hints are drawn in the item layer, and the foreground
         layer is not used at this time.
         """
+
+        global HINT_COLOR, SELECTED_HINT_COLOR
+
         if not self.initial_zoom_factor:
             visible_x = rect.width()
             visible_y = rect.height()
@@ -1626,14 +1705,18 @@ class ygGlyphScene(QGraphicsScene):
         pen = painter.pen()
 
         if self.preferences["show_metrics"]:
-            text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-            bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
-            dark_theme = text_hsv_value > bg_hsv_value
+            #text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
+            #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+            #self.dark_theme = text_hsv_value > bg_hsv_value
             pen.setWidth(1)
-            if dark_theme:
+            if self.dark_theme:
                 pen.setColor(QColor(200, 200, 200, 50))
+                HINT_COLOR = _HINT_DARK
+                SELECTED_HINT_COLOR = _SELECTED_HINT_DARK
             else:
                 pen.setColor(QColor(50, 50, 50, 50))
+                HINT_COLOR = _HINT_COLOR
+                SELECTED_HINT_COLOR = _SELECTED_HINT_COLOR
             painter.setPen(pen)
             painter.drawLine(QLine(-abs(self.xTranslate), 0, round(self.width()), 0))
             ya = -abs(self.yTranslate)
