@@ -66,7 +66,6 @@ class ygPreview(QWidget):
         self.bitmap_top = 0
         self.grid_height = 0
         self.total_height = 0
-        # self.baseline_position = 0
         # The top of the grid should be offset this far from self.vertical_margin
         self.top_grid_offset = 0
         # The pixels of the glyph start this far down.
@@ -77,7 +76,9 @@ class ygPreview(QWidget):
         self.instance_dict: Optional[dict] = None
         self.instance: Optional[str] = None
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
+        self.background_color = self.palette().color(QPalette.ColorRole.Base)
+        bg_hsv_value = self.background_color.value()
+        #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
         self.dark_theme = text_hsv_value > bg_hsv_value
         self.colors = self.mk_color_list()
         self.render_mode = RENDER_LCD_1
@@ -342,10 +343,11 @@ class ygPreview(QWidget):
         """Paint grayscale glyph."""
         painter = QPainter(self)
         brush = QBrush()
-        if self.dark_theme:
-            brush.setColor(QColor("black"))
-        else:
-            brush.setColor(QColor("white"))
+        brush.setColor(self.background_color)
+        #if self.dark_theme:
+        #    brush.setColor(QColor("black"))
+        #else:
+        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -374,10 +376,11 @@ class ygPreview(QWidget):
         """Paint subpixel rendering with solid pixels."""
         painter = QPainter(self)
         brush = QBrush()
-        if self.dark_theme:
-            brush.setColor(QColor("black"))
-        else:
-            brush.setColor(QColor("white"))
+        brush.setColor(self.background_color)
+        #if self.dark_theme:
+        #    brush.setColor(QColor("black"))
+        #else:
+        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -389,6 +392,7 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
+        black = QColor("black")
         for row in self.Z:
             for col in row:
                 rgb = []
@@ -396,6 +400,8 @@ class ygPreview(QWidget):
                     rgb.append(elem)
                 if self.dark_theme:
                     qc = QColor(rgb[0], rgb[1], rgb[2])
+                    if qc == black:
+                        qc == self.background_color
                 else:
                     qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
@@ -412,10 +418,11 @@ class ygPreview(QWidget):
         """Paint subpixel rendering with rgb pixel trios."""
         painter = QPainter(self)
         brush = QBrush()
-        if self.dark_theme:
-            brush.setColor(QColor("black"))
-        else:
-            brush.setColor(QColor("white"))
+        brush.setColor(self.background_color)
+        #if self.dark_theme:
+        #    brush.setColor(QColor("black"))
+        #else:
+        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -498,10 +505,11 @@ class ygStringPreviewPanel(QWidget):
 
     def _fill_background(self, painter: QPainter) -> None:
         brush = QBrush()
-        if self.yg_preview.dark_theme:
-            brush.setColor(QColor("black"))
-        else:
-            brush.setColor(QColor("white"))
+        brush.setColor(self.yg_preview.background_color)
+        #if self.yg_preview.dark_theme:
+        #    brush.setColor(QColor("black"))
+        #else:
+        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
