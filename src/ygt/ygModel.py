@@ -192,7 +192,7 @@ def random_id(s):
 # toggleMinDistCommand(glyphEditCommand): Glyph editing command.
 # changeCVCommand(glyphEditCommand): Glyph editing command.
 # toggleRoundingCommand(glyphEditCommand): Glyph editing command.
-# makeSetCommand(glyphEditCommand): Glyph editing command.
+# makeSetCommand(glyphEditCommand): Glyph editing command. (disabled -- perhaps not needed)
 # addHintCommand(glyphEditCommand): Glyph editing command.
 # deleteHintsCommand(glyphEditCommand): Glyph editing command.
 # reverseHintCommand(glyphEditCommand): Glyph editing command.
@@ -1814,35 +1814,35 @@ class toggleRoundingCommand(glyphEditCommand):
         self.send_signal()
 
 
-class makeSetCommand(glyphEditCommand):
-    def __init__(
-        self,
-        glyph: "ygGlyph",
-        hint: "ygHint",
-        pt_list: list,
-        touched_point: Optional[ygPoint],
-        callback: Callable,
-    ) -> None:
-        super().__init__(glyph)
-        self.hint = hint
-        self.pt_list = pt_list
-        self.touched_point = touched_point
-        self.callback = callback
-        self.setText("Make Set")
-
-    def redo(self) -> None:
-        if self.redo_state:
-            self.redo_state.restore()
-        else:
-            sorter = ygPointSorter(self.yg_glyph.current_axis())
-            sorter.sort(self.pt_list)
-            set = ygSet(self.pt_list)
-            set._main_point = self.touched_point
-            self.hint.set_target(set.id_list())
-            self.callback()
-            self.redo_state = glyphSaver(self.yg_glyph)
-        glyphSourceTester(self.yg_glyph, "makeSetCommand").test()
-        self.send_signal()
+#class makeSetCommand(glyphEditCommand):
+#    def __init__(
+#        self,
+#        glyph: "ygGlyph",
+#        hint: "ygHint",
+#        pt_list: list,
+#        touched_point: Optional[ygPoint],
+#        callback: Callable,
+#    ) -> None:
+#        super().__init__(glyph)
+#        self.hint = hint
+#        self.pt_list = pt_list
+#        self.touched_point = touched_point
+#        self.callback = callback
+#        self.setText("Make Set")
+#
+#    def redo(self) -> None:
+#        if self.redo_state:
+#            self.redo_state.restore()
+#        else:
+#            sorter = ygPointSorter(self.yg_glyph.current_axis())
+#            sorter.sort(self.pt_list)
+#            set = ygSet(self.pt_list)
+#            set._main_point = self.touched_point
+#            self.hint.set_target(set.id_list())
+#            self.callback()
+#            self.redo_state = glyphSaver(self.yg_glyph)
+#        glyphSourceTester(self.yg_glyph, "makeSetCommand").test()
+#        self.send_signal()
 
 
 class addHintCommand(glyphEditCommand):
@@ -1915,6 +1915,40 @@ class reverseHintCommand(glyphEditCommand):
             self.yg_glyph._rebuild_current_block()
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "reverseHintCommand").test()
+        self.send_signal()
+
+
+class addPointsCommand(glyphEditCommand):
+    def __init__(self, glyph: "ygGlyph", hint: "ygHint", p_list: list) -> None:
+        super().__init__(glyph)
+        self.hint = hint
+        self.p_list = p_list
+        self.setText("Adds points to hint")
+
+    def redo(self) -> None:
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.hint._add_points(self.p_list)
+            self.redo_state = glyphSaver(self.yg_glyph)
+        glyphSourceTester(self.yg_glyph, "addPointsCommand").test()
+        self.send_signal()
+
+
+class deletePointsCommand(glyphEditCommand):
+    def __init__(self, glyph: "ygGlyph", hint: "ygHint", p_list: list) -> None:
+        super().__init__(glyph)
+        self.hint = hint
+        self.p_list = p_list
+        self.setText("Delete points from hint")
+
+    def redo(self) -> None:
+        if self.redo_state:
+            self.redo_state.restore()
+        else:
+            self.hint._delete_points(self.p_list)
+            self.redo_state = glyphSaver(self.yg_glyph)
+        glyphSourceTester(self.yg_glyph, "deletePointsCommand").test()
         self.send_signal()
 
 
@@ -2738,16 +2772,16 @@ class ygGlyph(QObject):
         self._clean = False
         self.yg_font.set_dirty()
 
-    def make_set(
-        self,
-        hint: "ygHint",
-        pt_list: list,
-        touched_point: Optional[ygPoint],
-        callback: Callable,
-    ) -> None:
-        self.undo_stack.push(
-            makeSetCommand(self, hint, pt_list, touched_point, callback)
-        )
+    #def make_set(
+    #    self,
+    #    hint: "ygHint",
+    #    pt_list: list,
+    #    touched_point: Optional[ygPoint],
+    #    callback: Callable,
+    #) -> None:
+    #    self.undo_stack.push(
+    #        makeSetCommand(self, hint, pt_list, touched_point, callback)
+    #    )
 
     def set_clean(self) -> None:
         self._clean = True
@@ -3145,6 +3179,77 @@ class ygHint(QObject):
             return result
         else:
             return [self.yg_glyph.resolve_point_identifier(t).index]
+        
+    def _ptid_to_objects(self):
+        _target_list = self.target_list()
+        pt_list = []
+        for t in _target_list:
+            pt_list.append(self.yg_glyph.resolve_point_identifier(t))
+        return pt_list
+        
+    def contains_points(self, p: Any) -> bool:
+        """Returns True if point p or all points in list p are targets of this hint."""
+        if len(p) == 0:
+            return False
+        pt_list = self._ptid_to_objects()
+        sought_list = []
+        if type(p) is list:
+            for pp in p:
+                sought_list.append(self.yg_glyph.resolve_point_identifier(pp))
+        else:
+            sought_list = [self.yg_glyph.resolve_point_identifier(p)]
+        for p in sought_list:
+            if not p in pt_list:
+                return False
+        return True
+    
+    def _add_points(self, p: list) -> None:
+        """We should already have checked to make sure all points in p are
+        untouched and that this hint is shift, align, or interpolate.
+        Points in p must be type ygPoint."""
+        current_points = self._ptid_to_objects()
+        current_points.extend(p)
+        labels = []
+        for p in current_points:
+            labels.append(p.preferred_label())
+        if len(labels) > 1:
+            self._source["ptid"] = labels
+
+    def add_points(self, p: list) -> None:
+        if self.yg_glyph != None:
+            self.yg_glyph.undo_stack.push(
+                addPointsCommand(self.yg_glyph, self, p)
+            )
+
+    def _delete_points(self, p: list) -> None:
+        if not len(p):
+            return
+        pt_list = self._ptid_to_objects()
+        original_len = len(pt_list)
+        # There's got to be at least one point left for the hint after this operation.
+        if len(p) >= len(pt_list):
+            return
+        for pp in p:
+            ppp = self.yg_glyph.resolve_point_identifier(pp)
+            try:
+                pt_list.remove(ppp)
+            except Exception:
+                pass
+        if len(pt_list) >= original_len:
+            return
+        labels = []
+        for p in pt_list:
+            labels.append(p.preferred_label())
+        if len(labels) == 1:
+            self._source["ptid"] = labels[0]
+        elif len(labels) > 1:
+            self._source["ptid"] = labels
+
+    def delete_points(self, p: list) -> None:
+        if self.yg_glyph != None:
+            self.yg_glyph.undo_stack.push(
+                deletePointsCommand(self.yg_glyph, self, p)
+            )
 
     def ref(self) -> Any:
         if "ref" in self._source:

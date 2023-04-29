@@ -463,7 +463,7 @@ class MainWindow(QMainWindow):
         cursor_action_group = QActionGroup(self.toolbar)
         cursor_action_group.setExclusive(True)
 
-        self.cursor_action = self.toolbar.addAction("Cursor (Edit hints)")
+        self.cursor_action = self.toolbar.addAction("Editing cursor")
         cursor_icon = QIcon()
         cursor_icon.addPixmap(
             QPixmap(self.icon_path + "cursor-icon-on.png"), state=QIcon.State.On
@@ -476,7 +476,7 @@ class MainWindow(QMainWindow):
 
         self.toolbar.insertSeparator(self.cursor_action)
 
-        self.hand_action = self.toolbar.addAction("Hand (Pan the canvas)")
+        self.hand_action = self.toolbar.addAction("Panning Cursor (spacebar)")
         hand_icon = QIcon()
         hand_icon.addPixmap(
             QPixmap(self.icon_path + "hand-icon-on.png"), state=QIcon.State.On
@@ -542,10 +542,10 @@ class MainWindow(QMainWindow):
         )
         self.anchor_action.setEnabled(False)
 
-        self.make_set_action = self.toolbar.addAction("Make Set (K)")
-        self.make_set_action.setIcon(QIcon(QPixmap(self.icon_path + "make_set.png")))
-        self.make_set_action.setShortcut(QKeySequence(Qt.Key.Key_K))
-        self.make_set_action.setEnabled(False)
+        #self.make_set_action = self.toolbar.addAction("Make Set (K)")
+        #self.make_set_action.setIcon(QIcon(QPixmap(self.icon_path + "make_set.png")))
+        #self.make_set_action.setShortcut(QKeySequence(Qt.Key.Key_K))
+        #self.make_set_action.setEnabled(False)
 
         self.make_cv_guess_action = self.toolbar.addAction("Guess Control Value (?)")
         self.make_cv_guess_action.setIcon(
@@ -613,9 +613,12 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(object)
     def preview_ready(self, args: dict) -> None:
-        glyph_index = args["gindex"][self.preview_glyph_name]
-        self.yg_preview.fetch_glyph(args["font"], glyph_index)
-        self.yg_preview.update()
+        try:
+            glyph_index = args["gindex"][self.preview_glyph_name]
+            self.yg_preview.fetch_glyph(args["font"], glyph_index)
+            self.yg_preview.update()
+        except Exception:
+            pass
 
     @pyqtSlot()
     def toggle_auto_preview(self) -> None:
@@ -834,7 +837,7 @@ class MainWindow(QMainWindow):
         )
         self.shift_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
-        self.make_set_action.triggered.connect(self.glyph_pane.make_set)
+        # self.make_set_action.triggered.connect(self.glyph_pane.make_set)
         self.make_cv_action.triggered.connect(self.glyph_pane.make_control_value)
         self.make_cv_guess_action.triggered.connect(self.glyph_pane.guess_cv)
         self.vertical_action.toggled.connect(self.glyph_pane.switch_to_y)
@@ -1344,32 +1347,35 @@ class MainWindow(QMainWindow):
             self.shift_action.setEnabled(False)
             self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
-            self.make_set_action.setEnabled(False)
+            # self.make_set_action.setEnabled(False)
         elif selection_profile[0] == 1 and selection_profile[1] >= 1:
             # Enable make set button
-            if 1 in selection_profile[2] or 2 in selection_profile[2]:
-                self.make_set_action.setEnabled(True)
-            else:
-                self.make_set_action.setEnabled(False)
+            #if 1 in selection_profile[2] or 2 in selection_profile[2]:
+            #    self.make_set_action.setEnabled(True)
+            #else:
+            #    self.make_set_action.setEnabled(False)
+            # stem_action only if 1 pt touched and 1 pt untouched.
             if selection_profile[1] == 1:
-                # Enable link buttons
                 self.stem_action.setEnabled(True)
+            else:
+                self.stem_action.setEnabled(False)
+            # shift_action and align_action if 1 pt touched and 1 or more untouched.
+            if selection_profile[1] >= 1:
                 self.shift_action.setEnabled(True)
                 self.align_action.setEnabled(True)
             else:
-                self.stem_action.setEnabled(False)
                 self.shift_action.setEnabled(False)
                 self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
             self.anchor_action.setEnabled(False)
-        elif selection_profile[0] == 2 and selection_profile[1] == 1:
+        elif selection_profile[0] == 2 and selection_profile[1] >= 1:
             # Enable interpolation button
             self.interpolate_action.setEnabled(True)
             self.stem_action.setEnabled(False)
             self.shift_action.setEnabled(False)
             self.align_action.setEnabled(False)
             self.anchor_action.setEnabled(False)
-            self.make_set_action.setEnabled(False)
+            #self.make_set_action.setEnabled(False)
         else:
             # "Disable all hint editing buttons
             self.stem_action.setEnabled(False)
@@ -1377,7 +1383,7 @@ class MainWindow(QMainWindow):
             self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
             self.anchor_action.setEnabled(False)
-            self.make_set_action.setEnabled(False)
+            #self.make_set_action.setEnabled(False)
 
     @pyqtSlot()
     def clean_changed(self):
@@ -1681,7 +1687,7 @@ class mainWinEventFilter(QObject):
 
 def main():
     # from PyQt6.QtGui import QPalette
-    # print(dir(QPalette))
+    # print(dir(Qt))
     # print(inspect.getargspec(freetype.Face.get_glyph_name))
 
     app = QApplication([])
