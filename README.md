@@ -18,6 +18,18 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
+### Version 0.1.6 (2023-4-28)
+
+Select more than one untouched point when adding shift, align, or interpolate hints to create a hint with a set as target. This formerly had to be done with a separate “Make Set” command.
+
+“Make Set” command has been removed as unnecessary.
+
+To add a point to a shift, align, or interpolate hint, select the hint and at least one untouched point, and press the **plus** key.
+
+To delete a point or points from a shift, align, or interpolate hint, select one ore more points belonging to the hint and press the **hyphen** or **minus** key.
+
+Corrected background color of preview panels when dark theme is active.
+
 ### Version 0.1.5 (2023-4-25)
 
 Various UI refinements: initial scaling of glyphs, spacebar to temporarily switch to panning mode, and more.
