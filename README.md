@@ -28,7 +28,7 @@ To add a point to a shift, align, or interpolate hint, select the hint and at le
 
 To delete a point or points from a shift, align, or interpolate hint, select one ore more points belonging to the hint and press the **hyphen** or **minus** key.
 
-Corrected background color of preview panels when dark theme is active.
+Corrected background color of preview panels when dark theme is active. New color scheme for dark theme.
 
 ### Version 0.1.5 (2023-4-25)
 
