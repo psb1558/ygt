@@ -88,15 +88,15 @@ unicode_cat_names = {
     "LC": "Letter, cased",
     "Lm": "Letter, modifier",
     "Lo": "Letter, other",
-    "L": "Letter",
+    "L":  "Letter",
     "Mn": "Mark, nonspacing",
     "Mc": "Mark, spacing",
     "Me": "Mark, enclosing",
-    "M": "Mark",
+    "M":  "Mark",
     "Nd": "Number, decimal",
     "Nl": "Number, letter",
     "No": "Number, other",
-    "N": "Number",
+    "N":  "Number",
     "Pc": "Punctuation, connector",
     "Pd": "Punctuation, dash",
     "Ps": "Punctuation, open",
@@ -104,22 +104,22 @@ unicode_cat_names = {
     "Pi": "Punctuation, initial quote",
     "Pf": "Punctuation, final quote",
     "Po": "Punctuation, other",
-    "P": "Punctuation",
+    "P":  "Punctuation",
     "Sm": "Symbol, math",
     "Sc": "Symbol, currency",
     "Sk": "Symbol, modifier",
     "So": "Symbol, other",
-    "S": "Symbol",
+    "S":  "Symbol",
     "Zs": "Separator, space",
     "Zl": "Separator, line",
     "Zp": "Separator, paragraph",
-    "Z": "Separator",
+    "Z":  "Separator",
     "Cc": "Other, control",
     "Cf": "Other, format",
     "Cs": "Other, surrogate",
     "Co": "Other, private use",
     "Cn": "Other, not assigned",
-    "C": "Other",
+    "C":  "Other",
 }
 
 INITIAL_CV_DELTA = {"size": 25, "distance": 0.0}
@@ -192,10 +192,11 @@ def random_id(s):
 # toggleMinDistCommand(glyphEditCommand): Glyph editing command.
 # changeCVCommand(glyphEditCommand): Glyph editing command.
 # toggleRoundingCommand(glyphEditCommand): Glyph editing command.
-# makeSetCommand(glyphEditCommand): Glyph editing command. (disabled -- perhaps not needed)
 # addHintCommand(glyphEditCommand): Glyph editing command.
 # deleteHintsCommand(glyphEditCommand): Glyph editing command.
 # reverseHintCommand(glyphEditCommand): Glyph editing command.
+# addPointsCommand(glyphEditCommand): Add point(s) to shift, align or interp. hint
+# deletePointsCommand(glyphEditCommand): Delete point(s) from shift, align or interp. hint
 # switchAxisCommand(QUndoCommand): Glyph editing command.
 # glyphAddPropertyCommand(QUndoCommand): Glyph editing command.
 # glyphDeletePropertyCommand(QUndoCommand): Glyph editing command.
@@ -899,7 +900,8 @@ class ygPoint:
         if name_allowed:
             if len(self.preferred_name) > 0:
                 return self.preferred_name
-        if self.label_pref == "coord":
+        # Coordinate IDs only allowed for on-curve points.
+        if self.label_pref == "coord" and self.on_curve:
             if normalized:
                 t = self.coord.replace("{", "")
                 t = t.replace("}", "")
@@ -1814,37 +1816,6 @@ class toggleRoundingCommand(glyphEditCommand):
         self.send_signal()
 
 
-#class makeSetCommand(glyphEditCommand):
-#    def __init__(
-#        self,
-#        glyph: "ygGlyph",
-#        hint: "ygHint",
-#        pt_list: list,
-#        touched_point: Optional[ygPoint],
-#        callback: Callable,
-#    ) -> None:
-#        super().__init__(glyph)
-#        self.hint = hint
-#        self.pt_list = pt_list
-#        self.touched_point = touched_point
-#        self.callback = callback
-#        self.setText("Make Set")
-#
-#    def redo(self) -> None:
-#        if self.redo_state:
-#            self.redo_state.restore()
-#        else:
-#            sorter = ygPointSorter(self.yg_glyph.current_axis())
-#            sorter.sort(self.pt_list)
-#            set = ygSet(self.pt_list)
-#            set._main_point = self.touched_point
-#            self.hint.set_target(set.id_list())
-#            self.callback()
-#            self.redo_state = glyphSaver(self.yg_glyph)
-#        glyphSourceTester(self.yg_glyph, "makeSetCommand").test()
-#        self.send_signal()
-
-
 class addHintCommand(glyphEditCommand):
     def __init__(
         self, glyph: "ygGlyph", hint: "ygHint", conditional: bool = False
@@ -1949,6 +1920,7 @@ class deletePointsCommand(glyphEditCommand):
             self.hint._delete_points(self.p_list)
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "deletePointsCommand").test()
+        #self.yg_glyph._hints_changed(self.yg_glyph.hints())
         self.send_signal()
 
 
@@ -2772,17 +2744,6 @@ class ygGlyph(QObject):
         self._clean = False
         self.yg_font.set_dirty()
 
-    #def make_set(
-    #    self,
-    #    hint: "ygHint",
-    #    pt_list: list,
-    #    touched_point: Optional[ygPoint],
-    #    callback: Callable,
-    #) -> None:
-    #    self.undo_stack.push(
-    #        makeSetCommand(self, hint, pt_list, touched_point, callback)
-    #    )
-
     def set_clean(self) -> None:
         self._clean = True
 
@@ -2834,11 +2795,8 @@ class ygGlyph(QObject):
     def resolve_point_identifier(self, ptid: Any, depth: int = 0) -> Any:
         """Get the ygPoint object identified by ptid. ***Failures are very
         possible here, since there may be nonsense in a source file or in
-        the editor. Figure out how to handle failures gracefully.
-
-        (Instead of crashing, return None. Caller can respond by marking a
-        hint invalid, to be skipped over when generating xgf or rendering
-        on screen)
+        the editor. We handle obvious bad results (like None instead of an
+        object) by returning the zero point and issuing an error message.
 
         Parameters:
         ptid (int, str): An identifier for a point. Xgridfit allows them
@@ -2958,7 +2916,11 @@ class ygGlyph(QObject):
     def hints_changed(self, hint_list: list) -> None:
         self._hints_changed(hint_list)
 
-    def _hints_changed(self, hint_list: list, dirty: bool = True) -> None:
+    def _hints_changed(
+            self,
+            hint_list: list,
+            dirty: bool = True
+        ) -> None:
         if dirty:
             self.set_dirty()
         from .ygHintEditor import ygGlyphScene
