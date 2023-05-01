@@ -78,7 +78,6 @@ class ygPreview(QWidget):
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
         self.background_color = self.palette().color(QPalette.ColorRole.Base)
         bg_hsv_value = self.background_color.value()
-        #bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
         self.dark_theme = text_hsv_value > bg_hsv_value
         self.colors = self.mk_color_list()
         self.render_mode = RENDER_LCD_1
@@ -128,7 +127,6 @@ class ygPreview(QWidget):
         ft_width = ft_bitmap.width
         ft_rows = ft_bitmap.rows
         self.current_glyph_height = ft_rows
-        # ft_pitch  = ft_bitmap.pitch
         self.bitmap_top = self.face.glyph_slot.bitmap_top
         self.grid_height = self.face.ascender + abs(self.face.descender)
         self.total_height = self.grid_height
@@ -171,13 +169,11 @@ class ygPreview(QWidget):
     def toggle_show_hints(self) -> None:
         self.hinting_on = not self.hinting_on
         self.face.set_hinting_on(self.hinting_on)
-        # self._build_glyph()
         self.update()
 
     @pyqtSlot()
     def toggle_grid(self) -> None:
         self.show_grid = not self.show_grid
-        # self._build_glyph()
         self.update()
 
     @pyqtSlot()
@@ -200,7 +196,6 @@ class ygPreview(QWidget):
             self.paintEvent = self.paintEvent_b # type: ignore
         else:
             self.paintEvent = self.paintEvent_c # type: ignore
-        # self._build_glyph()
         self.update()
 
     def set_size(self, n: str | int) -> None:
@@ -213,15 +208,11 @@ class ygPreview(QWidget):
                 self.face.set_size(self.char_size)
             except Exception as e:
                 return
-            # self.label.setText(str(self.char_size) + "ppem")
             self.set_label_text()
-            # self._build_glyph()
             self.update()
 
     def resize_by(self, n: int) -> None:
         if self.face != None and self.glyph_index != 0:
-            # self.char_size += n
-            # self.set_label_text()
             self.set_size(self.char_size + n)
             self.update()
 
@@ -277,7 +268,6 @@ class ygPreview(QWidget):
     def _set_instance(self) -> None:
         self.face.set_instance(self.instance)
         self.set_label_text()
-        # self._build_glyph()
         self.update()
 
     @pyqtSlot()
@@ -344,10 +334,6 @@ class ygPreview(QWidget):
         painter = QPainter(self)
         brush = QBrush()
         brush.setColor(self.background_color)
-        #if self.dark_theme:
-        #    brush.setColor(QColor("black"))
-        #else:
-        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -362,7 +348,6 @@ class ygPreview(QWidget):
         for row in self.Z:
             for col in row:
                 qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
-                # qb = QBrush(QColor(101,53,15,col))
                 painter.fillRect(qr, self.colors[col])
                 xposition += self.pixel_size
             yposition += self.pixel_size
@@ -377,10 +362,6 @@ class ygPreview(QWidget):
         painter = QPainter(self)
         brush = QBrush()
         brush.setColor(self.background_color)
-        #if self.dark_theme:
-        #    brush.setColor(QColor("black"))
-        #else:
-        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -419,10 +400,6 @@ class ygPreview(QWidget):
         painter = QPainter(self)
         brush = QBrush()
         brush.setColor(self.background_color)
-        #if self.dark_theme:
-        #    brush.setColor(QColor("black"))
-        #else:
-        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
@@ -506,10 +483,6 @@ class ygStringPreviewPanel(QWidget):
     def _fill_background(self, painter: QPainter) -> None:
         brush = QBrush()
         brush.setColor(self.yg_preview.background_color)
-        #if self.yg_preview.dark_theme:
-        #    brush.setColor(QColor("black"))
-        #else:
-        #    brush.setColor(QColor("white"))
         brush.setStyle(Qt.BrushStyle.SolidPattern)
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
