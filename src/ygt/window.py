@@ -313,8 +313,8 @@ class MainWindow(QMainWindow):
         )
         self.pv_smaller_ten_action.setEnabled(False)
 
-        self.pv_show_hints_action = self.preview_menu.addAction("Show hinting")
-        self.pv_show_hints_action.setShortcut(QKeySequence("Ctrl+t"))
+        self.pv_show_hints_action = self.preview_menu.addAction("Hint preview")
+        self.pv_show_hints_action.setShortcut(QKeySequence("Ctrl+p"))
         self.pv_show_hints_action.setCheckable(True)
         self.pv_show_hints_action.setChecked(True)
         self.pv_show_hints_action.setEnabled(False)
@@ -328,8 +328,8 @@ class MainWindow(QMainWindow):
 
         self.preview_menu.addSeparator()
 
-        self.pv_set_size_action = self.preview_menu.addAction("Pixels per Em...")
-        self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+p"))
+        self.pv_set_size_action = self.preview_menu.addAction("Set resolution...")
+        self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+r"))
         self.pv_set_size_action.setEnabled(False)
 
         self.pv_render_mode_menu = self.preview_menu.addMenu("Render mode")
@@ -542,11 +542,6 @@ class MainWindow(QMainWindow):
         )
         self.anchor_action.setEnabled(False)
 
-        #self.make_set_action = self.toolbar.addAction("Make Set (K)")
-        #self.make_set_action.setIcon(QIcon(QPixmap(self.icon_path + "make_set.png")))
-        #self.make_set_action.setShortcut(QKeySequence(Qt.Key.Key_K))
-        #self.make_set_action.setEnabled(False)
-
         self.make_cv_guess_action = self.toolbar.addAction("Guess Control Value (?)")
         self.make_cv_guess_action.setIcon(
             QIcon(QPixmap(self.icon_path + "cv_guess.png"))
@@ -733,13 +728,6 @@ class MainWindow(QMainWindow):
         else:
             self.index_label_action.setEnabled(False)
             self.coord_label_action.setEnabled(True)
-
-    # @pyqtSlot()
-    # def window_menu_about_to_show(self) -> None:
-    #    if len(self.win_list) > 0:
-    #        wins = []
-    #        for w in self.win_list:
-    #            wins.append(w.filename)
 
     @pyqtSlot()
     def file_menu_about_to_show(self) -> None:
@@ -1349,12 +1337,6 @@ class MainWindow(QMainWindow):
             self.interpolate_action.setEnabled(False)
             # self.make_set_action.setEnabled(False)
         elif selection_profile[0] == 1 and selection_profile[1] >= 1:
-            # Enable make set button
-            #if 1 in selection_profile[2] or 2 in selection_profile[2]:
-            #    self.make_set_action.setEnabled(True)
-            #else:
-            #    self.make_set_action.setEnabled(False)
-            # stem_action only if 1 pt touched and 1 pt untouched.
             if selection_profile[1] == 1:
                 self.stem_action.setEnabled(True)
             else:
@@ -1474,16 +1456,6 @@ class MainWindow(QMainWindow):
         )
         self.prep_editor.show()
         self.prep_editor.activateWindow()
-
-    # @pyqtSlot()
-    # def edit_cvar(self) -> None:
-    #    self.cvar_editor = editorDialog(self.preferences,
-    #                                             self.yg_font.cvar,
-    #                                             "cvar",
-    #                                             is_cvar_valid,
-    #                                             top_structure="list")
-    #    self.cvar_editor.show()
-    #    self.cvar_editor.activateWindow()
 
     @pyqtSlot()
     def edit_functions(self) -> None:
@@ -1686,9 +1658,11 @@ class mainWinEventFilter(QObject):
 
 
 def main():
-    # from PyQt6.QtGui import QPalette
-    # print(dir(Qt))
-    # print(inspect.getargspec(freetype.Face.get_glyph_name))
+    import uharfbuzz as hb
+    from inspect import getfullargspec, signature
+    print(dir(hb))
+    # print(getfullargspec(hb.Font.create))
+    # print(type(hb.Font.create))
 
     app = QApplication([])
     font_id = QFontDatabase.addApplicationFont(os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf")
