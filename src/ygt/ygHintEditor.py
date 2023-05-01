@@ -61,7 +61,6 @@ from PyQt6.QtWidgets import (
     QStyleOptionGraphicsItem,
 )
 from fontTools.pens.basePen import BasePen  # type: ignore
-# from fontTools.pens.boundsPen import BoundsPen
 from .ygPreferences import ygPreferences
 
 
@@ -100,9 +99,6 @@ HINT_INTERPOLATE_DARK = QColor(212, 187, 106, 192)
 HINT_INTERPOLATE_SELECT_COLOR = QColor(215, 87, 0, 128)
 HINT_INTERPOLATE_SELECT_DARK = QColor(255, 195, 0, 192)
 
-#SET_COLOR = QColor(128, 128, 128, 128)
-#SET_SELECT_COLOR = QColor(128, 128, 128, 225)
-
 POINT_ONCURVE_OUTLINE = QColor("red")
 POINT_OFFCURVE_FILL = QColor("white")
 POINT_ONCURVE_FILL = QColor("white")
@@ -133,7 +129,6 @@ _HINT_COLOR = {
     "move": HINT_STEM_COLOR,
     "macro": HINT_FUNC_COLOR,
     "function": HINT_FUNC_COLOR,
-    # "set": SET_COLOR,
 }
 
 _HINT_DARK = {
@@ -148,7 +143,6 @@ _HINT_DARK = {
     "move": HINT_STEM_DARK,
     "macro": HINT_FUNC_DARK,
     "function": HINT_FUNC_DARK,
-    # "set": SET_COLOR,
 }
 
 SELECTED_HINT_COLOR = {}
@@ -165,7 +159,6 @@ _SELECTED_HINT_COLOR = {
     "move": HINT_STEM_SELECT_COLOR,
     "macro": HINT_FUNC_SELECT_COLOR,
     "function": HINT_FUNC_SELECT_COLOR,
-    # "set": SET_SELECT_COLOR,
 }
 
 _SELECTED_HINT_DARK = {
@@ -180,7 +173,6 @@ _SELECTED_HINT_DARK = {
     "move": HINT_STEM_SELECT_DARK,
     "macro": HINT_FUNC_SELECT_DARK,
     "function": HINT_FUNC_SELECT_DARK,
-    # "set": SET_SELECT_COLOR,
 }
 
 # Classes in this file:
@@ -424,7 +416,6 @@ class ygHintView(QGraphicsItem, ygSelectable):
                         macfunc_name
                     ]
                 else:
-                    # raise Exception(str(macfunc_name) + " not function or macro!")
                     return plist
                 k = p.point_dict.keys()
                 for kk in k:
@@ -451,6 +442,7 @@ class ygHintView(QGraphicsItem, ygSelectable):
             elif type(p) is ygParams:
                 self._touch_untouch(self._get_macfunc_targets(p), touch)
             else:
+                pp = ptindex[p.id]
                 if touch:
                     try:
                         ptindex[p.id].touched = True
@@ -462,7 +454,9 @@ class ygHintView(QGraphicsItem, ygSelectable):
                         ptindex[p.id].owners.remove(self)
                         if len(ptindex[p.id].owners) == 0:
                             ptindex[p.id].touched = False
-                    except Exception:
+                    except Exception as e:
+                        #print(str(e.args))
+                        #print(str(e))
                         pass
 
     def _touch_all_points(self) -> None:
@@ -575,9 +569,7 @@ class ygArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
             pen_color = HINT_COLOR[hint_type]
         pen = QPen(pen_color)
         pen.setWidth(HINT_ARROWHEAD_WIDTH)
-        # brush = QBrush(pen_color)
         self.setPen(pen)
-        # self.setBrush(brush)
 
     def setPos(self, qpf):
         # These little offsets were made by experimentation.  But see if they
@@ -594,7 +586,6 @@ class ygArrowHead(QGraphicsPolygonItem, ygGraphicalHintComponent):
 
     def mousePressEvent(self, event):
         # In ygArrowHead
-        # This doesn't seem to be working. Why not?
         with_shift = (
             QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier
         ) == Qt.KeyboardModifier.ShiftModifier
@@ -701,11 +692,9 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         if xdistance == 0 and ydistance == 0:
             self._shape = "invisible"
             self.arrow_axis = None
-        # elif box_ratio < 0.05:
         elif xdistance < 10:
             self._shape = "y only"
             self.arrow_axis = "y"
-        # elif box_ratio >= 1.0 and box_ratio <= 1.5:
         elif ydistance < 10:
             self._shape = "x only"
             self.arrow_axis = "x"
@@ -934,9 +923,6 @@ class ygPointMarker(QGraphicsEllipseItem, ygGraphicalHintComponent):
         self.label.setStyleSheet("QLabel {background-color: transparent; color: gray;}")
         self.label.setText(str(self.name))
         self.label.move(round(self._x + self.diameter), round(self._y + self.diameter))
-
-    def _get_model_point(self) -> ygPoint:
-        return self.pt.yg_point
 
     def _get_view_point(self):
         return self.pt
@@ -1195,7 +1181,8 @@ class ygSelection(QObject):
         self.selected_objects = []
         self.viewer.update()
         if emit_signal:
-            self.sig_selection_changed.emit(self.viewer.selection_profile())
+            self.send_signal()
+            #self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _add_object(self, obj: ygSelectable, add_to_selection: bool) -> None:
         if not add_to_selection:
@@ -1208,15 +1195,8 @@ class ygSelection(QObject):
             self.selected_objects.append(obj)
             obj._prepare_graphics()
             obj.update()
-        self.sig_selection_changed.emit(self.viewer.selection_profile())
-
-    # This is never called.
-    # def _cancel_object(self, obj):
-    #     obj.yg_unselect()
-    #     self.selected_objects.remove(obj)
-    #     obj._prepare_graphics()
-    #     obj.update()
-    #     self.sig_selection_changed.emit(self.viewer.selection_profile())
+        self.send_signal()
+        # self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _toggle_object(self, obj: ygSelectable) -> None:
         # Problem as in _add_object above.
@@ -1230,7 +1210,8 @@ class ygSelection(QObject):
             self.selected_objects.append(obj)
         obj._prepare_graphics()
         obj.update()
-        self.sig_selection_changed.emit(self.viewer.selection_profile())
+        self.send_signal()
+        # self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _add_rect(self, rect: QRectF, add_to_selection: bool) -> None:
         """This method of selecting doesn't work on hints."""
@@ -1242,7 +1223,8 @@ class ygSelection(QObject):
                 self.selected_objects.append(ptv)
                 ptv._prepare_graphics()
                 ptv.update()
-        self.sig_selection_changed.emit(self.viewer.selection_profile())
+        self.send_signal()
+        #self.sig_selection_changed.emit(self.viewer.selection_profile())
 
     def _toggle_rect(self, rect: QRectF) -> None:
         """This method of selecting doesn't work on hints."""
@@ -1258,7 +1240,8 @@ class ygSelection(QObject):
                     self.selected_objects.remove(ptv)
                 ptv._prepare_graphics()
                 ptv.update()
-        self.sig_selection_changed.emit(self.viewer.selection_profile())
+        self.send_signal()
+        # self.sig_selection_changed.emit(self.viewer.selection_profile())
 
 
 class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
@@ -1392,7 +1375,6 @@ class ygGlyphScene(QGraphicsScene):
     """
 
     sig_new_hint = pyqtSignal(object)
-    # sig_viewer_ready = pyqtSignal()
     sig_reverse_hint = pyqtSignal(object)
     sig_change_hint_color = pyqtSignal(object)
     sig_off_curve_visibility = pyqtSignal()
@@ -1511,8 +1493,6 @@ class ygGlyphScene(QGraphicsScene):
         self.sig_edit_macfunc_params.connect(self.edit_macfunc_params)
         self.sig_off_curve_visibility.connect(self.toggle_off_curve_visibility)
         self.sig_make_macfunc.connect(self.make_macfunc)
-        # self.sig_macfunc_target.connect(self.macfunc_target)
-        # self.sig_macfunc_ref.connect(self.macfunc_ref)
         self.sig_toggle_point_numbers.connect(self.toggle_point_numbers)
         self.sig_set_category.connect(self.set_category)
         self.sig_round_hint.connect(self.toggle_hint_rounding)
@@ -1697,7 +1677,7 @@ class ygGlyphScene(QGraphicsScene):
         if self.preferences["show_metrics"]:
             pen.setWidth(1)
             if self.dark_theme:
-                pen.setColor(QColor(200, 200, 200, 50))
+                pen.setColor(QColor(220, 220, 220, 75))
                 HINT_COLOR = _HINT_DARK
                 SELECTED_HINT_COLOR = _SELECTED_HINT_DARK
             else:
@@ -1799,37 +1779,6 @@ class ygGlyphScene(QGraphicsScene):
                     if self.point_numbers_showing:
                         p.del_label()
 
-    #def make_set(self) -> None:
-    #    """In the hint model, the target can be either a ygPoint or a ygSet.
-    #    This function takes the current selection, several ygPoint, and turns
-    #    them into a ygSet, which it substitutes for the ygPoint. Note that
-    #    exactly one selected point must be touched, and at least one
-    #    selected point must be untouched.
-    #    """
-    #    selected_points = self.selected_objects(True)
-    #    touched_points = []
-    #    untouched_points = []
-    #    for s in selected_points:
-    #        if s.touched:
-    #            touched_points.append(s)
-    #        else:
-    #            untouched_points.append(s)
-    #    if len(untouched_points) < 1 or len(touched_points) != 1:
-    #        return
-    #    touched_point = touched_points[0]
-    #    hint = touched_point.owners[0]
-    #    hint_model = hint.yg_hint
-    #    if not hint_model.hint_type() in ["shift", "align", "interpolate"]:
-    #        return
-    #    new_list = []
-    #    for p in selected_points:
-    #        new_list.append(self._model_point(p))
-    #    # params: ygModel.ygHint, list of ygModel.ygPoint, touched ygModel.ygPoint, callback func.
-    #    self.yg_glyph.make_set(
-    #        hint_model, new_list, touched_point.yg_point, hint._update_touches
-    #    )
-    #    self.yg_glyph.hint_changed(hint_model)
-
     def make_control_value(self) -> None:
         """ With one or two points selected, launch a dialog for making a pos or dist CV.
         """
@@ -1866,6 +1815,11 @@ class ygGlyphScene(QGraphicsScene):
                     else "index"
                 )()
             )
+
+    def untouch_all(self):
+        for p in self.yg_point_view_list:
+            p.touched = False
+            p.owners.clear()
 
     @pyqtSlot(object)
     def change_hint_color(self, _params: dict) -> None:
@@ -1962,10 +1916,12 @@ class ygGlyphScene(QGraphicsScene):
         # Remove the old hints (destroying the ygHintView wrappers) and empty
         # out the list storing them.
         for h in self.yg_hint_view_list:
-            h._remove_touches()
             if h in self.items():
                 h._remove_labels()
                 self.removeItem(h)
+        # This may seem crazy, but it seems most reliable and stable if we
+        # delete all touch data and build it again.
+        self.untouch_all()
         self.yg_hint_view_list.clear()
         # The hints we get from the model are ygModel.ygHint objects, using
         # any legal Xgridfit identifier for the points. Wrap each one in a
@@ -2430,8 +2386,6 @@ class ygGlyphScene(QGraphicsScene):
                 self.sig_new_hint.emit(new_yg_hint)
         if hint_type_num == 2:
             if pplen >= 3:
-                #if pplen > 3:
-                #    del pp[3:]
                 # If two of the three selected points are touched, they are the
                 # reference points, and the untouched point is the target.
                 # Otherwise, sort the points by x or y position: the middle one
@@ -2821,29 +2775,6 @@ class ygGlyphScene(QGraphicsScene):
         # Set a target or reference point for a function or macro. Only for use in ordering
         # hints: it has no effect on the rendering otherwise.
 
-        # The next few lines may be stranded. There used to be a "set target" menu item, but
-        # I removed it because it wasn't working, or was causing a crash, or something.
-
-        # if hint:
-        #     target_point = hint.mouse_over_point(QPointF(event.scenePos()))
-        #     if target_point != None:
-        #         target_point = target_point._get_model_point()
-        # else:
-        #     target_point = None
-        # new_target = target_point
-
-        # def tgt_pt_check(pt):
-        #    if pt == None:
-        #        return False
-        #    return self.resolve_point_identifier(pt) == target_point
-
-        # Make a set. Pointer can be anywhere for this.
-
-        # Test whether user can make a set. The rules are:
-        #    1. More than one point must be selected.
-        #    2. One selected point must be touched by a shift, align or
-        #       interpolate instruction (types 1 and 2).
-        #
         # Is this stranded code? We're no longer offering "Make Set" via the context menu,
         # and the point of this code seems to be to set a variable that's never consulted.
         touched_point = None
@@ -2962,10 +2893,6 @@ class ygGlyphScene(QGraphicsScene):
             self.sig_swap_macfunc_points.emit(
                 {"hint": hint, "new_pt": action.text(), "old_pt": swap_old_name}
             )
-        # if action == macfunc_target:
-        #    self.sig_macfunc_target.emit({"hint": hint, "pt": new_target})
-        # if action == macfunc_ref:
-        #    self.sig_macfunc_ref.emit({"hint": hint, "pt": new_target})
         if hint != None and action == round_hint:
             self.sig_round_hint.emit(hint)
         if hint != None and action == min_dist_action:
@@ -3107,7 +3034,6 @@ class ygGlyphView(QGraphicsView):
     def switch_to_y(self, checked: bool) -> None:
         if self.viewer:
             if checked and self.viewer.yg_glyph.current_axis() != "y":
-                # self.viewer.axis = "y"
                 self.viewer.yg_glyph.switch_to_axis("y")
                 win = self.parent().parent()
                 win.set_window_title()  # type: ignore
@@ -3135,10 +3061,6 @@ class ygGlyphView(QGraphicsView):
             menu_to_hint_type[self.sender().text()], ctrl=with_ctrl, shift=with_shift  # type: ignore
         )
 
-    #@pyqtSlot()
-    #def make_set(self) -> None:
-    #    self.viewer.make_set()
-
     # Why does sender return None when we use the decorator? What's best in this
     # situation? Here are problems: sender_text param is not consulted. Should it be
     # omitted? Make sure params match, esp. if we change them.
@@ -3159,6 +3081,8 @@ class ygGlyphView(QGraphicsView):
         # 1. Delete key will delete any selected hints.
         # 2. Spacebar will shift Qt drag mode to ScrollHandDrag while it is
         #    down. For panning the screen.
+        # 3. Hyphen (minus) removes a target point from a hint.
+        # 4. Plus adds a point to a hint.
         if event.key() in [16777219, 16777223]:
             self.viewer.delete_selected_hints()
         elif event.key() == Qt.Key.Key_Plus:
