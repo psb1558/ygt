@@ -23,7 +23,7 @@ class instanceChecker:
         self.add_variants_to_cvt(d)
 
     def delete_all_vars(self) -> None:
-        k = self.cvt.keys()
+        k = self.cvt.keys
         for kk in k:
             cv = self.cvt.get_cv(kk)
             try:
@@ -40,7 +40,7 @@ class instanceChecker:
         # We end up with a dict:
         # {master_id: {cv_name: val, ...}, ...}
         result = {}
-        k = self.masters.keys()
+        k = self.masters.keys
         for kk in k:
             c = self.get_cvs_for_master(kk)
             if len(c) > 0:
@@ -49,7 +49,7 @@ class instanceChecker:
 
     def add_variants_to_cvt(self, d: dict) -> None:
         # d is a dict in the format produced by get_all_variant_cvs.
-        ck = self.cvt.keys()
+        ck = self.cvt.keys
         dk = d.keys()
         for ckk in ck:  # iterate through CVs.
             for dkk in dk:  # iterate through masters
@@ -68,7 +68,7 @@ class instanceChecker:
         result = {}
         coords = self.masters.get_master_coords(master_id)
         self.make_instance(coords)
-        k = self.cvt.keys()
+        k = self.cvt.keys
         for kk in k:
             cv = self.cvt.get_cv(kk)
             if type(cv) is dict and "origin" in cv:

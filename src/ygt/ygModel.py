@@ -204,7 +204,7 @@ def random_id(s):
 #  Font objects (resumed):
 #
 # glyphSourceTester: Tests equality of object IDs.
-# ygGlyph(QObject): Keeps data for the current glyph.
+# ygGlyph(QObject): Keeps data for a glyph.
 # ygGlyphs: Collection of this font's glyphs.
 # Comparable: superclass for ygHintSource: for ordering hints.
 # ygHintSource(Comparable): Wrapper for hint source: use when sorting.
@@ -275,7 +275,8 @@ class SourceFile:
                     doc = ufo.readData("org.ygthinting/source.yaml")
                     self.y_doc = yaml.safe_load(doc)
 
-    def get_source(self) -> dict:
+    @property
+    def source(self) -> dict:
         return self.y_doc
 
     def save_source(self, top_window: Any = None) -> None:
@@ -306,15 +307,19 @@ class FontFiles:
         """
         self.data = source["font"]
 
+    @property
     def in_font(self) -> Optional[str]:
-        if "in" in self.data:
+        try:
             return self.data["in"]
-        return None
+        except KeyError:
+            return None
 
+    @property
     def out_font(self) -> Optional[str]:
-        if "out" in self.data:
+        try:
             return self.data["out"]
-        return None
+        except KeyError:
+            return None
 
 
 class ygFont(QObject):
@@ -356,9 +361,9 @@ class ygFont(QObject):
         if d and os.path.isdir(d) and d != os.getcwd():
             os.chdir(d)
 
-        self.source = self.source_file.get_source()
+        self.source = self.source_file.source
         self.font_files = FontFiles(self.source)
-        fontfile = self.font_files.in_font()
+        fontfile = self.font_files.in_font
         if not fontfile:
             raise Exception("Need the name of an existing font")
             # Need to let user try again.
@@ -599,6 +604,7 @@ class ygFont(QObject):
         if self.is_variable_font:
             instanceChecker(self.preview_font, self.cvt, self.masters).refresh()
 
+    @property
     def default_instance(self) -> Optional[str]:
         if not self.is_variable_font:
             return None
@@ -613,7 +619,8 @@ class ygFont(QObject):
                 break
         return def_inst
 
-    def axis_tags(self):
+    @property
+    def axis_tags(self) -> list:
         result = []
         for a in self.axes:
             result.append(a.axisTag)
@@ -651,14 +658,17 @@ class ygFont(QObject):
         """Helper for setting up an initial cvt."""
         return ygGlyph(ygPreferences(), self, glyph_name).extreme_points_y()
 
+    @property
     def family_name(self) -> str:
-        return self.ft_font["name"].getName(1, 3, 1, 0x409)
+        return str(self.ft_font["name"].getName(1, 3, 1, 0x409))
 
+    @property
     def style_name(self) -> str:
-        return self.ft_font["name"].getName(2, 3, 1, 0x409)
+        return str(self.ft_font["name"].getName(2, 3, 1, 0x409))
 
+    @property
     def full_name(self) -> str:
-        return str(self.family_name()) + "-" + str(self.style_name())
+        return self.family_name + "-" + self.style_name
 
     def set_dirty(self) -> None:
         self._clean = False
@@ -795,6 +805,7 @@ class ygCaller:
                     min_count += 1
         return range(min_count, max_count + 1)
 
+    @property
     def point_list(self) -> list:
         """Get a list of points (identifiers, not objects) from the dict of
         this callable's parameters.
@@ -943,6 +954,7 @@ class ygParams:
         self.point_dict = point_dict
         self.other_params = other_params
 
+    @property
     def point_list(self) -> list:
         result = []
         k = self.point_dict.keys()
@@ -982,14 +994,15 @@ class ygSet:
         # will contain another set. See if this can be safely removed.
         self._main_point: Optional[ygPoint] = None
 
+    @property
     def point_list(self) -> list:
         return self._point_list
 
-    def id_list(self) -> list:
-        l = []
-        for p in self._point_list:
-            l.append(p.preferred_label())
-        return l
+    #def id_list(self) -> list:
+    #    l = []
+    #    for p in self._point_list:
+    #        l.append(p.preferred_label())
+    #    return l
 
     def main_point(self) -> ygPoint:
         """Our use of an on-screen box may have made this useless. See if we
@@ -1022,7 +1035,7 @@ class ygSet:
         result: list = []
         if type(tester) is not ygSet:
             return result
-        pts = tester.point_list()
+        pts = tester.point_list
         for pt in pts:
             if pt in self:
                 result.append(pt)
@@ -1040,30 +1053,20 @@ class ygSet:
 #
 # Undo / Redo
 #
-# One helper class(glyphSaver) and several subclasses of QUndoCommand. Each glyph has its
-# own QUndoStack, and these are coordinated at the app level by one QUndoGroup.
+# Two helper classes (glyphSaver and fontInfoSaver) and several subclasses of QUndoCommand.
+# Each glyph has its own QUndoStack, and these are coordinated at the app level by one
+# QUndoGroup.
 #
 # The regular sequence is: (1) The constructor takes a snapshot of the current state
-# of the glyph program (via glyphSaver); (2) An editing action is performed (in .redo(),
-# which Qt calls when a command is added to the stack--so the command's actual work is
-# done there) and another snapshot is taken of the result; (3) on undo, the snapshot
+# of the code (via glyphSaver or fontInfoSaver); (2) An editing action is performed (in
+# .redo, which Qt calls when a command is added to the stack--so the command's actual work
+# is done there) and another snapshot is taken of the result; (3) on undo, the snapshot
 # taken in (1) is swapped in for the current state of the glyph program; (4) on redo,
 # the snapshot taken in (2) is swapped in.
 #
 # As a typical glyph program takes up 200-400 bytes in memory, this isn't as wasteful of
 # memory as it sounds; and it definitely keeps things simple. There are some variations on
 # the sequence.
-#
-# At the glyph level, undos are all implemented.
-#
-# To do at the font level:
-#
-# Edit cvt
-# Edit prep
-# Edit fpgm
-# Edit cvar
-# Edit macros
-# Edit defaults
 #
 
 
@@ -1151,7 +1154,7 @@ class fontInfoEditCommand(QUndoCommand):
     def send_signal(self) -> None:
         if self.yg_font.signal_connected:
             self.yg_font.sig_cvt_changed.emit()
-            self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints())
+            self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
 
     def redo(self) -> None:
         pass
@@ -1177,7 +1180,7 @@ class glyphEditCommand(QUndoCommand):
         self.redo_state: Union[glyphSaver, None] = None
 
     def send_signal(self) -> None:
-        self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints())
+        self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
         self.yg_glyph.send_yaml_to_editor()
 
     def redo(self) -> None:
@@ -1547,7 +1550,7 @@ class changePointNumbersCommand(glyphEditCommand):
             self.redo_state.restore()
         else:
             self.yg_glyph.sub_coords(
-                self.yg_glyph.current_block(), to_coords=self.to_coords
+                self.yg_glyph.current_block, to_coords=self.to_coords
             )
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "changePointNumbersCommand").test()
@@ -1566,13 +1569,13 @@ class updateSourceCommand(glyphEditCommand):
             self.redo_state.restore()
         else:
             try:
-                self.yg_glyph.gsource[self.yg_glyph.current_axis()]["points"].clear()
+                self.yg_glyph.gsource[self.yg_glyph.axis]["points"].clear()
                 for ss in self.s:
-                    self.yg_glyph.gsource[self.yg_glyph.current_axis()][
+                    self.yg_glyph.gsource[self.yg_glyph.axis][
                         "points"
                     ].append(ss)
-                self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block())
-                self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block())
+                self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
+                self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
             except Exception as e:
                 print(e)
                 self.undo_state.restore()
@@ -1686,7 +1689,7 @@ class setMacFuncOtherArgsCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            self.hint._source[self.hint.hint_type()] = self.new_params
+            self.hint.source[self.hint.hint_type] = self.new_params
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "setMacFuncOtherArgsCommand").test()
         self.send_signal()
@@ -1706,20 +1709,20 @@ class swapMacFuncPointsCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            if type(self.hint._source["ptid"]) is dict:
+            if type(self.hint.source["ptid"]) is dict:
                 try:
                     (
-                        self.hint._source["ptid"][self.new_name],
-                        self.hint._source["ptid"][self.old_name],
+                        self.hint.source["ptid"][self.new_name],
+                        self.hint.source["ptid"][self.old_name],
                     ) = (
-                        self.hint._source["ptid"][self.old_name],
-                        self.hint._source["ptid"][self.new_name],
+                        self.hint.source["ptid"][self.old_name],
+                        self.hint.source["ptid"][self.new_name],
                     )
                 except Exception as e:
-                    self.hint._source["ptid"][self.new_name] = self.hint._source[
+                    self.hint.source["ptid"][self.new_name] = self.hint._source[
                         "ptid"
                     ][self.old_name]
-                    del self.hint._source["ptid"][self.old_name]
+                    del self.hint.source["ptid"][self.old_name]
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "swapMacFuncPointsCommand").test()
         self.send_signal()
@@ -1751,7 +1754,7 @@ class changeDistanceTypeCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            self.hint._source["rel"] = self.new_color
+            self.hint.source["rel"] = self.new_color
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "changeDistanceTypeCommand").test()
         self.send_signal()
@@ -1767,12 +1770,12 @@ class toggleMinDistCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            current_min_dist = not self.hint.min_dist()
+            current_min_dist = not self.hint.min_dist
             if current_min_dist == self.hint.min_dist_is_default():
-                if "min" in self.hint._source:
-                    del self.hint._source["min"]
+                if "min" in self.hint.source:
+                    del self.hint.source["min"]
             else:
-                self.hint._source["min"] = current_min_dist
+                self.hint.source["min"] = current_min_dist
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "toggleMinDistCommand").test()
         self.send_signal()
@@ -1802,15 +1805,15 @@ class toggleRoundingCommand(glyphEditCommand):
         self.setText("Toggle Rounding")
 
     def redo(self) -> None:
-        current_round = not self.hint.rounded()
+        current_round = not self.hint.rounded
         if self.redo_state:
             self.redo_state.restore()
         else:
             if current_round == self.hint.round_is_default():
-                if "round" in self.hint._source:
-                    del self.hint._source["round"]
+                if "round" in self.hint.source:
+                    del self.hint.source["round"]
             else:
-                self.hint._source["round"] = current_round
+                self.hint.source["round"] = current_round
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "toggleRoundingCommand").test()
         self.send_signal()
@@ -1829,7 +1832,7 @@ class addHintCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            self.yg_glyph._add_hint(self.hint, self.yg_glyph.current_block())
+            self.yg_glyph._add_hint(self.hint, self.yg_glyph.current_block)
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "addHintCommand").test()
         self.send_signal()
@@ -1846,7 +1849,7 @@ class deleteHintsCommand(glyphEditCommand):
             self.redo_state.restore()
         else:
             for h in self.hint_list:
-                s = h._source
+                s = h.source
                 if "parent" in s:
                     try:
                         s["parent"]["points"].remove(s)
@@ -1854,7 +1857,7 @@ class deleteHintsCommand(glyphEditCommand):
                         pass
                 else:
                     try:
-                        self.yg_glyph.current_block().remove(s)
+                        self.yg_glyph.current_block.remove(s)
                     except Exception as e:
                         pass
                 if "points" in s:
@@ -1879,9 +1882,9 @@ class reverseHintCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            self.hint._source["ptid"], self.hint._source["ref"] = (
-                self.hint._source["ref"],
-                self.hint._source["ptid"],
+            self.hint.source["ptid"], self.hint.source["ref"] = (
+                self.hint.source["ref"],
+                self.hint.source["ptid"],
             )
             self.yg_glyph._rebuild_current_block()
             self.redo_state = glyphSaver(self.yg_glyph)
@@ -1920,7 +1923,7 @@ class deletePointsCommand(glyphEditCommand):
             self.hint._delete_points(self.p_list)
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "deletePointsCommand").test()
-        #self.yg_glyph._hints_changed(self.yg_glyph.hints())
+        #self.yg_glyph._hints_changed(self.yg_glyph.hints)
         self.send_signal()
 
 
@@ -1928,23 +1931,23 @@ class switchAxisCommand(QUndoCommand):
     def __init__(self, g: "ygGlyph", prefs: ygPreferences, new_axis: str) -> None:
         super().__init__()
         self.yg_glyph = g
-        self.original_axis = self.yg_glyph.current_axis()
+        self.original_axis = self.yg_glyph.axis
         self.new_axis = new_axis
         self.top_window = prefs.top_window()
         self.setText("Change Axis")
 
     def redo(self) -> None:
-        if self.yg_glyph.current_axis() == self.new_axis:
+        if self.yg_glyph.axis == self.new_axis:
             return
-        self.top_window.current_axis = self.yg_glyph._current_axis = self.new_axis
-        self.yg_glyph._hints_changed(self.yg_glyph.hints(), dirty=False)
+        self.top_window.current_axis = self.yg_glyph.axis = self.new_axis
+        self.yg_glyph._hints_changed(self.yg_glyph.hints, dirty=False)
         self.yg_glyph.send_yaml_to_editor()
         self.top_window.set_window_title()
         self.top_window.check_axis_button()
 
     def undo(self) -> None:
-        self.top_window.current_axis = self.yg_glyph._current_axis = self.original_axis
-        self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints())
+        self.top_window.current_axis = self.yg_glyph.axis = self.original_axis
+        self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
         self.yg_glyph.send_yaml_to_editor()
         self.top_window.set_window_title()
         self.top_window.check_axis_button()
@@ -1980,7 +1983,7 @@ class glyphAddPropertyCommand(QUndoCommand):
                 self.yg_glyph.gsource["props"] = self.props
             else:
                 del self.yg_glyph.gsource["props"]
-        self.yg_glyph._hints_changed(self.yg_glyph.hints())
+        self.yg_glyph._hints_changed(self.yg_glyph.hints)
 
     @pyqtSlot()
     def redo(self) -> None:
@@ -1988,7 +1991,7 @@ class glyphAddPropertyCommand(QUndoCommand):
             self.yg_glyph.gsource["props"] = {}
         self.yg_glyph.gsource["props"][self.prop_name] = self.prop_value
         glyphSourceTester(self.yg_glyph, "glyphAddPropertyCommand").test()
-        self.yg_glyph._hints_changed(self.yg_glyph.hints())
+        self.yg_glyph._hints_changed(self.yg_glyph.hints)
 
 
 class glyphDeletePropertyCommand(QUndoCommand):
@@ -2013,7 +2016,7 @@ class glyphDeletePropertyCommand(QUndoCommand):
         else:
             if "props" in self.yg_glyph.gsource:
                 del self.yg_glyph.gsource["props"]
-        self.yg_glyph._hints_changed(self.yg_glyph.hints())
+        self.yg_glyph._hints_changed(self.yg_glyph.hints)
 
     @pyqtSlot()
     def redo(self) -> None:
@@ -2021,7 +2024,7 @@ class glyphDeletePropertyCommand(QUndoCommand):
             del self.yg_glyph.gsource["props"][self.prop_name]
             if len(self.yg_glyph.gsource["props"]) == 0:
                 del self.yg_glyph.gsource["props"]
-            self.yg_glyph._hints_changed(self.yg_glyph.hints())
+            self.yg_glyph._hints_changed(self.yg_glyph.hints)
         except Exception:
             pass
         glyphSourceTester(self.yg_glyph, "glyphDeletePropertyCommand").test()
@@ -2078,9 +2081,9 @@ class ygGlyph(QObject):
             self.preferences.top_window().add_undo_stack(self.undo_stack)
             self.undo_stack.setActive(True)
         self.yaml_editor = None
-        self.yg_font = yg_font
+        self._yg_font = yg_font
         # The next few lines have to come *after* loading the ft_font (below)
-        self.gname = gname
+        self._gname = gname
 
         # Work with the glyph from the fontTools representation of the font.
 
@@ -2098,7 +2101,7 @@ class ygGlyph(QObject):
 
         # Initialize the source for this glyph.
 
-        self.gsource = yg_font.get_glyph(self.gname)
+        self._gsource = yg_font.get_glyph(self.gname)
         self.props = ygGlyphProperties(self)
         self.error = 0
 
@@ -2137,33 +2140,33 @@ class ygGlyph(QObject):
 
         # A little fix
 
-        backup_axis = self._current_axis
-        self._current_axis = "y"
-        self.fix_hint_types(self.current_block())
-        self._current_axis = "x"
-        self.fix_hint_types(self.current_block())
-        self._current_axis = backup_axis
+        backup_axis = self.axis
+        self.axis = "y"
+        self.fix_hint_types(self.current_block)
+        self.axis = "x"
+        self.fix_hint_types(self.current_block)
+        self.axis = backup_axis
 
         # Fix up the source to make it more usable.
-        self._yaml_add_parents(self.current_block())
-        self._yaml_supply_refs(self.current_block())
+        self._yaml_add_parents(self.current_block)
+        self._yaml_supply_refs(self.current_block)
 
         # This is the QGraphicsScene wrapper for this glyph object. But
         # do we need a reference here in the __init__? It's only used once,
         # in setting up a signal, and there are other ways to do that.
-        self.glyph_viewer = None
+        self.yg_glyph_scene = None
 
         self.sig_hints_changed.connect(self.hints_changed)
         if self.preferences.top_window() != None:
             self.set_auto_preview_connection()
 
-    def report_vars(self) -> None:
-        print("Glyph name: " + self.gname)
-        print("Size of undo stack: " + str(self.undo_stack.count()))
-        print("Code for glyph:")
-        print(self.gsource)
-        print("Current block:")
-        print(self.current_block())
+    #def report_vars(self) -> None:
+    #    print("Glyph name: " + self.gname)
+    #    print("Size of undo stack: " + str(self.undo_stack.count()))
+    #    print("Code for glyph:")
+    #    print(self.gsource)
+    #    print("Current block:")
+    #    print(self.current_block)
 
     def send_error_message(self, d: dict):
         if self.yg_font:
@@ -2228,15 +2231,15 @@ class ygGlyph(QObject):
         will be called every time the source is updated.
 
         """
-        flattened_tree = self._flatten_yaml_tree(copy.deepcopy(self.current_block()))
+        flattened_tree = self._flatten_yaml_tree(copy.deepcopy(self.current_block))
         for f in flattened_tree:
             if "points" in f:
                 del f["points"]
         new_tree = ygHintSorter(self.place_all(flattened_tree)).sort()
-        self.gsource[self.current_axis()]["points"].clear()
+        self.gsource[self.axis]["points"].clear()
         for t in new_tree:
-            self.gsource[self.current_axis()]["points"].append(t)
-        self.sig_hints_changed.emit(self.hints())
+            self.gsource[self.axis]["points"].append(t)
+        self.sig_hints_changed.emit(self.hints)
         self.send_yaml_to_editor()
 
     def rebuild_current_block(self) -> None:
@@ -2301,7 +2304,7 @@ class ygGlyph(QObject):
         for pt in node:
             if "parent" in pt:
                 h = ygHint(self, pt["parent"])
-                if (not h.hint_type() in ["function", "macro"]) and len(
+                if (not h.hint_type in ["function", "macro"]) and len(
                     h.target_list()
                 ) == 1:
                     del pt["ref"]
@@ -2368,7 +2371,7 @@ class ygGlyph(QObject):
                 last_left = left
                 leftmost_point = i
         return (rightmost_point, right), (leftmost_point, left)
-    
+
     def dimensions(self):
         if len(self.point_list) == 0:
             return 0, 0
@@ -2386,22 +2389,45 @@ class ygGlyph(QObject):
             return unicode_cat_names[cat]
         return cat
 
-    def current_axis(self) -> str:
+    @property
+    def axis(self) -> str:
         return self._current_axis
+    
+    @axis.setter
+    def axis(self, a: str) -> None:
+        if a in ["y", "x"]:
+            self._current_axis = a
+        else:
+            raise ValueError("Axis must be 'y' or 'x'.")
 
+    @property
+    def yg_font(self) -> ygFont:
+        return self._yg_font
+    
+    @property
+    def gname(self) -> str:
+        return self._gname
+    
+    @property
+    def gsource(self) -> dict:
+        return self._gsource
+
+    @property
     def current_block(self) -> list:
-        if self._current_axis == "y":
+        if self.axis == "y":
             return self.gsource["y"]["points"]
         else:
             return self.gsource["x"]["points"]
 
+    @property
     def hints(self) -> list:
         """Get a list of hints for the current axis, wrapped in ygHint
         objects.
 
         """
-        return self._yaml_mk_hint_list(self.current_block(), validate=True)
+        return self._yaml_mk_hint_list(self.current_block, validate=True)
 
+    @property
     def points(self) -> list:
         return self.point_list
 
@@ -2517,7 +2543,7 @@ class ygGlyph(QObject):
         """Search the yaml source for a point.
 
         Parameters:
-        block (list): At the top level, should be self.current_block().
+        block (list): At the top level, should be self.current_block.
 
         pt (ygPoint, ygSet, ygParams, int, or str): The point(s) we're
         searching for. If more than one point (ygSet, ygParams), any
@@ -2572,15 +2598,17 @@ class ygGlyph(QObject):
                 result.extend(self.search_source(ppt["points"], search_set, ptype))
         return result
 
-    def glyph_name(self) -> str:
-        return self.gname
+    #def glyph_name(self) -> str:
+    #    return self.gname
 
+    @property
     def xoffset(self) -> int:
         xo = self.props.get_property("xoffset")
         if xo != None:
             return xo
         return 0
 
+    @property
     def yoffset(self) -> int:
         yo = self.props.get_property("yoffset")
         if yo != None:
@@ -2624,8 +2652,8 @@ class ygGlyph(QObject):
                 point_index,
                 p[0][0],
                 p[0][1],
-                self.xoffset(),
-                self.yoffset(),
+                self.xoffset,
+                self.yoffset,
                 is_on_curve,
                 label_pref=lpref,
             )
@@ -2639,7 +2667,7 @@ class ygGlyph(QObject):
     #
 
     def switch_to_axis(self, new_axis: str) -> None:
-        if self.current_axis() == "y":
+        if self.axis == "y":
             new_axis = "x"
         else:
             new_axis = "y"
@@ -2654,7 +2682,7 @@ class ygGlyph(QObject):
         editor pane, this function gets called to do the rest. It
         massages the yaml source exactly as the __init__for this class
         does (calling the same functions) and installs new source
-        in self.current_block(). Finally it
+        in self.current_block. Finally it
         sends sig_hints_changed to notify that the hints are ready to
         render and sends reconstituted source back to the editor.
         """
@@ -2713,7 +2741,7 @@ class ygGlyph(QObject):
         """
         ref = None
         if type(h) is ygHint:
-            h = h.source()
+            h = h.source
         if "ref" in h:
             ref = h["ref"]
         if ref == None or type(ref) is list:
@@ -2778,9 +2806,9 @@ class ygGlyph(QObject):
                     result.append(p.preferred_label())
             return result
         if type(pts) is ygSet:
-            return self.points_to_labels(pts.point_list())
+            return self.points_to_labels(pts.point_list)
         if type(pts) is ygParams:
-            pp = pts.point_list()
+            pp = pts.point_list
             result = []
             for p in pp:
                 if type(p) is ygPoint:
@@ -2900,7 +2928,7 @@ class ygGlyph(QObject):
 
     def send_yaml_to_editor(self) -> None:
         """Sends yaml source for the current x or y block to the editor pane."""
-        new_yaml = copy.deepcopy(self.current_block())
+        new_yaml = copy.deepcopy(self.current_block)
         self.yaml_strip_extraneous_nodes(new_yaml)
         self.sig_glyph_source_ready.emit(
             yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper)
@@ -2909,7 +2937,7 @@ class ygGlyph(QObject):
     def hint_changed(self, h: Union["ygHint", None]):
         """Called by signal from ygHint. Sends a list of hints in response."""
         self.set_dirty()
-        self.sig_hints_changed.emit(self.hints())
+        self.sig_hints_changed.emit(self.hints)
         self.send_yaml_to_editor()
 
     @pyqtSlot(object)
@@ -2925,8 +2953,8 @@ class ygGlyph(QObject):
             self.set_dirty()
         from .ygHintEditor import ygGlyphScene
 
-        if self.glyph_viewer:
-            self.glyph_viewer.install_hints(hint_list)
+        if self.yg_glyph_scene:
+            self.yg_glyph_scene.install_hints(hint_list)
 
 
 class ygGlyphs:
@@ -2944,8 +2972,8 @@ class ygGlyphs:
         else:
             return {}
 
-    def glyph_list(self) -> list:
-        return list(self.data.keys())
+    #def glyph_list(self) -> list:
+    #    return list(self.data.keys())
 
     def del_glyph(self, gname: str) -> None:
         if gname in self.data:
@@ -2974,9 +3002,9 @@ class Comparable(object):
         """
         hint = ygHint(None, obj) # type: ignore
         if key == "ptid":
-            p = hint.target()
+            p = hint.target
         else:
-            p = hint.ref()
+            p = hint.ref
         result = []
         if type(p) is dict:
             k = p.keys()
@@ -3090,7 +3118,7 @@ class ygHint(QObject):
 
     def __init__(self, glyph: ygGlyph, point: dict) -> None:
         super().__init__()
-        self.id = uuid.uuid1()
+        self._id = uuid.uuid1()
         self._source = point
         self.yg_glyph = glyph
         self.placed = False
@@ -3098,6 +3126,7 @@ class ygHint(QObject):
         if self.yg_glyph != None:
             self.hint_changed_signal.connect(self.yg_glyph.hint_changed)
 
+    @property
     def source(self) -> dict:
         return self._source
 
@@ -3107,12 +3136,17 @@ class ygHint(QObject):
 
     # def parent(self):
     #    if "parent" in self.source:
-    #        return self._source["parent"]
+    #        return self.source["parent"]
 
     # def children(self):
-    #    if "points" in self._source:
-    #        return self._source["points"]
+    #    if "points" in self.source:
+    #        return self.source["points"]
 
+    @property
+    def id(self):
+        return self._id
+
+    @property
     def target(self) -> Any:
         """May return a point identifier (index, name, coordinate-pair), a list,
         or a dict.
@@ -3120,11 +3154,17 @@ class ygHint(QObject):
         """
         return self._source["ptid"]
 
+    # This is not used right now
+    # @target.setter
+    # def target(self, tgt: Any) -> None:
+    #     """tgt can be a point identifier or a set of them. no ygPoint objects."""
+    #     self.source["ptid"] = tgt
+
     def target_list(self, index_only: bool = False) -> list:
         """Always returns a list. Does not recurse."""
         if self.yg_glyph == None:
             return []
-        t = self.target()
+        t = self.target
         if type(t) is list:
             return t
         elif type(t) is dict:
@@ -3175,7 +3215,7 @@ class ygHint(QObject):
         for p in current_points:
             labels.append(p.preferred_label())
         if len(labels) > 1:
-            self._source["ptid"] = labels
+            self.source["ptid"] = labels
 
     def add_points(self, p: list) -> None:
         if self.yg_glyph != None:
@@ -3203,9 +3243,9 @@ class ygHint(QObject):
         for p in pt_list:
             labels.append(p.preferred_label())
         if len(labels) == 1:
-            self._source["ptid"] = labels[0]
+            self.source["ptid"] = labels[0]
         elif len(labels) > 1:
-            self._source["ptid"] = labels
+            self.source["ptid"] = labels
 
     def delete_points(self, p: list) -> None:
         if self.yg_glyph != None:
@@ -3213,37 +3253,36 @@ class ygHint(QObject):
                 deletePointsCommand(self.yg_glyph, self, p)
             )
 
+    @property
     def ref(self) -> Any:
-        if "ref" in self._source:
-            return self._source["ref"]
+        if "ref" in self.source:
+            return self.source["ref"]
         return None
 
-    def set_target(self, tgt: Any) -> None:
-        """tgt can be a point identifier or a set of them. no ygPoint objects."""
-        self._source["ptid"] = tgt
-
+    @property
     def hint_type(self) -> str:
-        if "macro" in self._source:
+        if "macro" in self.source:
             return "macro"
-        if "function" in self._source:
+        if "function" in self.source:
             return "function"
-        if "rel" in self._source:
-            return self._source["rel"]
+        if "rel" in self.source:
+            return self.source["rel"]
         return "anchor"
 
-    def can_be_reversed(self) -> bool:
-        no_func = not "function" in self._source
-        no_macro = not "macro" in self._source
-        has_eligible_ref = "ref" in self._source and (
-            type(self._source["ref"]) is not list
+    @property
+    def reversible(self) -> bool:
+        no_func = not "function" in self.source
+        no_macro = not "macro" in self.source
+        has_eligible_ref = "ref" in self.source and (
+            type(self.source["ref"]) is not list
         )
-        has_eligible_target = "ptid" in self._source and (
-            type(self._source["ptid"]) is not list
+        has_eligible_target = "ptid" in self.source and (
+            type(self.source["ptid"]) is not list
         )
         return has_eligible_ref and has_eligible_target and no_func and no_macro
 
     def reverse_hint(self, h: Any) -> None:
-        if self.can_be_reversed() and self.yg_glyph != None:
+        if self.reversible and self.yg_glyph != None:
             self.yg_glyph.undo_stack.push(reverseHintCommand(self.yg_glyph, self))
 
     def swap_macfunc_points(self, new_name: str, old_name: str) -> None:
@@ -3258,24 +3297,26 @@ class ygHint(QObject):
                 changeDistanceTypeCommand(self.yg_glyph, self, new_color)
             )
 
+    @property
     def rounded(self) -> bool:
-        if "round" in self._source:
-            if self._source["round"] == False:
+        if "round" in self.source:
+            if self.source["round"] == False:
                 return False
             return True
         else:
             return self.round_is_default()
 
     # Should make "min" handle a value.
+    @property
     def min_dist(self) -> bool:
         try:
-            m = self._source["min"]
+            m = self.source["min"]
             return m
         except Exception:
             return self.min_dist_is_default()
 
     def min_dist_is_default(self) -> bool:
-        return hint_type_nums[self.hint_type()] == 3
+        return hint_type_nums[self.hint_type] == 3
 
     def toggle_min_dist(self) -> None:
         if self.yg_glyph != None:
@@ -3287,28 +3328,29 @@ class ygHint(QObject):
             self.yg_glyph.undo_stack.push(toggleRoundingCommand(self.yg_glyph, self))
 
     def round_is_default(self) -> bool:
-        return hint_type_nums[self.hint_type()] in [0, 3]
+        return hint_type_nums[self.hint_type] in [0, 3]
 
     def set_round(self, b: bool, update: bool = False) -> None:
         if b != self.round_is_default():
-            self._source["round"] = b
+            self.source["round"] = b
         else:
-            if "round" in self._source:
-                del self._source["round"]
+            if "round" in self.source:
+                del self.source["round"]
         if update:
             self.hint_changed_signal.emit(self)
 
+    @property
     def cv(self) -> Optional[str]:
-        if "pos" in self._source:
-            return self._source["pos"]
-        if "dist" in self._source:
-            return self._source["dist"]
-        if "cv" in self._source:
-            return self._source["cv"]
+        if "pos" in self.source:
+            return self.source["pos"]
+        if "dist" in self.source:
+            return self.source["dist"]
+        if "cv" in self.source:
+            return self.source["cv"]
         return None
 
     def required_cv_type(self) -> Optional[str]:
-        hnum = hint_type_nums[self.hint_type()]
+        hnum = hint_type_nums[self.hint_type]
         if hnum == 0:
             return "pos"
         if hnum == 3:
@@ -3332,12 +3374,13 @@ class ygHint(QObject):
         cvtype = self.required_cv_type()
         if cvtype:
             if new_cv == "None":
-                if cvtype in self._source:
-                    del self._source[cvtype]
+                if cvtype in self.source:
+                    del self.source[cvtype]
             else:
-                self._source[cvtype] = new_cv
+                self.source[cvtype] = new_cv
 
     # Placeholder. Need to provide an interface to control this.
+    @property
     def cut_in(self) -> bool:
         return True
 
@@ -3356,22 +3399,23 @@ class ygHint(QObject):
 
     def _hint_string(self) -> str:
         result = "Hint target: "
-        result += str(self._source["ptid"])
-        if "ref" in self._source:
+        result += str(self.source["ptid"])
+        if "ref" in self.source:
             result += "; ref: "
-            result += str(self._source["ref"])
-        if "parent" in self._source:
+            result += str(self.source["ref"])
+        if "parent" in self.source:
             result += "; parent: "
-            result += str(self._source["parent"]["ptid"])
+            result += str(self.source["parent"]["ptid"])
         return result
 
     def _get_macfunc(self) -> Optional[Union[str, dict]]:
-        if "function" in self._source:
-            return self._source["function"]
-        elif "macro" in self._source:
-            return self._source["macro"]
+        if "function" in self.source:
+            return self.source["function"]
+        elif "macro" in self.source:
+            return self.source["macro"]
         return None
 
+    @property
     def macfunc_name(self) -> Optional[str]:
         macfunc = self._get_macfunc()
         if type(macfunc) is dict:
@@ -3380,6 +3424,7 @@ class ygHint(QObject):
             return macfunc
         return None
 
+    @property
     def macfunc_other_args(self) -> Optional[dict]:
         macfunc = self._get_macfunc()
         other_params = {}
@@ -3391,7 +3436,8 @@ class ygHint(QObject):
             return other_params
         return None
 
-    def set_macfunc_other_args(self, d: dict) -> None:
+    @macfunc_other_args.setter
+    def macfunc_other_args(self, d: dict) -> None:
         """d is a dictionary of params for this hint."""
         if len(d) > 1 and self.yg_glyph != None:
             self.yg_glyph.undo_stack.push(
@@ -3455,23 +3501,25 @@ class ygMasters:
     def create_master(self):
         master_id = random_id("master")
         d = {"name": master_id, "vars": {}}
-        at = self.yg_font.axis_tags()
+        at = self.yg_font.axis_tags
         for a in at:
             d["vars"][a] = 0.0
         return master_id, d
 
+    @property
     def keys(self):
         return self.source["masters"].keys()
 
+    @property
     def names(self):
         n_list = []
-        k = self.source["masters"].keys()
+        k = self.keys
         for kk in k:
             n_list.append(self.source["masters"][kk]["name"])
         return n_list
 
     def master_by_name(self, n):
-        k = self.source["masters"].keys()
+        k = self.keys
         for kk in k:
             if self.source["masters"][kk]["name"] == n:
                 return kk, self.source["masters"][kk]
@@ -3789,6 +3837,7 @@ class ygcvt(ygSourceable):
         )
         self.set_clean(True)
 
+    @property
     def keys(self) -> Iterable:
         return self.font_source["cvt"].keys()
 
@@ -3845,8 +3894,8 @@ class ygcvt(ygSourceable):
 
     def _get_val_from_hint(self, hint: ygHint, axis: str) -> Optional[int]:
         """Helper for get_closest_cv_action and get_closest_cv_name."""
-        tgt = hint.yg_glyph.resolve_point_identifier(hint.target())
-        ref = hint.ref()
+        tgt = hint.yg_glyph.resolve_point_identifier(hint.target)
+        ref = hint.ref
         if ref != None:
             ref = hint.yg_glyph.resolve_point_identifier(ref)
             if type(ref) is not ygPoint:
@@ -3866,7 +3915,7 @@ class ygcvt(ygSourceable):
 
     def get_closest_cv_name(self, cvlist: list, hint: ygHint) -> str:
         """cvlist is a list of cv names."""
-        axis = hint.yg_glyph.current_axis()
+        axis = hint.yg_glyph.axis
         val = self._get_val_from_hint(hint, axis)
         vlist = []
         for c in cvlist:
@@ -3888,7 +3937,7 @@ class ygcvt(ygSourceable):
         """
         alst.pop(0)
         alst.pop(0)
-        axis = hint.yg_glyph.current_axis()
+        axis = hint.yg_glyph.axis
         val = self._get_val_from_hint(hint, axis)
         vlist = []
         for a in alst:

@@ -8,7 +8,7 @@ class stemFinder:
         self.counter_clockwise = bool(self.yg_glyph.yg_font.defaults.get_default("counterclockwise"))
         self.contours = []
         contour = []
-        points = yg_glyph.points()
+        points = yg_glyph.points
         for p in points:
             contour.append(p)
             if p.end_of_contour:
@@ -16,7 +16,7 @@ class stemFinder:
                 contour = []
         self.high_point = p1
         self.low_point = p2
-        if self.yg_glyph.current_axis() == "y":
+        if self.yg_glyph.axis == "y":
             # self.high_point must have a higher y value than self.low_point.
             if self.high_point.font_y < self.low_point.font_y:
                 self.high_point, self.low_point = self.low_point, self.high_point
@@ -136,7 +136,7 @@ class stemFinder:
             and self.low_point, based on this class's analysis of the stem.
         """
         result = "graydist"
-        if self.yg_glyph.current_axis() == "x":
+        if self.yg_glyph.axis == "x":
             high_y_dir = self.y_direction(self.high_point)
             low_y_dir = self.y_direction(self.low_point)
             if high_y_dir == "up" and low_y_dir == "down":

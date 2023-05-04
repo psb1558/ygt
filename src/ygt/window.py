@@ -12,7 +12,6 @@ from .ygHintEditor import ygGlyphScene, ygGlyphView
 from .ygPreferences import ygPreferences, open_config
 from .ygSchema import (
     is_cvt_valid,
-    is_cvar_valid,
     is_prep_valid,
     are_macros_valid,
     are_functions_valid,
@@ -129,11 +128,10 @@ class MainWindow(QMainWindow):
             parent = None
         ):
         super(MainWindow, self).__init__(parent=parent)
+        # undo_group will hold undo stacks for each edited glyph and
+        # font-level data.
         self.undo_group = QUndoGroup()
         self.undo_group.cleanChanged.connect(self.clean_changed)
-        # The undo registry should keep a record of undo stacks for each
-        # glyph that has been edited, and for the prep, cvar, fpgm, macros,
-        # and defaults.
         self.error_manager = ygErrorMessages(self)
         if not win_list:
             self.win_list = [self]
@@ -197,10 +195,13 @@ class MainWindow(QMainWindow):
         self.recents_actions: list = []
         self.instance_actions: list = []
         self.window_list: list = []
-        # self.thread = None
         self.preview_maker: Optional[ygPreviewFontMaker] = None
         self.font_generator: Optional[ygFontGenerator] = None
         self.auto_preview_update = True
+
+        #
+        # Build menus and toolbar
+        #
 
         self.menu = self.menuBar()
 
@@ -329,7 +330,7 @@ class MainWindow(QMainWindow):
         self.preview_menu.addSeparator()
 
         self.pv_set_size_action = self.preview_menu.addAction("Set resolution...")
-        self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+r"))
+        self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+l"))
         self.pv_set_size_action.setEnabled(False)
 
         self.pv_render_mode_menu = self.preview_menu.addMenu("Render mode")
@@ -619,7 +620,7 @@ class MainWindow(QMainWindow):
     def toggle_auto_preview(self) -> None:
         self.auto_preview_update = not self.auto_preview_update
         try:
-            self.glyph_pane.viewer.yg_glyph.set_auto_preview_connection()
+            self.glyph_pane.yg_glyph_scene.yg_glyph.set_auto_preview_connection()
         except Exception as e:
             # print(e)
             pass
@@ -638,7 +639,7 @@ class MainWindow(QMainWindow):
             pass
         source = self.yg_font.source
         font = self.yg_font.preview_font
-        self.preview_glyph_name = self.glyph_pane.viewer.yg_glyph.gname
+        self.preview_glyph_name = self.glyph_pane.yg_glyph_scene.yg_glyph.gname
         preview_text = self.yg_string_preview.panel._text
         self.preview_glyph_name_list = []
         if preview_text != None and len(preview_text) > 0:
@@ -690,7 +691,7 @@ class MainWindow(QMainWindow):
     def show_font_view(self) -> None:
         """Display the modeless dialog in fontViewWindow.py."""
         if not self.font_viewer:
-            font_name = self.yg_font.font_files.in_font()
+            font_name = self.yg_font.font_files.in_font
             glyph_list = self.yg_font.glyph_list
             self.font_viewer = fontViewWindow(font_name, self.yg_font, glyph_list, self)
         if self.font_viewer.valid:
@@ -709,12 +710,12 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def index_labels(self) -> None:
         self.points_as_coords = False
-        self.glyph_pane.viewer.set_point_display("index")
+        self.glyph_pane.yg_glyph_scene.set_point_display("index")
 
     @pyqtSlot()
     def coord_labels(self) -> None:
         self.points_as_coords = True
-        self.glyph_pane.viewer.set_point_display("coord")
+        self.glyph_pane.yg_glyph_scene.set_point_display("coord")
 
     #
     # Prep for menu display
@@ -893,20 +894,24 @@ class MainWindow(QMainWindow):
         self.setup_nav_connections()
         self.setup_zoom_connections()
         self.source_editor.setup_editor_signals(
-            self.glyph_pane.viewer.yg_glyph.save_editor_source
+            self.glyph_pane.yg_glyph_scene.yg_glyph.save_editor_source
         )
         self.source_editor.setup_status_indicator(self.set_status_validity_msg)
         self.setup_cursor_connections()
 
     def connect_editor_signals(self) -> None:
         self.source_editor.setup_editor_signals(
-            self.glyph_pane.viewer.yg_glyph.save_editor_source
+            self.glyph_pane.yg_glyph_scene.yg_glyph.save_editor_source
         )
 
     def disconnect_editor_signals(self) -> None:
         self.source_editor.disconnect_editor_signals(
-            self.glyph_pane.viewer.yg_glyph.save_editor_source
+            self.glyph_pane.yg_glyph_scene.yg_glyph.save_editor_source
         )
+
+    #
+    # GUI setup
+    #
 
     def set_up_instance_list(self) -> None:
         if self.yg_font.is_variable_font and hasattr(self.yg_font, "instances"):
@@ -922,16 +927,13 @@ class MainWindow(QMainWindow):
                 self.instance_actions.append(self.instance_menu.addAction(k))
                 instance_names.append(k)
             self.yg_preview.add_instances(self.yg_font.instances)
-            self.yg_preview.instance = self.yg_font.default_instance()
+            self.yg_preview.instance = self.yg_font.default_instance
             self.prev_instance_action.setEnabled(False)
             self.next_instance_action.setEnabled(False)
             self.instance_menu.setEnabled(False)
 
-    #
-    # GUI setup
-    #
-
     def set_size_and_position(self):
+        """Set size and position of the main window."""
         if self.preferences.geometry_valid():
             self.setGeometry(
                 self.preferences["top_window_pos_x"],
@@ -990,6 +992,7 @@ class MainWindow(QMainWindow):
         for ss in s:
             ss.setClean()
 
+    # Could be a property
     def is_file_clean(self):
         s = self.undo_group.stacks()
         for ss in s:
@@ -1007,10 +1010,10 @@ class MainWindow(QMainWindow):
 
     def _save_yaml_file(self) -> None:
         if self.yg_font and (not self.is_file_clean()):
-            glyph = self.glyph_pane.viewer.yg_glyph
+            glyph = self.glyph_pane.yg_glyph_scene.yg_glyph
             glyph_backup = copy.deepcopy(glyph.gsource)
             glyph.cleanup_glyph()
-            self.yg_font.cleanup_font(glyph.glyph_name())
+            self.yg_font.cleanup_font(glyph.gname)
             self.yg_font.source_file.save_source()
             glyph.gsource.clear()
             for k in glyph_backup.keys():
@@ -1025,7 +1028,7 @@ class MainWindow(QMainWindow):
         if not self.yg_font.source_file.filename:
             return
         self.preferences.add_recent(self.yg_font.source_file.filename)
-        glyph = self.glyph_pane.viewer.yg_glyph
+        glyph = self.glyph_pane.yg_glyph_scene.yg_glyph
         glyph_backup = copy.deepcopy(glyph.gsource)
         glyph.cleanup_glyph()
         self.yg_font.source_file.save_source(top_window=self)
@@ -1044,8 +1047,8 @@ class MainWindow(QMainWindow):
             # It means that it's safe to run the rest of this function.
             pass
         source = self.yg_font.source
-        new_file_name = self.yg_font.font_files.out_font()
-        in_file_name = self.yg_font.font_files.in_font()
+        new_file_name = self.yg_font.font_files.out_font
+        in_file_name = self.yg_font.font_files.in_font
         if new_file_name == None or in_file_name == None:
             return
         source = self.yg_font.source
@@ -1250,7 +1253,6 @@ class MainWindow(QMainWindow):
             self.preferences.add_recent(filename)
             split_fn = os.path.splitext(filename)
             fn_base = split_fn[0]
-            # self.filename_extension = extension = split_fn[1]
             extension = split_fn[1]
             yaml_source = {}
             # If file is .ttf, create a skeleton yaml_source and a ygt_filename.
@@ -1289,18 +1291,18 @@ class MainWindow(QMainWindow):
 
             if (
                 "current_glyph" in self.preferences
-                and self.yg_font.full_name() in self.preferences["current_glyph"]
+                and self.yg_font.full_name in self.preferences["current_glyph"]
             ):
-                initGlyph = self.preferences["current_glyph"][self.yg_font.full_name()]
+                initGlyph = self.preferences["current_glyph"][self.yg_font.full_name]
             else:
                 initGlyph = "A"
             modelGlyph = ygGlyph(self.preferences, self.yg_font, initGlyph)
             modelGlyph.set_yaml_editor(self.source_editor)
-            viewer = ygGlyphScene(self.preferences, modelGlyph)
-            view = ygGlyphView(self.preferences, viewer, self.yg_font)
-            viewer.owner = view
+            yg_glyph_scene = ygGlyphScene(self.preferences, modelGlyph)
+            view = ygGlyphView(self.preferences, yg_glyph_scene, self.yg_font)
+            yg_glyph_scene.owner = view
             self.add_glyph_pane(view)
-            view.centerOn(view.viewer.center_x, view.sceneRect().center().y())
+            view.centerOn(view.yg_glyph_scene.center_x, view.sceneRect().center().y())
             self.set_window_title()
             self.set_up_instance_list()
             self.setup_editor_connections()
@@ -1317,6 +1319,7 @@ class MainWindow(QMainWindow):
     def setup_stem_buttons(self, axis):
         pass
 
+    @pyqtSlot(object)
     def selection_changed(self, selection_profile: list):
         total_selected = selection_profile[0] + selection_profile[1]
         # fix up make cv button
@@ -1377,9 +1380,7 @@ class MainWindow(QMainWindow):
         if self.yg_font:
             base += (
                 " -- "
-                + str(self.yg_font.family_name())
-                + "-"
-                + str(self.yg_font.style_name())
+                + self.yg_font.full_name
             )
             if not self.is_file_clean():
                 base += "*"
@@ -1388,9 +1389,9 @@ class MainWindow(QMainWindow):
             self.set_statusbar_text(None)
 
     def set_statusbar_text(self, valid: Union[bool, None]) -> None:
-        status_text = self.glyph_pane.viewer.yg_glyph.gname
+        status_text = self.glyph_pane.yg_glyph_scene.yg_glyph.gname
         status_text += (
-            " - " + unicode_cat_names[self.glyph_pane.viewer.yg_glyph.get_category()]
+            " - " + unicode_cat_names[self.glyph_pane.yg_glyph_scene.yg_glyph.get_category()]
         )
         status_text += " (" + self.current_axis + ")"
         if valid != None:
@@ -1421,14 +1422,14 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def indices_to_coords(self) -> None:
         try:
-            self.glyph_pane.viewer.yg_glyph.indices_to_coords()
+            self.glyph_pane.yg_glyph_scene.yg_glyph.indices_to_coords()
         except Exception as e:
             print(e)
 
     @pyqtSlot()
     def coords_to_indices(self) -> None:
         try:
-            self.glyph_pane.viewer.yg_glyph.coords_to_indices()
+            self.glyph_pane.yg_glyph_scene.yg_glyph.coords_to_indices()
         except Exception as e:
             print(e)
 
@@ -1488,7 +1489,7 @@ class MainWindow(QMainWindow):
     def edit_names(self) -> None:
         self.names_editor = editorDialog(
             self.preferences,
-            self.glyph_pane.viewer.yg_glyph.names,
+            self.glyph_pane.yg_glyph_scene.yg_glyph.names,
             "names",
             are_names_valid,
         )
@@ -1499,7 +1500,7 @@ class MainWindow(QMainWindow):
     def edit_properties(self) -> None:
         self.properties_editor = editorDialog(
             self.preferences,
-            self.glyph_pane.viewer.yg_glyph.props,
+            self.glyph_pane.yg_glyph_scene.yg_glyph.props,
             "properties",
             are_properties_valid,
         )
@@ -1579,6 +1580,7 @@ class MainWindow(QMainWindow):
                 self.del_from_win_list(self)
                 event.accept()
 
+    # Could be property
     def all_clean(self) -> bool:
         for w in self.win_list:
             if not w.is_file_clean():
@@ -1625,7 +1627,7 @@ class MainWindow(QMainWindow):
 
     def event(self, event) -> bool:
         if event.type() == event.Type.WindowActivate and self.glyph_pane:
-                self.glyph_pane.viewer.yg_glyph.undo_stack.setActive(True)
+                self.glyph_pane.yg_glyph_scene.yg_glyph.undo_stack.setActive(True)
         return super().event(event)
 
     def get_preferences(self, prefs: Optional[ygPreferences]) -> None:
@@ -1641,8 +1643,9 @@ class MainWindow(QMainWindow):
         self.preferences.set_show_off_curve_points(self.show_off_curve_points)
         self.preferences.set_show_point_numbers(self.show_point_numbers)
 
+    # Could be property
     def current_glyph(self):
-        return self.glyph_pane.viewer.yg_glyph
+        return self.glyph_pane.yg_glyph_scene.yg_glyph
 
 
 class mainWinEventFilter(QObject):
@@ -1658,16 +1661,16 @@ class mainWinEventFilter(QObject):
 
 
 def main():
-    import uharfbuzz as hb
-    from inspect import getfullargspec, signature
-    print(dir(hb))
-    # print(getfullargspec(hb.Font.create))
-    # print(type(hb.Font.create))
+    #import uharfbuzz as hb
+    #from inspect import getfullargspec, signature
+    #print(dir(hb._harfbuzz))
+    #print(dir(hb._harfbuzz.Font))
+    #print(dir(hb._harfbuzz.Buffer))
 
     app = QApplication([])
     font_id = QFontDatabase.addApplicationFont(os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf")
     if font_id == -1:
-        print("Can't find the font Source Code Pro.")
+        print("Can't find font Source Code Pro.")
     top_window = MainWindow(app)
     top_window.get_preferences(open_config(top_window))
     app.setWindowIcon(QIcon(top_window.icon_path + "program.png"))

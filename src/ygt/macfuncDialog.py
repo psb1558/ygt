@@ -35,7 +35,7 @@ class macfuncDialog(QDialog):
                 # print("in function dialog:")
                 # print("Error: " + str(e))
                 pass
-        self.hint_type = _hint.yg_hint.hint_type()
+        self.hint_type = _hint.yg_hint.hint_type
         self._layout = QVBoxLayout()
         QBtn = (
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -102,7 +102,7 @@ class macfuncDialog(QDialog):
         self.setLayout(self._layout)
 
     def accept(self) -> None:
-        self.result_dict = {"nm": self.yg_hint.macfunc_name()}
+        self.result_dict = {"nm": self.yg_hint.macfunc_name}
         for w in self.widgets:
             if w.itemAt(1).widget().text() != "None": # type: ignore
                 self.result_dict[w.itemAt(0).widget().text()] = ( # type: ignore
@@ -110,7 +110,7 @@ class macfuncDialog(QDialog):
                 )
         # So param_list is the answer from this dialog. Don't plug it into the
         # hint here, but rather in a QUndoCommand.
-        # self.yg_hint._source[self.yg_hint.hint_type()] = param_list
+        # self.yg_hint._source[self.yg_hint.hint_type] = param_list
         super().accept()
 
 
@@ -119,11 +119,11 @@ class ygCVTWidget(QComboBox):
         super().__init__()
         self.addItem("None")
         # self.setInsertPolicy(QComboBox.InsertPolicy.InsertAlphabetically)
-        # cv_list = hint.yg_glyph.yg_font.cvt.get_list(_type, hint.yg_glyph.current_axis())
+        # cv_list = hint.yg_glyph.yg_font.cvt.get_list(_type, hint.yg_glyph.axis)
         cv_list = hint.yg_glyph.yg_font.cvt.get_list(
             hint.yg_glyph,
             type=_type,
-            axis=hint.yg_glyph.current_axis(),
+            axis=hint.yg_glyph.axis,
             cat=hint.yg_glyph.get_category(),
             suffix=hint.yg_glyph.get_suffixes(),
         )
@@ -132,8 +132,8 @@ class ygCVTWidget(QComboBox):
             self.addItem(c)
             if c == default:
                 self.setCurrentText(default)
-        if hint.cv():
-            self.setCurrentText(hint.cv())
+        if hint.cv:
+            self.setCurrentText(hint.cv)
 
     def text(self) -> str:
         return self.currentText()

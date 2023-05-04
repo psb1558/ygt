@@ -119,7 +119,7 @@ class cvEditPane(QWidget, cvSource):
         self.button_layout = QHBoxLayout()
 
         self.cv_list = QListWidget()
-        self.cv_list.addItems(self._cvt.keys())
+        self.cv_list.addItems(self._cvt.keys)
         self.current_list_item = self.cv_list.item(0)
         self.cv_list.setCurrentItem(self.current_list_item)
         self._current_cv_name = self.current_list_item.text()
@@ -166,7 +166,7 @@ class cvEditPane(QWidget, cvSource):
         self._cvt.del_cv(self._current_cv_name)
         self.cv_list.clear()
         try:
-            self._current_cv_name = list(self._cvt.keys())[0]
+            self._current_cv_name = list(self._cvt.keys)[0]
         except IndexError:
             return
         self.refresh()
@@ -180,7 +180,7 @@ class cvEditPane(QWidget, cvSource):
             self.add_cv()
         self._current_cv = self._cvt.get_cv(self._current_cv_name)
         self.cv_list.clear()
-        self.cv_list.addItems(self._cvt.keys())
+        self.cv_list.addItems(self._cvt.keys)
         matches = self.cv_list.findItems(
             self._current_cv_name, Qt.MatchFlag.MatchExactly
         )
@@ -337,7 +337,7 @@ class mastersWidget(QWidget):
         self.button_layout = QHBoxLayout()
 
         self.master_list = QListWidget()
-        self.master_list.addItems(self.masters.names())
+        self.master_list.addItems(self.masters.names)
         self.current_list_item = self.master_list.item(0)
         self.master_list.setCurrentItem(self.current_list_item)
         self.master_list.itemActivated.connect(self.new_item)
@@ -388,7 +388,7 @@ class mastersWidget(QWidget):
 
     def add_master(self) -> None:
         master_dict = {}
-        axis_tags = self.yg_font.axis_tags()
+        axis_tags = self.yg_font.axis_tags
         for a in axis_tags:
             master_dict[a] = 0.0
         master_id = random_id("master")
@@ -401,7 +401,7 @@ class mastersWidget(QWidget):
         self.master_list.clear()
         try:
             self._current_master = self.masters.master_by_name(
-                self.yg_font.masters.names()[0]
+                self.yg_font.masters.names[0]
             )
         except IndexError:
             return
@@ -411,7 +411,7 @@ class mastersWidget(QWidget):
         if not len(self.yg_font.masters):
             return
         self.master_list.clear()
-        self.master_list.addItems(self.yg_font.masters.names())
+        self.master_list.addItems(self.yg_font.masters.names)
         matches = self.master_list.findItems(
             self.current_master_name(), Qt.MatchFlag.MatchExactly
         )
@@ -453,7 +453,7 @@ class masterWidget(QWidget):
         self.name_layout.addWidget(self.master_name_widget)
         self.master_layout.addLayout(self.name_layout)
         self.names = []
-        axis_tags = yg_font.axis_tags()
+        axis_tags = yg_font.axis_tags
         for axis_name in axis_tags:
             axis_val_layout = QHBoxLayout()
             axis_val_layout.addWidget(QLabel(axis_name))
@@ -651,7 +651,7 @@ class cvWidget(QWidget):
             self.variants_tab_layout = QVBoxLayout()
             self.var_widgets = []
             self.var_layouts = []
-            master_keys = self.masters.keys() # type: ignore
+            master_keys = self.masters.keys # type: ignore
             for k in master_keys:
                 self.var_layouts.append(QHBoxLayout())
                 self.var_layouts[-1].addWidget(QLabel(self.masters.get_master_name(k))) # type: ignore

@@ -5,6 +5,7 @@ import copy
 from tempfile import SpooledTemporaryFile
 from PyQt6.QtGui import QColor, QPen
 from PyQt6.QtCore import QRect, QLine
+import uharfbuzz as uhb
 
 
 RENDER_GRAYSCALE = 1
@@ -59,10 +60,35 @@ class freetypeFont:
             if type(font) is SpooledTemporaryFile:
                 font.seek(0)
                 self.face = ft.Face(font)
+                # Experimental code, for harfbuzz.
+                # Here's what we're going to have to do.
+                #    1. Load the whole font into Harfbuzz (shall we do this just once for
+                #       the session?)
+                #    2. Display features, let user choose.
+                #    3. Let hb.shape get us a new string
+                #    4. Get glyph names.
+                #    5. Send list of names to Xgridfit, get back list of indices.
+                #    6. Draw the glyphs.
+                #font.seek(0)
+                #font_data = font.read()
+                #hb_face = uhb.Face(font_data)
+                #hb_font = uhb.Font(hb_face)
+                #buf = uhb.Buffer()
+                #buf.add_str("first flat office")
+                #buf.guess_segment_properties()
+                #features = {"kern": True, "liga": True}
+                #uhb.shape(hb_font, buf, features)
+                #print(uhb._harfbuzz.ot_layout_language_get_feature_tags(hb_face, "GSUB"))
+                # End of harfbuzz experiment.
                 font.close()
+                #import uharfbuzz as hb
+                #test = hb.Blob(self.face)
+                #print(test)
             else:
                 self.face = ft.Face(font)
-        except Exception:
+        except Exception as e:
+            print(e.args)
+            print(e)
             self.valid = False
             return
         self.char_size = size * 64
@@ -157,10 +183,6 @@ class freetypeFont:
             flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD
         if not self.hinting_on:
             flags = flags | ft.FT_LOAD_NO_HINTING | ft.FT_LOAD_NO_AUTOHINT
-        # For some UFOs, font view is hanging here (with load_glyph). It doesn't
-        # hang except with
-        # UFOs, and it generates the preview well from the same in-memory TTFont.
-        # So what are we doing differently when generating the font view?
         self.face.load_glyph(self.glyph_index, flags=flags)
         self.glyph_slot = self.face.glyph
         self.advance = round(self.glyph_slot.advance.x / 64)

@@ -373,7 +373,10 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
-        black = QColor("black")
+        if self.dark_theme:
+            skippable = QColor("black")
+        else:
+            skippable = QColor("white")
         for row in self.Z:
             for col in row:
                 rgb = []
@@ -381,12 +384,11 @@ class ygPreview(QWidget):
                     rgb.append(elem)
                 if self.dark_theme:
                     qc = QColor(rgb[0], rgb[1], rgb[2])
-                    if qc == black:
-                        qc == self.background_color
                 else:
                     qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
-                qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
-                painter.fillRect(qr, qc)
+                if qc != skippable:
+                    qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
+                    painter.fillRect(qr, qc)
                 xposition += self.pixel_size
             yposition += self.pixel_size
             xposition = self.horizontal_margin
@@ -470,7 +472,7 @@ class ygStringPreviewPanel(QWidget):
 
     def string_to_glyph_list(self, s: str) -> list:
         """Get a list of glyph names needed for string s."""
-        yg_font = self.top_window.glyph_pane.viewer.yg_glyph.yg_font
+        yg_font = self.top_window.glyph_pane.yg_glyph_scene.yg_glyph.yg_font
         result = []
         for c in s:
             try:
