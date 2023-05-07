@@ -2366,13 +2366,13 @@ class ygGlyphScene(QGraphicsScene):
                     if ppp.touched:
                         ref_name = self._model_point(ppp).preferred_label()
                     else:
-                        target_names.append(str(self._model_point(ppp).preferred_label()))
+                        target_names.append(self._model_point(ppp).preferred_label())
                 if len(target_names) == 1 or hint_type_num == 3:
                     tgt = target_names[0]
                 else:
                     tgt = target_names
                 # This should not happen if we've filtered properly before calling this.
-                if not ref_name or len(target_names) == 0:
+                if ref_name == "" or len(target_names) == 0:
                     return
                 h = {"ptid": tgt, "ref": ref_name, "rel": hint_type}
                 new_yg_hint = ygHint(self.yg_glyph, h)
