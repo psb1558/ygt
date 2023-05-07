@@ -58,6 +58,7 @@ from fontTools import ttLib, ufoLib # type: ignore
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
+ygt_version = "0.2.0"
 
 
 class ygPreviewFontMaker(QThread):
@@ -253,6 +254,11 @@ class MainWindow(QMainWindow):
         self.font_info_action = self.file_menu.addAction("Font Info")
         self.font_info_action.setShortcut(QKeySequence("Ctrl+i"))
         self.font_info_action.setEnabled(False)
+
+        self.file_menu.addSeparator()
+
+        self.about_action = self.file_menu.addAction("About YGT")
+        self.about_action.setMenuRole(QAction.MenuRole.ApplicationSpecificRole)
 
         self.file_menu.aboutToShow.connect(self.file_menu_about_to_show)
 
@@ -838,6 +844,7 @@ class MainWindow(QMainWindow):
         self.open_action.triggered.connect(self.open_file)
         self.save_font_action.triggered.connect(self.export_font)
         self.font_info_action.triggered.connect(self.edit_font_info)
+        self.about_action.triggered.connect(self.show_about_dialog)
 
     def setup_recents_connections(self) -> None:
         for a in self.recents_actions:
@@ -1437,6 +1444,21 @@ class MainWindow(QMainWindow):
     def set_status_validity_msg(self, t: str) -> None:
         self.set_statusbar_text(bool(t))
 
+    @pyqtSlot()
+    def show_about_dialog(self) -> None:
+        msg = QMessageBox(self)
+        msg.setWindowTitle("About YGT")
+        msg.setText("YGT " + ygt_version)
+        detailed_text = "TrueType Hint Editor.\n"
+        detailed_text += "Copyright © 2023 by Peter S. Baker.\n"
+        detailed_text += "Apache License, version 2.0. \n\n"
+        detailed_text += "For further information, visit https://github.com/psb1558/ygt."
+        msg.setDetailedText(detailed_text)
+        # Will need to mess with size hints and policies to do this.
+        # msg.resize(round(msg.width() * 2), round(msg.height() * 2))
+        msg.setStandardButtons(QMessageBox.StandardButton.NoButton)
+        msg.exec()
+
     def show_error_message(self, msg_list: list) -> None:
         msg = QMessageBox(self)
         if msg_list[0] == "Warning":
@@ -1695,7 +1717,7 @@ class mainWinEventFilter(QObject):
 def main():
     #import uharfbuzz as hb
     #from inspect import getfullargspec, signature
-    #print(dir(hb._harfbuzz))
+    # print(dir(QMessageBox))
     #print(dir(hb._harfbuzz.Font))
     #print(dir(hb._harfbuzz.Buffer))
 
