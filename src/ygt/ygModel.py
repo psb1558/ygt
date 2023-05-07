@@ -920,7 +920,11 @@ class ygPoint:
                 return t
             else:
                 return self.coord
-        return self.index
+        try:
+            return int(self.index)
+        except TypeError:
+            print("TypeError: " + str(self.index))
+            return str(self.index)
 
     def set_preferred_name(self, n: str) -> None:
         self.preferred_name = n
@@ -2075,10 +2079,10 @@ class ygGlyph(QObject):
         """
         super().__init__()
         self.preferences = preferences
-        top_window = self.preferences.top_window()
-        if top_window != None:
+        self.top_window = self.preferences.top_window()
+        if self.top_window != None:
             self.undo_stack = QUndoStack()
-            self.preferences.top_window().add_undo_stack(self.undo_stack)
+            self.top_window.add_undo_stack(self.undo_stack)
             self.undo_stack.setActive(True)
         self.yaml_editor = None
         self._yg_font = yg_font
@@ -2133,8 +2137,8 @@ class ygGlyph(QObject):
             self.point_coord_dict[p.coord] = p
 
         # Decide the initial axis.
-        if self.preferences and self.preferences.top_window() != None:
-            self._current_axis = self.preferences.top_window().current_axis
+        if self.preferences and self.top_window != None:
+            self._current_axis = self.top_window.current_axis
         else:
             self._current_axis = "y"
 
@@ -2157,7 +2161,7 @@ class ygGlyph(QObject):
         self.yg_glyph_scene = None
 
         self.sig_hints_changed.connect(self.hints_changed)
-        if self.preferences.top_window() != None:
+        if self.top_window != None:
             self.set_auto_preview_connection()
 
     #def report_vars(self) -> None:
@@ -2642,8 +2646,7 @@ class ygGlyph(QObject):
         pt_list = []
         gl = self.ft_glyph.getCoordinates(self.yg_font.ft_font["glyf"])
         lpref = "index"
-        top_window = self.preferences.top_window()
-        if top_window != None and top_window.points_as_coords:
+        if self.top_window != None and self.top_window.points_as_coords:
             lpref = "coord"
         for point_index, p in enumerate(zip(gl[0], gl[2])):
             is_on_curve = p[1] & 0x01 == 0x01
@@ -2908,14 +2911,14 @@ class ygGlyph(QObject):
     #
 
     def set_auto_preview_connection(self) -> None:
-        if self.preferences.top_window().auto_preview_update:
+        if self.top_window.auto_preview_update:
             self.sig_hints_changed.connect(
-                self.preferences.top_window().preview_current_glyph
+                self.top_window.preview_current_glyph
             )
         else:
             try:
                 self.sig_hints_changed.disconnect(
-                    self.preferences.top_window().preview_current_glyph
+                    self.top_window.preview_current_glyph
                 )
             except Exception as e:
                 # print(e)
@@ -2955,6 +2958,10 @@ class ygGlyph(QObject):
 
         if self.yg_glyph_scene:
             self.yg_glyph_scene.install_hints(hint_list)
+
+        if self.top_window != None:
+            if self.top_window.font_viewer:
+                self.top_window.font_viewer.update_cell(self.gname)
 
 
 class ygGlyphs:
