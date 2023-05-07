@@ -18,6 +18,18 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
+### Verasion 0.2.0
+
+Added files supporting creation of executables.
+
+Changed shortcuts: Ctrl-P = Hint Preview; Ctrl-L: Set Resolution.
+
+Fixed a bug that left some untouched points with "touched" flags.
+
+Can override light or dark theme for the Preview panels.
+
+Various bug fixes, efficiencies, and other improvements in the code.
+
 ### Version 0.1.6 (2023-4-28)
 
 Select more than one untouched point when adding shift, align, or interpolate hints to create a hint with a set as target. This formerly had to be done with a separate “Make Set” command.
