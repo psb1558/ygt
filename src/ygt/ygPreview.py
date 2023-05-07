@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QVBoxLayout,
 )
-from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette
+from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
 
 
@@ -30,7 +30,7 @@ class ygPreviewContainer(QWidget):
         self.setLayout(self._layout)
 
 
-class ygPreview(QWidget):
+class ygPreview(QLabel):
 
     sig_preview_paint_done = pyqtSignal(object)
 
@@ -76,23 +76,54 @@ class ygPreview(QWidget):
         self.instance_dict: Optional[dict] = None
         self.instance: Optional[str] = None
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        self.background_color = self.palette().color(QPalette.ColorRole.Base)
+        self.background_color = self.default_background = self.palette().color(QPalette.ColorRole.Base)
         bg_hsv_value = self.background_color.value()
         self.dark_theme = text_hsv_value > bg_hsv_value
-        self.colors = self.mk_color_list()
+        self.theme_choice = "auto"
+        self.colors = None
+        self.change_theme(self.theme_choice)
+
         self.render_mode = RENDER_LCD_1
         self.hinting_on = True
-        self.paintEvent = self.paintEvent_b # type: ignore
+        # We display the preview by painting on a QPixmap and adding that to this widget.
+        # There are three methods for grayscale, lcd1, and lcd2. These are assigned to
+        # self.make_pixmap, which can be called whenever display needs to be refreshed--
+        # but we don't call the actual methods directly.
+        self.make_pixmap = self.make_pixmap_lcd1
+
+        self.pixmap = None
 
     def set_up_signal(self, func: Callable) -> None:
         self.sig_preview_paint_done.connect(func)
 
+    def change_theme(self, new_theme):
+        self.theme_choice = new_theme
+        match self.theme_choice:
+            case "light":
+                palette = self.palette()
+                palette.setColor(QPalette.ColorRole.Base, QColor("white"))
+                self.setPalette(palette)
+            case "dark":
+                palette = self.palette()
+                palette.setColor(QPalette.ColorRole.Base, QColor("black"))
+                self.setPalette(palette)
+            case _:
+                palette = self.palette()
+                palette.setColor(QPalette.ColorRole.Base, self.default_background)
+                self.setPalette(palette)
+        self.background_color = self.palette().color(QPalette.ColorRole.Base)
+        self.colors = self.mk_color_list()
+
     def mk_color_list(self) -> List[QColor]:
         """Pre-build a list of grayscale colors--for the big preview."""
         l = [0] * 256
+
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
+
         for count, c in enumerate(l):
-            # Mypy complains about this, and I have no idea what is actually wrong.
-            if self.dark_theme:
+            if dark_theme:
                 l[count] = QColor(255, 255, 255, count) # type: ignore
             else:
                 l[count] = QColor(101, 53, 15, count) # type: ignore
@@ -169,11 +200,30 @@ class ygPreview(QWidget):
     def toggle_show_hints(self) -> None:
         self.hinting_on = not self.hinting_on
         self.face.set_hinting_on(self.hinting_on)
+        self.make_pixmap()
         self.update()
 
     @pyqtSlot()
     def toggle_grid(self) -> None:
         self.show_grid = not self.show_grid
+        self.make_pixmap()
+        self.update()
+
+    @pyqtSlot()
+    def set_theme_auto(self) -> None:
+        self.set_theme("auto")
+
+    @pyqtSlot()
+    def set_theme_light(self) -> None:
+        self.set_theme("light")
+
+    @pyqtSlot()
+    def set_theme_dark(self) -> None:
+        self.set_theme("dark")
+
+    def set_theme(self, t: str) -> None:
+        self.change_theme(t)
+        self.make_pixmap()
         self.update()
 
     @pyqtSlot()
@@ -191,11 +241,12 @@ class ygPreview(QWidget):
     def set_render_mode(self, m: int) -> None:
         self.render_mode = m
         if self.render_mode == RENDER_GRAYSCALE:
-            self.paintEvent = self.paintEvent_a # type: ignore
+            self.make_pixmap = self.make_pixmap_grayscale
         elif self.render_mode == RENDER_LCD_1:
-            self.paintEvent = self.paintEvent_b # type: ignore
+            self.make_pixmap = self.make_pixmap_lcd1
         else:
-            self.paintEvent = self.paintEvent_c # type: ignore
+            self.make_pixmap = self.make_pixmap_lcd2
+        self.make_pixmap()
         self.update()
 
     def set_size(self, n: str | int) -> None:
@@ -209,11 +260,13 @@ class ygPreview(QWidget):
             except Exception as e:
                 return
             self.set_label_text()
+            self.make_pixmap()
             self.update()
 
     def resize_by(self, n: int) -> None:
         if self.face != None and self.glyph_index != 0:
             self.set_size(self.char_size + n)
+            self.make_pixmap()
             self.update()
 
     def set_label_text(self) -> None:
@@ -268,6 +321,7 @@ class ygPreview(QWidget):
     def _set_instance(self) -> None:
         self.face.set_instance(self.instance)
         self.set_label_text()
+        self.make_pixmap()
         self.update()
 
     @pyqtSlot()
@@ -302,11 +356,15 @@ class ygPreview(QWidget):
         if self.render_mode != RENDER_GRAYSCALE:
             line_length = int(line_length / 3)
 
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
+
         for i, r in enumerate(range(height)):
             if i == baseline:
                 pen.setColor(QColor("red"))
             else:
-                if self.dark_theme:
+                if dark_theme:
                     pen.setColor(QColor(200, 200, 200, 50))
                 else:
                     pen.setColor(QColor(50, 50, 50, 50))
@@ -320,7 +378,8 @@ class ygPreview(QWidget):
                 grid_width = round(grid_width / 3) + 1
             y_top = self.vertical_margin + (self.top_grid_offset * self.pixel_size)
             y_bot = top - self.pixel_size
-            if self.dark_theme:
+
+            if dark_theme:
                 pen.setColor(QColor(200, 200, 200, 50))
             else:
                 pen.setColor(QColor(50, 50, 50, 50))
@@ -329,14 +388,17 @@ class ygPreview(QWidget):
                 painter.drawLine(QLine(left, y_top, left, y_bot))
                 left += self.pixel_size
 
-    def paintEvent_a(self, event) -> None:
+    def make_pixmap_grayscale(self) -> None:
         """Paint grayscale glyph."""
-        painter = QPainter(self)
-        brush = QBrush()
-        brush.setColor(self.background_color)
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        rect = QRect(0, 0, self.width(), self.height())
-        painter.fillRect(rect, brush)
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
+
+        if self.pixmap == None:
+            self.pixmap = QPixmap(self.width(), self.height())
+        self.pixmap.fill(self.background_color)
+        painter = QPainter(self.pixmap)
+
         if not self._build_glyph():
             painter.end()
             return
@@ -355,16 +417,19 @@ class ygPreview(QWidget):
         if self.show_grid:
             self.draw_grid(painter)
         painter.end()
+        self.setPixmap(self.pixmap)
         self.sig_preview_paint_done.emit(None)
 
-    def paintEvent_b(self, event) -> None:
-        """Paint subpixel rendering with solid pixels."""
-        painter = QPainter(self)
-        brush = QBrush()
-        brush.setColor(self.background_color)
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        rect = QRect(0, 0, self.width(), self.height())
-        painter.fillRect(rect, brush)
+    def make_pixmap_lcd1(self) -> None:
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
+
+        if self.pixmap == None:
+            self.pixmap = QPixmap(self.width(), self.height())
+        self.pixmap.fill(self.background_color)
+        painter = QPainter(self.pixmap)
+
         if not self._build_glyph():
             painter.end()
             return
@@ -373,16 +438,18 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
-        if self.dark_theme:
+
+        if dark_theme:
             skippable = QColor("black")
         else:
             skippable = QColor("white")
+
         for row in self.Z:
             for col in row:
                 rgb = []
                 for elem in col:
                     rgb.append(elem)
-                if self.dark_theme:
+                if dark_theme:
                     qc = QColor(rgb[0], rgb[1], rgb[2])
                 else:
                     qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
@@ -392,19 +459,27 @@ class ygPreview(QWidget):
                 xposition += self.pixel_size
             yposition += self.pixel_size
             xposition = self.horizontal_margin
+
         if self.show_grid:
             self.draw_grid(painter)
+
         painter.end()
+
+        self.setPixmap(self.pixmap)
+
         self.sig_preview_paint_done.emit(None)
 
-    def paintEvent_c(self, event) -> None:
+    def make_pixmap_lcd2(self) -> None:
         """Paint subpixel rendering with rgb pixel trios."""
-        painter = QPainter(self)
-        brush = QBrush()
-        brush.setColor(self.background_color)
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        rect = QRect(0, 0, self.width(), self.height())
-        painter.fillRect(rect, brush)
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
+
+        if self.pixmap == None:
+            self.pixmap = QPixmap(self.width(), self.height())
+        self.pixmap.fill(self.background_color)
+        painter = QPainter(self.pixmap)
+
         if not self._build_glyph():
             painter.end()
             return
@@ -413,10 +488,13 @@ class ygPreview(QWidget):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
         for row in self.Z:
             for col in row:
                 for n, elem in enumerate(col):
-                    if self.dark_theme:
+                    if dark_theme:
                         if n == 0:
                             qc = QColor(elem, 0, 0)
                         elif n == 1:
@@ -443,6 +521,7 @@ class ygPreview(QWidget):
         if self.show_grid:
             self.draw_grid(painter)
         painter.end()
+        self.setPixmap(self.pixmap)
         self.sig_preview_paint_done.emit(None)
 
 
@@ -501,6 +580,11 @@ class ygStringPreviewPanel(QWidget):
         self.face.reset_rect_list()
         xposition = 25
         yposition = 66
+
+        dark_theme = (self.yg_preview.theme_choice == "dark")
+        if self.yg_preview.theme_choice == "auto":
+            dark_theme = self.yg_preview.dark_theme
+
         for s in range(10, 100):
             this_is_target = (s == target_size)
             self.face.set_params(
@@ -514,8 +598,8 @@ class ygStringPreviewPanel(QWidget):
                 painter,
                 xposition,
                 yposition,
-                spacing_mark=True,
-                dark_theme=self.yg_preview.dark_theme,
+                spacing_mark = True,
+                dark_theme = dark_theme,
                 is_target=this_is_target
             )
             xposition += advance
@@ -536,13 +620,16 @@ class ygStringPreviewPanel(QWidget):
         xposition = 25
         yposition = 66
         self.face = self.yg_preview.face
+        dark_theme = (self.yg_preview.theme_choice == "dark")
+        if self.yg_preview.theme_choice == "auto":
+            dark_theme = self.yg_preview.dark_theme
         self.rect_list = self.face.draw_string(
             painter,
             self._text,
             xposition,
             yposition,
             x_limit = PREVIEW_WIDTH - 50,
-            dark_theme = self.yg_preview.dark_theme
+            dark_theme = dark_theme
         )
         painter.end()
 

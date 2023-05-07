@@ -3,8 +3,8 @@ from fontTools import subset
 from .ygModel import ygFont
 from math import ceil
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea
-from PyQt6.QtGui import QPainter, QBrush, QPen, QColor, QPalette
+from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea, QLabel
+from PyQt6.QtGui import QPainter, QBrush, QPen, QColor, QPalette, QPixmap
 import numpy
 from tempfile import SpooledTemporaryFile
 import copy
@@ -23,7 +23,6 @@ class fontViewWindow(QWidget):
     It also works as a navigation aid: just click on any character.
 
     """
-
     sig_switch_to_glyph = pyqtSignal(object)
 
     def __init__(
@@ -55,6 +54,7 @@ class fontViewWindow(QWidget):
             self.valid = False
             return
         self.glyph_list = glyph_list
+        self.glyph_index = {}
 
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
         bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
@@ -71,6 +71,12 @@ class fontViewWindow(QWidget):
             self.top_window.glyph_pane.switch_from_font_viewer
         )
 
+    def update_cell(self, g):
+        gc = self.glyph_index[g]
+        # print("via update_cell " + str(id(gc)))
+        gc.make_pixmap()
+        gc.update()
+
     def clicked_glyph(self, g: str) -> None:
         self.sig_switch_to_glyph.emit(g)
 
@@ -78,6 +84,7 @@ class fontViewWindow(QWidget):
 class fontViewPanel(QWidget):
     def __init__(self, dialog: fontViewWindow) -> None:
         super().__init__()
+        self.dialog = dialog
         gl = dialog.glyph_list
         numchars = len(gl)
         cols = 10
@@ -92,7 +99,9 @@ class fontViewPanel(QWidget):
         col = 0
         self._layout.setRowMinimumHeight(row, 36)
         for g in gl:
-            self._layout.addWidget(fontViewCell(dialog, g), row, col)
+            fvc = fontViewCell(dialog, g)
+            self._layout.addWidget(fvc, row, col)
+            self.dialog.glyph_index[g[1]] = fvc
             col += 1
             if col == 10:
                 row += 1
@@ -104,32 +113,44 @@ class fontViewPanel(QWidget):
             self.setStyleSheet("background-color: white;")
 
 
-class fontViewCell(QWidget):
+class fontViewCell(QLabel):
     def __init__(self, dialog: fontViewWindow, glyph: list) -> None:
         super().__init__()
         self.dialog = dialog
         self.glyph = glyph[1]
         self.setFixedSize(36, 36)
+        self.has_hints = False
+        self.pixmap = None
+        self.make_pixmap()
 
-    def paintEvent(self, event) -> None:
-        painter = QPainter(self)
-
-        dark_theme = self.dialog.dark_theme
-
-        brush = QBrush()
-        if self.dialog.yg_font.has_hints(self.glyph):
-            if dark_theme:
-                brush.setColor(QColor(0, 0, 186, 128))
-            else:
-                brush.setColor(QColor(186, 255, 255, 128))
+    def make_pixmap(self) -> None:
+        """ Make a pixmap for this cell and draw the glyph on it.
+            This makes for rapid painting and fast scrolling. If there's
+            a change, simply repaint the pixmap and call update() on the
+            cell.
+        """
+        # Test to see if we really need to paint the pixmap.
+        has_hints_now = self.dialog.yg_font.has_hints(self.glyph)
+        if self.pixmap != None and self.has_hints == has_hints_now:
+            return
         else:
-            if dark_theme:
-                brush.setColor(QColor("black"))
+            self.has_hints = has_hints_now
+
+        if self.pixmap == None:
+            self.pixmap = QPixmap(36,36)
+
+        if self.dialog.dark_theme:
+            if self.has_hints:
+                self.pixmap.fill(QColor(0, 0, 186, 128))
             else:
-                brush.setColor(QColor("white"))
-        brush.setStyle(Qt.BrushStyle.SolidPattern)
-        rect = QRect(0, 0, self.width(), self.height())
-        painter.fillRect(rect, brush)
+                self.pixmap.fill(QColor("black"))
+        else:
+            if self.has_hints:
+                self.pixmap.fill(QColor(186, 255, 255, 128))
+            else:
+                self.pixmap.fill(QColor("white"))
+
+        painter = QPainter(self.pixmap)
 
         ind = self.dialog.face.name_to_index(self.glyph)
         self.dialog.face.set_char(ind)
@@ -137,9 +158,14 @@ class fontViewCell(QWidget):
             round((36 - self.dialog.face.face_height) / 2) + self.dialog.face.ascender
         )
         xpos = round((36 - self.dialog.face.advance) / 2)
-        self.dialog.face.draw_char(painter, xpos, baseline, dark_theme = dark_theme)
+        self.dialog.face.draw_char(
+            painter, xpos, baseline, dark_theme = self.dialog.dark_theme
+        )
 
         painter.end()
 
+        self.setPixmap(self.pixmap)
+
     def mousePressEvent(self, event) -> None:
+        # print("Thie is " + str(id(self)))
         self.dialog.clicked_glyph(self.glyph)
