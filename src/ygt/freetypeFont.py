@@ -1,3 +1,4 @@
+# from functools import lru_cache
 from typing import Optional
 import freetype as ft # type: ignore
 import numpy
@@ -213,6 +214,13 @@ class freetypeFont:
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
 
+    #@lru_cache(maxsize = 2048)
+    #def _get_lcd_color(self, rgb, dark_theme):
+    #    if dark_theme:
+    #        return QColor(rgb[0], rgb[1], rgb[2])
+    #    return QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
+
+
     def _draw_char_lcd(
             self,
             painter,
@@ -257,6 +265,9 @@ class freetypeFont:
                 rgb = []
                 for elem in col:
                     rgb.append(elem)
+                # The cached function doesn't help at all (timer produces about the same result).
+                # Look for other possibilities for optimization.
+                #qc = self._get_lcd_color(tuple(rgb), dark_theme)
                 if dark_theme:
                     qc = QColor(rgb[0], rgb[1], rgb[2])
                 else:
