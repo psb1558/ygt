@@ -1,3 +1,4 @@
+# ApplicationSpecificRole
 # import inspect
 from typing import Any, TypeVar, Union, Optional
 import sys
@@ -154,8 +155,20 @@ class MainWindow(QMainWindow):
         )
         self.statusbar.addWidget(self.statusbar_label)
 
-        self.prog_path = os.path.split(__file__)[0]
-        self.icon_path = self.prog_path + "/icons/"
+        #self.prog_path = os.path.split(__file__)[0]
+        #self.icon_path = self.prog_path + "/icons/"
+        # self.icon_path = "Resources/icons/"
+        # self.show_error_message(['Ho', 'Hum', str(self.icon_path)])
+
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            self.icon_path = os.path.split(sys._MEIPASS)[0]
+            self.icon_path += "/Resources/icons/"
+            # self.show_error_message(['', '', os.path.dirname(__file__)])
+        else:
+            self.icon_path = os.path.split(__file__)[0]
+            self.icon_path += "/icons/"
+            # self.show_error_message(['', '', 'running in a normal Python process'])
+
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setWindowTitle("YGT")
         self.toolbar = self.addToolBar("Tools")
@@ -328,6 +341,20 @@ class MainWindow(QMainWindow):
         self.instance_menu: Optional[QMenu] = None
 
         self.preview_menu.addSeparator()
+
+        self.pv_theme_menu = self.preview_menu.addMenu("Theme")
+        self.pv_theme_auto_action = self.pv_theme_menu.addAction("Auto")
+        self.pv_theme_light_action = self.pv_theme_menu.addAction("Light")
+        self.pv_theme_dark_action = self.pv_theme_menu.addAction("Dark")
+        self.theme_action_group = QActionGroup(self.pv_theme_menu)
+        self.theme_action_group.addAction(self.pv_theme_auto_action)
+        self.theme_action_group.addAction(self.pv_theme_light_action)
+        self.theme_action_group.addAction(self.pv_theme_dark_action)
+        self.pv_theme_auto_action.setCheckable(True)
+        self.pv_theme_light_action.setCheckable(True)
+        self.pv_theme_dark_action.setCheckable(True)
+        self.pv_theme_auto_action.setChecked(True)
+        self.pv_theme_menu.setEnabled(False)
 
         self.pv_set_size_action = self.preview_menu.addAction("Set resolution...")
         self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+l"))
@@ -612,6 +639,7 @@ class MainWindow(QMainWindow):
         try:
             glyph_index = args["gindex"][self.preview_glyph_name]
             self.yg_preview.fetch_glyph(args["font"], glyph_index)
+            self.yg_preview.make_pixmap()
             self.yg_preview.update()
         except Exception:
             pass
@@ -765,6 +793,7 @@ class MainWindow(QMainWindow):
         if self.yg_preview != None:
             if self.yg_preview.face != None:
                 self.pv_render_mode_menu.setEnabled(True)
+            self.pv_theme_menu.setEnabled(True)
             self.pv_show_hints_action.setChecked(self.yg_preview.hinting_on)
             self.pv_show_grid_action.setChecked(self.yg_preview.show_grid)
         self.toggle_auto_preview_action.setChecked(self.auto_preview_update)
@@ -855,6 +884,9 @@ class MainWindow(QMainWindow):
         self.pv_mode_1_action.triggered.connect(self.yg_preview.render1)
         self.pv_mode_2_action.triggered.connect(self.yg_preview.render2)
         self.pv_mode_3_action.triggered.connect(self.yg_preview.render3)
+        self.pv_theme_auto_action.triggered.connect(self.yg_preview.set_theme_auto)
+        self.pv_theme_light_action.triggered.connect(self.yg_preview.set_theme_light)
+        self.pv_theme_dark_action.triggered.connect(self.yg_preview.set_theme_dark)
         self.pv_show_hints_action.triggered.connect(self.yg_preview.toggle_show_hints)
         self.pv_show_grid_action.triggered.connect(self.yg_preview.toggle_grid)
 
@@ -1668,7 +1700,14 @@ def main():
     #print(dir(hb._harfbuzz.Buffer))
 
     app = QApplication([])
-    font_id = QFontDatabase.addApplicationFont(os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf")
+
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        font_path = os.path.split(sys._MEIPASS)[0]
+        font_path += "/Resources/fonts/SourceCodePro-Regular.ttf"
+    else:
+        font_path = os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf"
+
+    font_id = QFontDatabase.addApplicationFont(font_path)
     if font_id == -1:
         print("Can't find font Source Code Pro.")
     top_window = MainWindow(app)
