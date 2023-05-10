@@ -262,6 +262,8 @@ defaults_struct = {
     Optional("round"): hint_types,
     Optional("no-round"): hint_types,
     Optional("cv_vars_generated"): bool,
+    Optional("merge-mode"): bool,
+    Optional("replace-prep"): bool,
 }
 
 properties_struct = {

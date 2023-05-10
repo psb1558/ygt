@@ -22,7 +22,8 @@ from .ygSchema import (
 )
 from .ygError import ygErrorMessages
 from .makeCVDialog import fontInfoWindow
-from xgridfit import compile_list, compile_all # type: ignore
+from xgridfit import compile_list # type: ignore
+from xgridfit import run as xgf_run # type: ignore
 from fontTools import ufoLib # type: ignore
 from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
 from PyQt6.QtWidgets import (
@@ -105,17 +106,34 @@ class ygFontGenerator(QThread):
     sig_font_gen_done = pyqtSignal(object)
     sig_font_gen_error = pyqtSignal()
 
-    def __init__(self, font: ttLib.TTFont, source: dict, output_font: str) -> None:
+    def __init__(
+            self,
+            font: ttLib.TTFont,
+            source: dict,
+            output_font: str,
+            mergemode: bool,
+            replaceprep: bool,
+        ) -> None:
         super().__init__()
         self.ft_font = font
         self.source = source
         self.output_font = output_font
         self.error = False
+        self.mergemode = mergemode
+        self.replaceprep = replaceprep
 
     def run(self) -> None:
         try:
             font = copy.deepcopy(self.ft_font)
-            failed_glyph_list = compile_all(font, self.source, self.output_font)
+            # failed_glyph_list = compile_all(font, self.source, self.output_font)
+            err, failed_glyph_list = xgf_run(
+                font = font,
+                yaml = self.source,
+                outputfont = self.output_font,
+                quiet = 3,
+                mergemode = self.mergemode,
+                replaceprep = self.replaceprep
+            )
             self.sig_font_gen_done.emit(failed_glyph_list)
         except KeyError as e:
             self.sig_font_gen_error.emit()
@@ -1102,7 +1120,11 @@ class MainWindow(QMainWindow):
         ret = msg_box.exec()
         if ret == QMessageBox.StandardButton.Cancel:
             return
-        self.font_generator = ygFontGenerator(font, source, new_file_name)
+        mergemode = bool(self.yg_font.defaults.get_default("merge-mode"))
+        replaceprep = bool(self.yg_font.defaults.get_default("replace-prep"))
+        self.font_generator = ygFontGenerator(
+            font, source, new_file_name, mergemode, replaceprep
+        )
         self.font_generator.finished.connect(self.font_generator.deleteLater)
         self.font_generator.sig_font_gen_done.connect(self.font_gen_finished)
         self.font_generator.sig_font_gen_error.connect(self.font_gen_error)
