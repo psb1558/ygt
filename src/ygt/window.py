@@ -181,11 +181,12 @@ class MainWindow(QMainWindow):
 
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             self.icon_path = os.path.split(sys._MEIPASS)[0]
-            self.icon_path += "/Resources/icons/"
-            # self.show_error_message(['', '', os.path.dirname(__file__)])
+            # self.icon_path += "/Resources/icons/"
+            self.icon_path = os.path.join(sys._MEIPASS, "icons")
+            self.show_error_message(['', '', self.icon_path])
         else:
             self.icon_path = os.path.split(__file__)[0]
-            self.icon_path += "/icons/"
+            self.icon_path = os.path.join(self.icon_path, "/icons/")
             # self.show_error_message(['', '', 'running in a normal Python process'])
 
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
@@ -487,10 +488,10 @@ class MainWindow(QMainWindow):
         self.vertical_action = self.toolbar.addAction("Vertical hinting")
         vertical_icon = QIcon()
         vertical_icon.addPixmap(
-            QPixmap(self.icon_path + "vertical-on.png"), state=QIcon.State.On
+            QPixmap(os.path.join(self.icon_path, "vertical-on.png")), state=QIcon.State.On
         )
         vertical_icon.addPixmap(
-            QPixmap(self.icon_path + "vertical-off.png"), state=QIcon.State.Off
+            QPixmap(os.path.join(self.icon_path, "vertical-off.png")), state=QIcon.State.Off
         )
         self.vertical_action.setIcon(vertical_icon)
         self.vertical_action.setCheckable(True)
@@ -498,10 +499,10 @@ class MainWindow(QMainWindow):
         self.horizontal_action = self.toolbar.addAction("Horizontal hinting")
         horizontal_icon = QIcon()
         horizontal_icon.addPixmap(
-            QPixmap(self.icon_path + "horizontal-on.png"), state=QIcon.State.On
+            QPixmap(os.path.join(self.icon_path, "horizontal-on.png")), state=QIcon.State.On
         )
         horizontal_icon.addPixmap(
-            QPixmap(self.icon_path + "horizontal-off.png"), state=QIcon.State.Off
+            QPixmap(os.path.join(self.icon_path, "horizontal-off.png")), state=QIcon.State.Off
         )
         self.horizontal_action.setIcon(horizontal_icon)
         self.horizontal_action.setCheckable(True)
@@ -518,10 +519,10 @@ class MainWindow(QMainWindow):
         self.cursor_action = self.toolbar.addAction("Editing cursor")
         cursor_icon = QIcon()
         cursor_icon.addPixmap(
-            QPixmap(self.icon_path + "cursor-icon-on.png"), state=QIcon.State.On
+            QPixmap(os.path.join(self.icon_path, "cursor-icon-on.png")), state=QIcon.State.On
         )
         cursor_icon.addPixmap(
-            QPixmap(self.icon_path + "cursor-icon-off.png"), state=QIcon.State.Off
+            QPixmap(os.path.join(self.icon_path, "cursor-icon-off.png")), state=QIcon.State.Off
         )
         self.cursor_action.setIcon(cursor_icon)
         self.cursor_action.setCheckable(True)
@@ -531,10 +532,10 @@ class MainWindow(QMainWindow):
         self.hand_action = self.toolbar.addAction("Panning Cursor (spacebar)")
         hand_icon = QIcon()
         hand_icon.addPixmap(
-            QPixmap(self.icon_path + "hand-icon-on.png"), state=QIcon.State.On
+            QPixmap(os.path.join(self.icon_path, "hand-icon-on.png")), state=QIcon.State.On
         )
         hand_icon.addPixmap(
-            QPixmap(self.icon_path + "hand-icon-off.png"), state=QIcon.State.Off
+            QPixmap(os.path.join(self.icon_path, "hand-icon-off.png")), state=QIcon.State.Off
         )
         self.hand_action.setIcon(hand_icon)
         self.hand_action.setCheckable(True)
@@ -546,7 +547,7 @@ class MainWindow(QMainWindow):
         self.hand_action.setEnabled(False)
 
         self.stem_action = self.toolbar.addAction("Stem (T)")
-        self.stem_action.setIcon(QIcon(QPixmap(self.icon_path + "stem_distance.png")))
+        self.stem_action.setIcon(QIcon(QPixmap(os.path.join(self.icon_path, "stem_distance.png"))))
         self.stem_action.setShortcuts(
             [
                 QKeySequence(Qt.Key.Key_T),
@@ -560,14 +561,14 @@ class MainWindow(QMainWindow):
         self.toolbar.insertSeparator(self.stem_action)
 
         self.shift_action = self.toolbar.addAction("Shift (H)")
-        self.shift_action.setIcon(QIcon(QPixmap(self.icon_path + "shift.png")))
+        self.shift_action.setIcon(QIcon(QPixmap(os.path.join(self.icon_path, "shift.png"))))
         self.shift_action.setShortcuts(
             [QKeySequence(Qt.Key.Key_H), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_H)] # type: ignore
         )
         self.shift_action.setEnabled(False)
 
         self.align_action = self.toolbar.addAction("Align (L)")
-        self.align_action.setIcon(QIcon(QPixmap(self.icon_path + "align.png")))
+        self.align_action.setIcon(QIcon(QPixmap(os.path.join(self.icon_path, "align.png"))))
         self.align_action.setShortcuts(
             [QKeySequence(Qt.Key.Key_L), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_L)] # type: ignore
         )
@@ -575,7 +576,7 @@ class MainWindow(QMainWindow):
 
         self.interpolate_action = self.toolbar.addAction("Interpolate (I)")
         self.interpolate_action.setIcon(
-            QIcon(QPixmap(self.icon_path + "interpolate.png"))
+            QIcon(QPixmap(os.path.join(self.icon_path, "interpolate.png")))
         )
         self.interpolate_action.setShortcuts(
             [QKeySequence(Qt.Key.Key_I), QKeySequence(Qt.Modifier.SHIFT | Qt.Key.Key_I)] # type: ignore
@@ -583,7 +584,7 @@ class MainWindow(QMainWindow):
         self.interpolate_action.setEnabled(False)
 
         self.anchor_action = self.toolbar.addAction("Anchor (A)")
-        self.anchor_action.setIcon(QIcon(QPixmap(self.icon_path + "anchor.png")))
+        self.anchor_action.setIcon(QIcon(QPixmap(os.path.join(self.icon_path, "anchor.png"))))
         self.anchor_action.setShortcuts(
             [
                 QKeySequence(Qt.Key.Key_A),
@@ -596,13 +597,13 @@ class MainWindow(QMainWindow):
 
         self.make_cv_guess_action = self.toolbar.addAction("Guess Control Value (?)")
         self.make_cv_guess_action.setIcon(
-            QIcon(QPixmap(self.icon_path + "cv_guess.png"))
+            QIcon(QPixmap(os.path.join(self.icon_path, "cv_guess.png")))
         )
         self.make_cv_guess_action.setShortcut(QKeySequence(Qt.Key.Key_Question))
         self.make_cv_guess_action.setEnabled(False)
 
         self.make_cv_action = self.toolbar.addAction("Make Control Value (C)")
-        self.make_cv_action.setIcon(QIcon(QPixmap(self.icon_path + "cv.png")))
+        self.make_cv_action.setIcon(QIcon(QPixmap(os.path.join(self.icon_path, "cv.png"))))
         self.make_cv_action.setShortcut(QKeySequence(Qt.Key.Key_C))
         self.make_cv_action.setEnabled(False)
 
@@ -1746,11 +1747,21 @@ def main():
     app = QApplication([])
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        font_path = os.path.split(sys._MEIPASS)[0]
-        font_path += "/Resources/fonts/SourceCodePro-Regular.ttf"
+        # font_path = os.path.split(sys._MEIPASS)[0]
+        print(sys._MEIPASS)
+        font_path = os.path.join(
+            sys._MEIPASS,
+            "fonts/SourceCodePro-Regular.ttf"
+        )
+        print(font_path)
+        # font_path += "/Resources/fonts/SourceCodePro-Regular.ttf"
     else:
-        font_path = os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf"
-
+        font_path = os.path.join(
+            os.path.dirname(__file__),
+            "fonts/SourceCodePro-Regular.ttf"
+        )
+        #font_path = os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf"
+    
     font_id = QFontDatabase.addApplicationFont(font_path)
     if font_id == -1:
         print("Can't find font Source Code Pro.")
