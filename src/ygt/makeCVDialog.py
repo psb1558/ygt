@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QDialogButtonBox,
     QComboBox,
     QLineEdit,
@@ -856,7 +857,9 @@ class miscDefaultsWidget(QWidget):
         super().__init__()
         self.yg_font = yg_font
         self.defaults = yg_font.defaults
-        self.layout_obj = QVBoxLayout()
+        self.layout_obj = QGridLayout()
+        self.layout_obj.setHorizontalSpacing(20)
+        self.layout_obj.setVerticalSpacing(0)
         self.ignore_signal = False
 
         self.tt_defaults = QCheckBox("Use TrueType defaults")
@@ -907,13 +910,25 @@ class miscDefaultsWidget(QWidget):
         self.replaceprep.setToolTip(s)
         self.replaceprep.stateChanged.connect(self.toggle_replaceprep)
 
-        self.layout_obj.addWidget(self.tt_defaults)
-        self.layout_obj.addWidget(self.init_graphics)
-        self.layout_obj.addWidget(self.assume_always_y)
-        self.layout_obj.addWidget(self.counterclockwise)
-        self.layout_obj.addWidget(self.cleartype)
-        self.layout_obj.addWidget(self.mergemode)
-        self.layout_obj.addWidget(self.replaceprep)
+        self.functionbase = functionBaseWidget(self.defaults)
+        s =  "In merge mode, <span>set</span> 'function-base' to a non-zero value if Ygt guesses wrongly "
+        s += "about the highest-numbered function in the font to which you are adding hints."
+        self.functionbase.setToolTip(s)
+
+        self.layout_obj.addWidget(self.tt_defaults, 1, 1)
+        self.layout_obj.addWidget(self.init_graphics, 2, 1)
+        self.layout_obj.addWidget(self.cleartype, 3, 1)
+        self.layout_obj.addWidget(self.assume_always_y, 4, 1)
+        self.layout_obj.addWidget(self.counterclockwise, 1, 2)
+        self.layout_obj.addWidget(self.mergemode, 2, 2)
+        self.layout_obj.addWidget(self.replaceprep, 3, 2)
+        self.functionbase.setFixedWidth(int(self.functionbase.width() /4))
+        function_base_layout = QHBoxLayout()
+        # function_base_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        function_base_layout.addWidget(QLabel("function base"))
+        function_base_layout.addWidget(self.functionbase, alignment = Qt.AlignmentFlag.AlignLeft)
+        self.layout_obj.addLayout(function_base_layout, 4, 2)
+
         self.setLayout(self.layout_obj)
 
         self.refresh()
@@ -964,10 +979,11 @@ class miscDefaultsWidget(QWidget):
         if self.mergemode.isChecked():
             self.defaults.set_default({"merge-mode": True})
             self.replaceprep.setEnabled(True)
+            self.functionbase.setEnabled(True)
         else:
             self.defaults.del_default("merge-mode")
-            self.toggle_replaceprep()
             self.replaceprep.setEnabled(False)
+            self.functionbase.setEnabled(False)
 
     def toggle_replaceprep(self) -> None:
         if self.ignore_signal:
@@ -1471,6 +1487,44 @@ class cvVarWidget(QLineEdit):
             k = v[self.var_id]
         self.setText(str(k))
         self.set_clean()
+
+
+class functionBaseWidget(QLineEdit):
+    def __init__(self, defaults):
+        super().__init__()
+        self.defaults = defaults
+        init_val = self.defaults.get_default("function-base")
+        if init_val == None:
+            init_val = 0
+        self.setText(str(init_val))
+        self.setValidator(QIntValidator(0, 255))
+        self.editingFinished.connect(self.text_changed)
+        self.last_val = self.text()
+
+    def _text(self) -> str:
+        return self.text().strip()
+
+    def fixup(self) -> None:
+        t = self._text()
+        if t != self.last_val:
+            try:
+                i = int(t)
+            except ValueError:
+                i = 0
+            self.defaults.set_default({"function-base": i})
+
+    def text_changed(self) -> None:
+        t = self._text()
+        if t != self.last_val:
+            self.fixup()
+            self.last_val = t
+
+    def refresh(self) -> None:
+        fb = self.defaults.get_default("function-base")
+        if fb == None:
+            self.setText("0")
+        else:
+            self.setText(str(fb))
 
 
 class cvValueWidget(QLineEdit):

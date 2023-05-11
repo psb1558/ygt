@@ -264,6 +264,7 @@ defaults_struct = {
     Optional("cv_vars_generated"): bool,
     Optional("merge-mode"): bool,
     Optional("replace-prep"): bool,
+    Optional("function-base"): int,
 }
 
 properties_struct = {

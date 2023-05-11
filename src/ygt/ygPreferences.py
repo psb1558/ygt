@@ -252,6 +252,9 @@ def write_win_registry(prefs):
             yg_key, "auto_preview", 0, winreg.REG_DWORD, int(prefs["auto_preview"])
         )
         winreg.SetValueEx(
+            yg_key, "recents", 0, winreg.REG_MULTI_SZ, prefs["recents"]
+        )
+        winreg.SetValueEx(
             yg_key, "top_window_pos_x", 0, winreg.REG_DWORD, prefs["top_window_pos_x"]
         )
         winreg.SetValueEx(

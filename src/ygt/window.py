@@ -111,8 +111,13 @@ class ygFontGenerator(QThread):
             font: ttLib.TTFont,
             source: dict,
             output_font: str,
-            mergemode: bool,
-            replaceprep: bool,
+            mergemode: bool = False,
+            replaceprep: bool = False,
+            functionbase: int = 0,
+            initgraphics: bool = False,
+            assume_y: bool = False,
+            cleartype: bool = True, # Not yet hooked up
+            use_truetype_defaults: bool = False, # Not yet hooked up
         ) -> None:
         super().__init__()
         self.ft_font = font
@@ -121,6 +126,15 @@ class ygFontGenerator(QThread):
         self.error = False
         self.mergemode = mergemode
         self.replaceprep = replaceprep
+        self.functionbase = functionbase
+        self.initgraphics = initgraphics
+        self.assume_y = "no"
+        if assume_y:
+            self.assume_y = "yes"
+        self.cleartype = "no"
+        if cleartype:
+            self.cleartype = "yes"
+        self.use_truetype_defaults = use_truetype_defaults
 
     def run(self) -> None:
         try:
@@ -132,7 +146,10 @@ class ygFontGenerator(QThread):
                 outputfont = self.output_font,
                 quiet = 3,
                 mergemode = self.mergemode,
-                replaceprep = self.replaceprep
+                replaceprep = self.replaceprep,
+                functionbase = self.functionbase,
+                initgraphics = self.initgraphics,
+                assume_y = self.assume_y,
             )
             self.sig_font_gen_done.emit(failed_glyph_list)
         except KeyError as e:
@@ -174,20 +191,12 @@ class MainWindow(QMainWindow):
         )
         self.statusbar.addWidget(self.statusbar_label)
 
-        #self.prog_path = os.path.split(__file__)[0]
-        #self.icon_path = self.prog_path + "/icons/"
-        # self.icon_path = "Resources/icons/"
-        # self.show_error_message(['Ho', 'Hum', str(self.icon_path)])
-
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             self.icon_path = os.path.split(sys._MEIPASS)[0]
-            # self.icon_path += "/Resources/icons/"
             self.icon_path = os.path.join(sys._MEIPASS, "icons")
-            self.show_error_message(['', '', self.icon_path])
         else:
             self.icon_path = os.path.split(__file__)[0]
-            self.icon_path = os.path.join(self.icon_path, "/icons/")
-            # self.show_error_message(['', '', 'running in a normal Python process'])
+            self.icon_path = os.path.join(self.icon_path, "icons/")
 
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
         self.setWindowTitle("YGT")
@@ -1123,8 +1132,21 @@ class MainWindow(QMainWindow):
             return
         mergemode = bool(self.yg_font.defaults.get_default("merge-mode"))
         replaceprep = bool(self.yg_font.defaults.get_default("replace-prep"))
+        initgraphics = bool(self.yg_font.defaults.get_default("init-graphics")) # ***
+        assume_y = bool(self.yg_font.defaults.get_default("assume-always-y"))
+        try:
+            functionbase = int(self.yg_font.defaults.get_default("function-base"))
+        except TypeError:
+            functionbase = 0
         self.font_generator = ygFontGenerator(
-            font, source, new_file_name, mergemode, replaceprep
+            font,
+            source,
+            new_file_name,
+            mergemode = mergemode,
+            replaceprep = replaceprep,
+            functionbase = functionbase,
+            initgraphics = initgraphics,
+            assume_y = assume_y
         )
         self.font_generator.finished.connect(self.font_generator.deleteLater)
         self.font_generator.sig_font_gen_done.connect(self.font_gen_finished)
@@ -1700,7 +1722,8 @@ class MainWindow(QMainWindow):
         )
 
     def moveEvent(self, event):
-        self.preferences.set_top_window_pos(event.pos().x(), event.pos().y())
+        if hasattr(self, "preferences"):
+            self.preferences.set_top_window_pos(event.pos().x(), event.pos().y())
 
     def event(self, event) -> bool:
         if event.type() == event.Type.WindowActivate and self.glyph_pane:
@@ -1751,7 +1774,8 @@ def main():
         print(sys._MEIPASS)
         font_path = os.path.join(
             sys._MEIPASS,
-            "fonts/SourceCodePro-Regular.ttf"
+            "fonts",
+            "SourceCodePro-Regular.ttf"
         )
         print(font_path)
         # font_path += "/Resources/fonts/SourceCodePro-Regular.ttf"
