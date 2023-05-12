@@ -5,7 +5,6 @@ from math import ceil
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea, QLabel
 from PyQt6.QtGui import QPainter, QBrush, QPen, QColor, QPalette, QPixmap
-import numpy
 from tempfile import SpooledTemporaryFile
 import copy
 

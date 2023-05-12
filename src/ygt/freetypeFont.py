@@ -2,12 +2,24 @@
 from typing import Optional
 import freetype as ft # type: ignore
 import numpy
+import cv2
 import copy
 from tempfile import SpooledTemporaryFile
 from PyQt6.QtGui import QColor, QPen
 from PyQt6.QtCore import QRect, QLine
 import uharfbuzz as uhb
 
+def inverse_gamma(image, gamma):
+	# invGamma = 1.0 / gamma
+	table = numpy.array([((i / 255.0) ** gamma) * 255
+		for i in numpy.arange(0, 256)]).astype("uint8")
+	return cv2.LUT(image, table)
+
+def adjust_gamma(image, gamma):
+	invGamma = 1.0 / gamma
+	table = numpy.array([((i / 255.0) ** invGamma) * 255
+		for i in numpy.arange(0, 256)]).astype("uint8")
+	return cv2.LUT(image, table)
 
 RENDER_GRAYSCALE = 1
 RENDER_LCD_1 = 2
@@ -213,7 +225,26 @@ class freetypeFont:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, width)
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
+        
+    def mk_bg_array(self, ar, bg_color):
+        ZZ = copy.deepcopy(ar)
+        red =   bg_color.red()
+        green = bg_color.green()
+        blue =  bg_color.blue()
+        for row in ZZ:
+            for col in row:
+                rgb_counter = 0
+                for elem in col:
+                    if rgb_counter == 0:
+                        elem = red
+                    elif rgb_counter == 1:
+                        elem = green
+                    elif rgb_counter == 2:
+                        elem = blue
+                        rgb_counter = 0
+        return ZZ
 
+        
     #@lru_cache(maxsize = 2048)
     #def _get_lcd_color(self, rgb, dark_theme):
     #    if dark_theme:
@@ -228,7 +259,8 @@ class freetypeFont:
             y,
             spacing_mark = False,
             dark_theme = False,
-            is_target = False
+            is_target = False,
+            bg_color = QColor("white")
         ):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
@@ -242,7 +274,26 @@ class freetypeFont:
 
         """
         gdata = self._get_bitmap_metrics()
+        # ZZZZ = self.mk_array(gdata, RENDER_LCD_1)
+        # Here we try (1) getting bitmap into linear space with a standard gamma;
+        # (2) alpha blending of fg and bg color and (2) applying inverse gamma.
+        # Note that I don't really know what I'm doing here, welcome correction.
+        # 
+        #s = ZZZZ.shape
+        #if not 0 in list(s):
+        #    ZZZ = adjust_gamma(ZZZZ, 2.2)
+        #    ZZ  = cv2.addWeighted(self.mk_bg_array(ZZZ, bg_color), 0.5, ZZZ, 0.5, 0)
+        #    Z = inverse_gamma(ZZ, 1.8)
+        #else:
+        #    Z = ZZZZ
         Z = self.mk_array(gdata, RENDER_LCD_1)
+        if not 0 in list(Z.shape):
+            Z = adjust_gamma(Z, 2.2)
+            Z  = cv2.addWeighted(self.mk_bg_array(Z, bg_color), 0.5, Z, 0.5, 0)
+            Z = inverse_gamma(Z, 1.8)
+        #else:
+        #    Z = ZZZZ
+
         ypos = y - gdata["bitmap_top"]
         starting_ypos = ypos
         is_mark = spacing_mark and gdata["advance"] == 0
@@ -309,7 +360,9 @@ class freetypeFont:
             y,
             spacing_mark=False,
             dark_theme = False,
-            is_target = False):
+            is_target = False,
+            bg_color = QColor("white")
+        ):
         """Draws a bitmap with grayscale rendering
 
         Params:
@@ -403,7 +456,16 @@ class freetypeFont:
                 pass
         return indices
 
-    def draw_string(self, painter, s, x, y, x_limit = 200, y_increment = 67, dark_theme = False):
+    def draw_string(self,
+                    painter,
+                    s,
+                    x,
+                    y,
+                    x_limit = 200,
+                    y_increment = 67,
+                    dark_theme = False,
+                    bg_color = QColor("white")
+        ):
         self.last_glyph_index = None
         self.reset_rect_list()
         indices = self.string_to_indices(s)
@@ -416,7 +478,8 @@ class freetypeFont:
                     self.last_glyph_index, i, ft.FT_KERNING_DEFAULT
                 )
                 xpos += k.x
-            xpos += self.draw_char(painter, xpos, ypos, dark_theme = dark_theme)
+            # Need a bg color here.
+            xpos += self.draw_char(painter, xpos, ypos, dark_theme = dark_theme, bg_color = bg_color)
             if xpos >= x_limit:
                 xpos = x
                 ypos += y_increment

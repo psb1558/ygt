@@ -600,7 +600,8 @@ class ygStringPreviewPanel(QWidget):
                 yposition,
                 spacing_mark = True,
                 dark_theme = dark_theme,
-                is_target=this_is_target
+                is_target=this_is_target,
+                bg_color = self.yg_preview.background_color
             )
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):
@@ -629,7 +630,8 @@ class ygStringPreviewPanel(QWidget):
             xposition,
             yposition,
             x_limit = PREVIEW_WIDTH - 50,
-            dark_theme = dark_theme
+            dark_theme = dark_theme,
+            bg_color = self.yg_preview.background_color
         )
         painter.end()
 

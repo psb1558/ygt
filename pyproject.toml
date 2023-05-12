@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ygt"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
     { name="Peter S. Baker", email="b.tarde@mail.com" },
 ]
@@ -21,13 +21,14 @@ dependencies = [
     "fonttools >= 4.38.0",
     "freetype-py >= 2.3.0",
     "defcon >= 0.10.1",
-    "xgridfit >= 3.2.18",
+    "xgridfit >= 3.3.0",
     "setuptools >= 65.3.0",
     "PyYAML >= 6.0",
     "schema >= 0.7.5",
     "fs >= 2.4.15",
     "ufo2ft >= 2.28.0",
     "numpy",
+    "opencv-python",
 ]
 
 [project.scripts]

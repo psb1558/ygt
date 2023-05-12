@@ -59,7 +59,7 @@ from fontTools import ttLib, ufoLib # type: ignore
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
-ygt_version = "0.2.0"
+ygt_version = "0.2.1"
 
 
 class ygPreviewFontMaker(QThread):
