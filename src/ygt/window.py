@@ -47,6 +47,7 @@ from PyQt6.QtGui import (
     QKeySequence,
     QIcon,
     QPixmap,
+    QImage,
     QActionGroup,
     QUndoStack,
     QUndoGroup,
@@ -1763,7 +1764,7 @@ class mainWinEventFilter(QObject):
 def main():
     #import uharfbuzz as hb
     #from inspect import getfullargspec, signature
-    # print(dir(QMessageBox))
+    # print(dir(QImage.Format))
     #print(dir(hb._harfbuzz.Font))
     #print(dir(hb._harfbuzz.Buffer))
 

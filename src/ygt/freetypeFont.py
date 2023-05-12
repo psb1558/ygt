@@ -5,7 +5,7 @@ import numpy
 import cv2
 import copy
 from tempfile import SpooledTemporaryFile
-from PyQt6.QtGui import QColor, QPen
+from PyQt6.QtGui import QColor, QPen, QImage
 from PyQt6.QtCore import QRect, QLine
 import uharfbuzz as uhb
 
@@ -291,8 +291,6 @@ class freetypeFont:
             Z = adjust_gamma(Z, 2.2)
             Z  = cv2.addWeighted(self.mk_bg_array(Z, bg_color), 0.5, Z, 0.5, 0)
             Z = inverse_gamma(Z, 1.8)
-        #else:
-        #    Z = ZZZZ
 
         ypos = y - gdata["bitmap_top"]
         starting_ypos = ypos
@@ -309,26 +307,32 @@ class freetypeFont:
         else:
             qp = QPen(QColor("black"))
             white_color = QColor("white")
-        qp.setWidth(1)
-        for row in Z:
-            xpos = starting_xpos
-            for col in row:
-                rgb = []
-                for elem in col:
-                    rgb.append(elem)
-                # The cached function doesn't help at all (timer produces about the same result).
-                # Look for other possibilities for optimization.
-                #qc = self._get_lcd_color(tuple(rgb), dark_theme)
-                if dark_theme:
-                    qc = QColor(rgb[0], rgb[1], rgb[2])
-                else:
-                    qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
-                if qc != white_color:
-                    qp.setColor(qc)
-                    painter.setPen(qp)
-                    painter.drawPoint(xpos, ypos)
-                xpos += 1
-            ypos += 1
+        if not dark_theme:
+            Z = cv2.bitwise_not(Z)
+        height, width, channel = Z.shape
+        bytesPerLine = 3 * width
+        img = QImage(Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888)
+        painter.drawImage(starting_xpos, starting_ypos, img)
+        #qp.setWidth(1)
+        #for row in Z:
+        #    xpos = starting_xpos
+        #    for col in row:
+        #        rgb = []
+        #        for elem in col:
+        #            rgb.append(elem)
+        #        # The cached function doesn't help at all (timer produces about the same result).
+        #        # Look for other possibilities for optimization.
+        #        #qc = self._get_lcd_color(tuple(rgb), dark_theme)
+        #        if dark_theme:
+        #            qc = QColor(rgb[0], rgb[1], rgb[2])
+        #        else:
+        #            qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
+        #        if qc != white_color:
+        #            qp.setColor(qc)
+        #            painter.setPen(qp)
+        #            painter.drawPoint(xpos, ypos)
+        #        xpos += 1
+        #    ypos += 1
         ending_xpos = starting_xpos + round(gdata["advance"])
         ending_ypos = starting_ypos + gdata["rows"]
         if is_target:
