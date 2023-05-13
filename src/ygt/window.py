@@ -1,4 +1,3 @@
-# ApplicationSpecificRole
 # import inspect
 from typing import Any, TypeVar, Union, Optional
 import sys
@@ -140,7 +139,6 @@ class ygFontGenerator(QThread):
     def run(self) -> None:
         try:
             font = copy.deepcopy(self.ft_font)
-            # failed_glyph_list = compile_all(font, self.source, self.output_font)
             err, failed_glyph_list = xgf_run(
                 font = font,
                 yaml = self.source,
@@ -176,10 +174,8 @@ class MainWindow(QMainWindow):
         else:
             self.win_list = win_list
         self.filename = ""
-        # self.filename_extension = ""
         self.font_info_editor: Optional[fontInfoWindow] = None
         self.cvt_editor: Optional[editorDialog] = None
-        # self.cvar_editor = None
         self.prep_editor: Optional[editorDialog] = None
         self.function_editor: Optional[editorDialog] = None
         self.macro_editor: Optional[editorDialog] = None
@@ -891,7 +887,6 @@ class MainWindow(QMainWindow):
         )
         self.shift_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
-        # self.make_set_action.triggered.connect(self.glyph_pane.make_set)
         self.make_cv_action.triggered.connect(self.glyph_pane.make_control_value)
         self.make_cv_guess_action.triggered.connect(self.glyph_pane.guess_cv)
         self.vertical_action.toggled.connect(self.glyph_pane.switch_to_y)
@@ -900,7 +895,6 @@ class MainWindow(QMainWindow):
     def setup_edit_connections(self) -> None:
         self.edit_cvt_action.triggered.connect(self.edit_cvt)
         self.edit_prep_action.triggered.connect(self.edit_prep)
-        # self.edit_cvar_action.triggered.connect(self.edit_cvar)
         self.edit_functions_action.triggered.connect(self.edit_functions)
         self.edit_macros_action.triggered.connect(self.edit_macros)
         self.edit_defaults_action.triggered.connect(self.edit_defaults)
@@ -1017,13 +1011,11 @@ class MainWindow(QMainWindow):
             height = qg.height() * 0.75
             self.setGeometry(int(x), int(y), int(width), int(height))
 
-    def add_preview(self, previewer: ygPreview) -> None:
-        self.yg_preview = previewer
+    def add_preview(self) -> None:
+        self.yg_preview = ygPreview(self)
         self.yg_string_preview = ygStringPreview(self.yg_preview, self)
         self.yg_string_preview.set_go_to_signal(self.go_to_glyph)
-        self.preview_scroller = QScrollArea()
-        self.preview_scroller.setWidget(self.yg_preview)
-        ygpc = ygPreviewContainer(self.preview_scroller, self.yg_string_preview)
+        ygpc = ygPreviewContainer(self.yg_preview, self.yg_string_preview)
         self.qs.addWidget(ygpc)
         self.setup_preview_connections()
 
@@ -1133,7 +1125,7 @@ class MainWindow(QMainWindow):
             return
         mergemode = bool(self.yg_font.defaults.get_default("merge-mode"))
         replaceprep = bool(self.yg_font.defaults.get_default("replace-prep"))
-        initgraphics = bool(self.yg_font.defaults.get_default("init-graphics")) # ***
+        initgraphics = bool(self.yg_font.defaults.get_default("init-graphics"))
         assume_y = bool(self.yg_font.defaults.get_default("assume-always-y"))
         try:
             functionbase = int(self.yg_font.defaults.get_default("function-base"))
@@ -1359,8 +1351,7 @@ class MainWindow(QMainWindow):
 
             self.preferences["current_font"] = filename
 
-            self.yg_preview = ygPreview(self)
-            self.add_preview(self.yg_preview)
+            self.add_preview()
             self.yg_preview.set_up_signal(self.update_string_preview)
             self.source_editor = ygYAMLEditor(self.preferences)
             self.add_editor(self.source_editor)
@@ -1387,6 +1378,8 @@ class MainWindow(QMainWindow):
             view = ygGlyphView(self.preferences, yg_glyph_scene, self.yg_font)
             yg_glyph_scene.owner = view
             self.add_glyph_pane(view)
+            w = self.width()
+            self.qs.setSizes([int(w * 0.2961), int(w * 0.1497), int(w * 0.5542)])
             view.centerOn(view.yg_glyph_scene.center_x, view.sceneRect().center().y())
             self.set_window_title()
             self.set_up_instance_list()
@@ -1423,7 +1416,6 @@ class MainWindow(QMainWindow):
             self.shift_action.setEnabled(False)
             self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
-            # self.make_set_action.setEnabled(False)
         elif selection_profile[0] == 1 and selection_profile[1] >= 1:
             if selection_profile[1] == 1:
                 self.stem_action.setEnabled(True)
@@ -1453,7 +1445,6 @@ class MainWindow(QMainWindow):
             self.align_action.setEnabled(False)
             self.interpolate_action.setEnabled(False)
             self.anchor_action.setEnabled(False)
-            #self.make_set_action.setEnabled(False)
 
     @pyqtSlot()
     def clean_changed(self):
@@ -1771,7 +1762,6 @@ def main():
     app = QApplication([])
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        # font_path = os.path.split(sys._MEIPASS)[0]
         print(sys._MEIPASS)
         font_path = os.path.join(
             sys._MEIPASS,
@@ -1779,14 +1769,12 @@ def main():
             "SourceCodePro-Regular.ttf"
         )
         print(font_path)
-        # font_path += "/Resources/fonts/SourceCodePro-Regular.ttf"
     else:
         font_path = os.path.join(
             os.path.dirname(__file__),
             "fonts/SourceCodePro-Regular.ttf"
         )
-        #font_path = os.path.dirname(__file__) + "/fonts/SourceCodePro-Regular.ttf"
-    
+
     font_id = QFontDatabase.addApplicationFont(font_path)
     if font_id == -1:
         print("Can't find font Source Code Pro.")

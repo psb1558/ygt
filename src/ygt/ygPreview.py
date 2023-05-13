@@ -7,23 +7,25 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
     QVBoxLayout,
+    QScrollArea,
+    QSizePolicy,
 )
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
 
 
 PREVIEW_WIDTH = 450
-PREVIEW_HEIGHT = 700
-STRING_PREVIEW_HEIGHT = 150
+PREVIEW_HEIGHT = 500
+STRING_PREVIEW_HEIGHT = 200
 PREVIEW_HORI_MARGIN = 25
 PREVIEW_VERT_MARGIN = 50
 
 
-class ygPreviewContainer(QWidget):
+class ygPreviewContainer(QScrollArea):
     def __init__(self, preview, string_preview):
         super().__init__()
         self._layout = QVBoxLayout()
-        self._layout.setSpacing(0)
+        self._layout.setSpacing(10)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.addWidget(preview)
         self._layout.addWidget(string_preview)
@@ -46,11 +48,14 @@ class ygPreview(QLabel):
         self.label.setText(str(self.char_size) + "ppem")
         self.label.setParent(self)
         self.label.move(50, 30)
+
         self.minimum_x = PREVIEW_WIDTH
         self.minimum_y = PREVIEW_HEIGHT
-        self.setMinimumSize(self.minimum_x, self.minimum_y)
+        self.setFixedWidth(self.minimum_x)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.vertical_margin = PREVIEW_VERT_MARGIN
         self.horizontal_margin = PREVIEW_HORI_MARGIN
+
         self.max_pixel_size = 12
         self.pixel_size = 12
         # absolute height of the glyph, from top pixel to bottom pixel.
@@ -59,9 +64,9 @@ class ygPreview(QLabel):
         self.ascender = 0
         # Corresponds to the font's descender number
         self.descender = 0
-        # The height of the glyph above the baseline. Should be able to subtract
-        # this from self.ascender to get where on the grid we should start laying
-        # down pixels. If the result of the subtraction is negative, we need to
+        # The height of the glyph above the baseline. Subtract this from
+        # self.ascender to get where on the grid we should start laying down
+        # pixels. If the result of the subtraction is negative, we need to
         # display grid above the ascender number.
         self.bitmap_top = 0
         self.grid_height = 0
@@ -71,10 +76,13 @@ class ygPreview(QLabel):
         # The pixels of the glyph start this far down.
         self.top_char_margin = 0
         self.show_grid = True
+
         # Two- or three-dimensional array shaped by numpy.
         self.Z: list = []
         self.instance_dict: Optional[dict] = None
         self.instance: Optional[str] = None
+
+        # Figure out if we have a dark or a light theme.
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
         self.background_color = self.default_background = self.palette().color(QPalette.ColorRole.Base)
         bg_hsv_value = self.background_color.value()
@@ -85,6 +93,7 @@ class ygPreview(QLabel):
 
         self.render_mode = RENDER_LCD_1
         self.hinting_on = True
+
         # We display the preview by painting on a QPixmap and adding that to this widget.
         # There are three methods for grayscale, lcd1, and lcd2. These are assigned to
         # self.make_pixmap, which can be called whenever display needs to be refreshed--
@@ -178,10 +187,10 @@ class ygPreview(QLabel):
         char_width = ft_width
         if self.render_mode != RENDER_GRAYSCALE:
             char_width = ft_width / 3
-        preview_display_width = PREVIEW_WIDTH - (PREVIEW_HORI_MARGIN * 2)
+        preview_display_width = self.width() - (PREVIEW_HORI_MARGIN * 2)
         if char_width * self.pixel_size > preview_display_width:
             self.pixel_size = round(preview_display_width / char_width)
-        preview_display_height = PREVIEW_HEIGHT - (PREVIEW_VERT_MARGIN * 2)
+        preview_display_height = self.height() - (PREVIEW_VERT_MARGIN * 2)
         if self.total_height * self.pixel_size > preview_display_height:
             self.pixel_size = round(preview_display_height / self.total_height)
         if self.render_mode == RENDER_LCD_2:
@@ -536,7 +545,8 @@ class ygStringPreviewPanel(QWidget):
         self._text = ""
         self.minimum_x = PREVIEW_WIDTH
         self.minimum_y = 200
-        self.setMinimumSize(self.minimum_x, self.minimum_y)
+        self.setFixedSize(PREVIEW_WIDTH, STRING_PREVIEW_HEIGHT)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.paintEvent = self.paintEvent_a # type: ignore
         self.rect_list: list = []
 
@@ -660,7 +670,14 @@ class ygStringPreview(QWidget):
         self.yg_preview = yg_preview
         self.top_window = top_window
 
+        self.vertical_margin = PREVIEW_VERT_MARGIN
+        self.horizontal_margin = PREVIEW_HORI_MARGIN
+
         self._layout = QVBoxLayout()
+        self._layout.setContentsMargins(0,0,0,0)
+
+        self.setFixedWidth(PREVIEW_WIDTH)
+        self.setMinimumHeight(STRING_PREVIEW_HEIGHT)
 
         self.panel = ygStringPreviewPanel(yg_preview, top_window)
 
