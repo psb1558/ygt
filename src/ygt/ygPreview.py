@@ -1,5 +1,13 @@
 from typing import Callable, List, Optional
-from .freetypeFont import freetypeFont, RENDER_GRAYSCALE, RENDER_LCD_1, RENDER_LCD_2
+import copy
+from numpy import nditer
+from .freetypeFont import (
+    freetypeFont,
+    RENDER_GRAYSCALE,
+    RENDER_LCD_1,
+    RENDER_LCD_2,
+    adjust_gamma,
+)
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
@@ -12,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
+import cv2
 
 
 PREVIEW_WIDTH = 450
@@ -445,24 +454,34 @@ class ygPreview(QLabel):
         if len(self.Z) == 0:
             painter.end()
             return
+        # Get a copy of the pre-corrected bitmap to use as a mask. We'll skip drawing any
+        # pixels with color 0,0,0.
+        mask = copy.deepcopy(self.Z)
+        if dark_theme:
+            alpha = 0.95
+        else:
+            alpha = 0.88
+        if not 0 in list(self.Z.shape):
+            self.Z = adjust_gamma(self.Z, 2.2)
+            self.Z  = cv2.addWeighted(
+                self.Z, alpha, self.face.mk_bg_array(self.Z, self.background_color), 1.0 - alpha, 0
+            )
+            self.Z = adjust_gamma(self.Z, 1 / 1.8)
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
 
-        if dark_theme:
-            skippable = QColor("black")
-        else:
-            skippable = QColor("white")
-
-        for row in self.Z:
-            for col in row:
-                rgb = []
-                for elem in col:
-                    rgb.append(elem)
-                if dark_theme:
-                    qc = QColor(rgb[0], rgb[1], rgb[2])
-                else:
-                    qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
-                if qc != skippable:
+        for i, row in enumerate(self.Z):
+            for ii, col in enumerate(row):
+                # If any of the (rgb) bytes for this pixel are non-zero in the mask,
+                # draw the pixel. Otherwise skip.
+                if mask[i][ii].any():
+                    rgb = []
+                    for elem in col:
+                        rgb.append(elem)
+                    if dark_theme:
+                        qc = QColor(rgb[0], rgb[1], rgb[2])
+                    else:
+                        qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
                     qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
                     painter.fillRect(qr, qc)
                 xposition += self.pixel_size

@@ -5,15 +5,9 @@ import numpy
 import cv2
 import copy
 from tempfile import SpooledTemporaryFile
-from PyQt6.QtGui import QColor, QPen, QImage
+from PyQt6.QtGui import QColor, QPen, QImage, QRegion, QBitmap, QPixmap
 from PyQt6.QtCore import QRect, QLine
 import uharfbuzz as uhb
-
-def inverse_gamma(image, gamma):
-	# invGamma = 1.0 / gamma
-	table = numpy.array([((i / 255.0) ** gamma) * 255
-		for i in numpy.arange(0, 256)]).astype("uint8")
-	return cv2.LUT(image, table)
 
 def adjust_gamma(image, gamma):
 	invGamma = 1.0 / gamma
@@ -233,15 +227,13 @@ class freetypeFont:
         blue =  bg_color.blue()
         for row in ZZ:
             for col in row:
-                rgb_counter = 0
-                for elem in col:
-                    if rgb_counter == 0:
-                        elem = red
-                    elif rgb_counter == 1:
-                        elem = green
-                    elif rgb_counter == 2:
-                        elem = blue
-                        rgb_counter = 0
+                for en, elem in enumerate(col):
+                    if en == 0:
+                        col[en] = red
+                    elif en == 1:
+                        col[en] = green
+                    elif en == 2:
+                        col[en] = blue
         return ZZ
 
         
@@ -274,24 +266,51 @@ class freetypeFont:
 
         """
         gdata = self._get_bitmap_metrics()
-        # ZZZZ = self.mk_array(gdata, RENDER_LCD_1)
-        # Here we try (1) getting bitmap into linear space with a standard gamma;
-        # (2) alpha blending of fg and bg color and (2) applying inverse gamma.
-        # Note that I don't really know what I'm doing here, welcome correction.
-        # 
-        #s = ZZZZ.shape
-        #if not 0 in list(s):
-        #    ZZZ = adjust_gamma(ZZZZ, 2.2)
-        #    ZZ  = cv2.addWeighted(self.mk_bg_array(ZZZ, bg_color), 0.5, ZZZ, 0.5, 0)
-        #    Z = inverse_gamma(ZZ, 1.8)
-        #else:
-        #    Z = ZZZZ
-        Z = self.mk_array(gdata, RENDER_LCD_1)
-        if not 0 in list(Z.shape):
-            Z = adjust_gamma(Z, 2.2)
-            Z  = cv2.addWeighted(self.mk_bg_array(Z, bg_color), 0.5, Z, 0.5, 0)
-            Z = inverse_gamma(Z, 1.8)
 
+        # Here we try (1) getting bitmap into linear space with a standard gamma;
+        # (2) alpha blending of fg and bg color and (3) applying inverse gamma.
+        # Note that I don't really know what I'm doing here, but just trying to
+        # follow FreeType instructions. Corrections welcome.
+
+        # 1. Get the bitmap into a numpy array.
+        # 2. Get a mask.
+        # 3. Apply gamma.
+        # 4. blend fg and bg colors.
+        # 5. Apply gamma.
+        # 6. Do some metrics and positioning stuff.
+        # 7. Apply mask to bitmap.
+        # 8. Draw image.
+
+        # Get the Freetype bitmap into a numpy array.
+        Z = self.mk_array(gdata, RENDER_LCD_1)
+        height, width, channel = Z.shape
+        bytesPerLine = channel * width
+        # Make a QImage from the numpy array, then make a mask that will turn its
+        # (currently) black pixels transparent.
+        img = QImage(Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888)
+        qmask = QBitmap.fromImage(img.createMaskFromColor(QColor("black").rgb()))
+        # Different alpha blending for dark and light themes.
+        if dark_theme:
+            alpha = 0.95
+        else:
+            alpha = 0.88
+        # If we have a bitmap (we may not for space, etc.), do: (1) invert for
+        # black-on-white text; (2) apply gamma to get bitmap into linear space;
+        # (3) apply alpha blending; (4) apply inverse gamma.
+        have_outline = True
+        if Z is not None:
+            if not (0 in list(Z.shape)):
+                if not dark_theme:
+                    Z = (255-Z)
+                    # Z = cv2.bitwise_not(Z)
+
+                Z = adjust_gamma(Z, 2.2)
+                Z = cv2.addWeighted(Z, alpha, self.mk_bg_array(Z, bg_color), 1.0 - alpha, 0)
+                Z = adjust_gamma(Z, 1.0 / 1.8)
+        else:
+            have_outline = False
+
+        # Get starting position and metrics.
         ypos = y - gdata["bitmap_top"]
         starting_ypos = ypos
         is_mark = spacing_mark and gdata["advance"] == 0
@@ -301,38 +320,16 @@ class freetypeFont:
             gdata["advance"] = self.advance = round(gdata["width"] / 3) + 4
         else:
             starting_xpos = xpos = x + gdata["bitmap_left"]
-        if dark_theme:
-            qp = QPen(QColor("white"))
-            white_color = QColor("black")
-        else:
-            qp = QPen(QColor("black"))
-            white_color = QColor("white")
-        if not dark_theme:
-            Z = cv2.bitwise_not(Z)
-        height, width, channel = Z.shape
-        bytesPerLine = 3 * width
-        img = QImage(Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888)
-        painter.drawImage(starting_xpos, starting_ypos, img)
-        #qp.setWidth(1)
-        #for row in Z:
-        #    xpos = starting_xpos
-        #    for col in row:
-        #        rgb = []
-        #        for elem in col:
-        #            rgb.append(elem)
-        #        # The cached function doesn't help at all (timer produces about the same result).
-        #        # Look for other possibilities for optimization.
-        #        #qc = self._get_lcd_color(tuple(rgb), dark_theme)
-        #        if dark_theme:
-        #            qc = QColor(rgb[0], rgb[1], rgb[2])
-        #        else:
-        #            qc = QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
-        #        if qc != white_color:
-        #            qp.setColor(qc)
-        #            painter.setPen(qp)
-        #            painter.drawPoint(xpos, ypos)
-        #        xpos += 1
-        #    ypos += 1
+
+        # Get QImage from Z; convert to QPixmap; apply mask; draw the character.
+        if have_outline:
+            img = QImage(Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888)
+            pm = QPixmap(img)
+            pm.setMask(qmask)
+            painter.drawPixmap(starting_xpos, starting_ypos, pm)
+
+        # Draw a red line under target glyph (the one in the current resolution); get
+        # a QRect for this glyph (will be a target for clicks).
         ending_xpos = starting_xpos + round(gdata["advance"])
         ending_ypos = starting_ypos + gdata["rows"]
         if is_target:
