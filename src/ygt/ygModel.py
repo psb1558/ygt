@@ -19,8 +19,11 @@ import random
 import copy
 import unicodedata
 import abc
+from tempfile import SpooledTemporaryFile
 from .ygPreferences import ygPreferences
 from .cvGuesser import instanceChecker
+from .freetypeFont import freetypeFont
+from .harfbuzzFont import harfbuzzFont
 
 # from .ygSchema import error_message, set_error_message, is_cv_delta_valid
 import defcon # type: ignore
@@ -370,21 +373,36 @@ class ygFont(QObject):
         split_fn = os.path.splitext(str(fontfile))
         extension = split_fn[1]
         ft_open_error = False
+        # self.freetype_font = None
+        # Here we get *two* copies of the font in memory: one in FontTools format,
+        # the other FreeType.
         if extension == ".ttf":
             try:
                 self.ft_font = ttLib.TTFont(fontfile)
+                self.freetype_font = freetypeFont(fontfile)
+                self.harfbuzz_font = harfbuzzFont(fontfile, self.freetype_font)
             except FileNotFoundError as ferr:
                 ft_open_error = True
         elif extension == ".ufo":
             try:
                 ufo = defcon.Font(fontfile)
                 self.ft_font = compileTTF(ufo, useProductionNames=False, reverseDirection=False)
+                tf = SpooledTemporaryFile(max_size=3000000, mode='b')
+                self.ft_font.save(tf, 1)
+                self.freetype_font = freetypeFont(tf, keep_open = True)
+                self.harfbuzz_font = harfbuzzFont(tf, self.freetype_font)
+                # tf.close()
             except Exception as e:
                 print(e)
                 ft_open_error = True
         if ft_open_error:
             raise Exception("Can't find font file " + str(fontfile))
             # Fix this! Need a dialog box and a chance to try again for a valid font.
+            #
+            # Do this: open a file dialog for locating the font file, and place this
+            # in the SourceFile object. If user doesn't choose a font, then close
+            # this window (send signal to top_window?). The application can continue
+            # if other windows are open.
 
         # Making a deepcopy so we can always have a clean copy of the font to work with.
         self.preview_font = copy.deepcopy(self.ft_font)
@@ -561,8 +579,6 @@ class ygFont(QObject):
         self.cmap = self.ft_font["cmap"].buildReversed()
 
         # This dict is for using a glyph name to look up a glyph's index.
-        # Composites are left out, since this program doesn't deal with them
-        # (may decide, though, to display previews of them)
         self.name_to_index = {}
         raw_order_list = self.ft_font.getGlyphOrder()
         for order_index, gn in enumerate(raw_order_list):
@@ -573,7 +589,9 @@ class ygFont(QObject):
         # is our order for the font.
         for gn in glyph_names:
             g = self.ft_font["glyf"][gn]
-            if not g.isComposite():
+            # Remove this test if we're going to display composites.
+            # if not g.isComposite():
+            if True:
                 cc = g.getCoordinates(self.ft_font["glyf"])
                 if len(cc) > 0:
                     self.glyph_list.append((self.get_unicode(gn), gn))
@@ -696,6 +714,11 @@ class ygFont(QObject):
                 {"msg": "Error in cleanup_font: " + str(e), "mode": "console"}
             )
 
+    def is_composite(self, gname: str) -> bool:
+        if not gname in self.name_to_index:
+            return False
+        return self.ft_font['glyf'][gname].isComposite()
+
     def has_hints(self, gname: str) -> bool:
         if not gname in self.glyphs:
             return False
@@ -738,6 +761,19 @@ class ygFont(QObject):
             return self.unicode_to_name[ord(char)]
         except Exception:
             return ".notdef"
+        
+    def additional_component_names(self, glyph_list):
+        """Get list of components for all the glyphs in glyph_list.
+           Recurse if necessary. Don't worry about redundancies in list.
+        """
+        result = []
+        for gn in glyph_list:
+            cn = self.ft_font['glyf'][gn].getComponentNames(self.ft_font['glyf'])
+            if len(cn):
+                for ccn in cn:
+                    result.append(ccn)
+                    result.extend(self.additional_component_names([ccn]))
+        return result
 
     def string_to_name_list(self, s: str) -> list:
         """Get the names of the glyphs needed to make string s
@@ -748,7 +784,8 @@ class ygFont(QObject):
             gn = self.get_glyph_name(c)
             if not gn in result:
                 result.append(gn)
-        return result
+        result.extend(self.additional_component_names(result))
+        return list(set(result))
 
     def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
         """Save a y or x block to the in-memory source."""
@@ -2102,6 +2139,7 @@ class ygGlyph(QObject):
             else:
                 raise Exception("Tried to load nonexistent glyph " + self.gname)
             self.ft_glyph = yg_font.ft_font["glyf"][self.gname]
+        self.is_composite = self.ft_glyph.isComposite()
 
         # Initialize the source for this glyph.
 
@@ -2934,7 +2972,7 @@ class ygGlyph(QObject):
         new_yaml = copy.deepcopy(self.current_block)
         self.yaml_strip_extraneous_nodes(new_yaml)
         self.sig_glyph_source_ready.emit(
-            yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper)
+            [yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper), self.is_composite]
         )
 
     def hint_changed(self, h: Union["ygHint", None]):

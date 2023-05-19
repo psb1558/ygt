@@ -568,6 +568,7 @@ class ygStringPreviewPanel(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.paintEvent = self.paintEvent_a # type: ignore
         self.rect_list: list = []
+        self._full_glyph_list = []
 
     def set_go_to_signal(self, func: Callable) -> None:
         self.sig_go_to_glyph.connect(func)
@@ -579,7 +580,7 @@ class ygStringPreviewPanel(QWidget):
         self._text = t
 
     def string_to_glyph_list(self, s: str) -> list:
-        """Get a list of glyph names needed for string s."""
+        """Get a list of glyph names (no dupicates) needed for string s."""
         yg_font = self.top_window.glyph_pane.yg_glyph_scene.yg_glyph.yg_font
         result = []
         for c in s:
@@ -655,7 +656,8 @@ class ygStringPreviewPanel(QWidget):
             dark_theme = self.yg_preview.dark_theme
         self.rect_list = self.face.draw_string(
             painter,
-            self._text,
+            # self._text,
+            self._full_glyph_list,
             xposition,
             yposition,
             x_limit = PREVIEW_WIDTH - 50,
@@ -717,6 +719,18 @@ class ygStringPreview(QWidget):
         self._layout.addWidget(self.button_widget)
 
         self.setLayout(self._layout)
+
+        # list of glyph names correspond
+        
+    @property
+    def full_glyph_list(self):
+        return self.panel._full_glyph_list
+    
+    @full_glyph_list.setter
+    def full_glyph_list(self, l):
+        self.panel._full_glyph_list.clear()
+        for ll in l:
+            self.panel._full_glyph_list.append(ll)
 
     def set_go_to_signal(self, func: Callable) -> None:
         self.panel.set_go_to_signal(func)

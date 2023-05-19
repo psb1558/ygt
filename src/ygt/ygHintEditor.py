@@ -1,5 +1,6 @@
 from typing import Any, TypeVar, Union, Optional, List, Dict, Callable, overload, Tuple
 import sys
+import numpy
 import uuid
 import copy
 from .macfuncDialog import macfuncDialog
@@ -40,6 +41,9 @@ from PyQt6.QtGui import (
     QAction,
     QPainter,
     QPalette,
+    QImage,
+    QPixmap,
+    QBitmap,
 )
 from PyQt6.QtWidgets import (
     QWidget,
@@ -59,9 +63,12 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QGraphicsProxyWidget,
     QStyleOptionGraphicsItem,
+    QHBoxLayout,
 )
 from fontTools.pens.basePen import BasePen  # type: ignore
+from fontTools.pens.freetypePen import FreeTypePen
 from .ygPreferences import ygPreferences
+# from .freetypeFont import freetypeFont
 
 
 HINT_ARROW_WIDTH = 3
@@ -1440,6 +1447,8 @@ class ygGlyphScene(QGraphicsScene):
         self.xTranslate = self.canvas_size[2]
         self.yTranslate = self.canvas_size[3]
 
+        # Used when we draw an image instead of rendering the glyph.
+        self.glyph_img = None
 
         # Try to get rid of ref to this scene in the model's ygGlyph class.
         # For now, we've got to ignore the type so as to avoid circular imports.
@@ -1460,6 +1469,7 @@ class ygGlyphScene(QGraphicsScene):
         self.yTranslate = 0
         self.original_coordinates: Any = None
         self.center_x = self.xTranslate + round(self.adv / 2)
+        self.optimal_size = (0, 0)
 
         # Setup for selecting
 
@@ -1475,13 +1485,14 @@ class ygGlyphScene(QGraphicsScene):
 
         # Add the points and manage their visibility.
 
-        for p in self.yg_point_view_list:
-            p._prepare_graphics()
-            if not p.yg_point.on_curve and not self.off_curve_points_showing:
-                p.hide()
-            if p.isVisible() and self.point_numbers_showing:
-                p.add_label()
-            self.addItem(p)
+        if not self.yg_glyph.is_composite:
+            for p in self.yg_point_view_list:
+                p._prepare_graphics()
+                if not p.yg_point.on_curve and not self.off_curve_points_showing:
+                    p.hide()
+                if p.isVisible() and self.point_numbers_showing:
+                    p.add_label()
+                self.addItem(p)
 
         # Set up connections.
 
@@ -1534,9 +1545,10 @@ class ygGlyphScene(QGraphicsScene):
         self.install_hints(self.yg_glyph.hints)
         # This will have the effect of moving point labels to the new positions
         # of the points. Affect only those already visible.
-        for p in self.yg_point_view_list:
-            if p.has_label():
-                p.add_label()
+        if not self.yg_glyph.is_composite:
+            for p in self.yg_point_view_list:
+                if p.has_label():
+                    p.add_label()
 
     def reset_scale(self) -> None:
         c = self.original_coordinates
@@ -1583,10 +1595,37 @@ class ygGlyphScene(QGraphicsScene):
                 # fontTools coordinate list has phantom points at the end, which we ignore.
                 pass
 
-        glyph_set = {self.yg_glyph.gname: self.yg_glyph.ft_glyph}
-        self.path = QPainterPath()
-        self.qt_pen = QtPen(glyph_set, path=self.path)
-        self.yg_glyph.ft_glyph.draw(self.qt_pen, self.yg_glyph.yg_font.ft_font["glyf"])
+        # glyph_set = {self.yg_glyph.gname: self.yg_glyph.ft_glyph}
+        glyph_set = self.yg_glyph.yg_font.ft_font.getGlyphSet()
+        glyph_table = self.yg_glyph.yg_font.ft_font["glyf"]
+        if self.yg_glyph.is_composite:
+            pass
+            #freetype_pen = FreeTypePen(glyph_set)
+            #print(type(freetype_pen))
+            #print(type(glyph_table))
+            #self.yg_glyph.ft_glyph.draw(freetype_pen, glyph_table)
+            #width, height = self.yg_glyph.dimensions()
+            # arr = freetype_pen.array(width = int((width * 64) * self.zoom_factor), height = int((height * 64) * self.zoom_factor))
+            #arr = freetype_pen.array(width * self.zoom_factor, height * self.zoom_factor)
+            #print("arr.shape: " + str(arr.shape))
+            #width, height = arr.shape
+            #self.glyph_img = QImage(arr, int(width * self.zoom_factor), int(height * self.zoom_factor), QImage.Format.Format_Mono)
+            #
+            #from matplotlib import pyplot as plt
+            #plt.imshow(arr)
+            #plt.show()
+            #
+            #qd = QDialog(self.preferences.top_window())
+            #layout = QHBoxLayout()
+            #l = QLabel()
+            #layout.addWidget(l)
+            #pm = QPixmap.fromImage(self.glyph_img)
+            #l.setPixmap(pm)
+            #qd.exec()
+        else:
+            self.path = QPainterPath()
+            self.qt_pen = QtPen(glyph_set, path=self.path)
+            self.yg_glyph.ft_glyph.draw(self.qt_pen, glyph_table)
 
     def _calc_canvas_size(self) -> Tuple[int, int, int, int]:
         """This calculates a canvas that will do for the entire font. The result
@@ -1652,6 +1691,7 @@ class ygGlyphScene(QGraphicsScene):
             visible_y = rect.height()
             optimal_x = round(visible_x * 0.8)
             optimal_y = round(visible_y * 0.8)
+            self.optimal_size = (optimal_x, optimal_y)
             width, height = self.yg_glyph.dimensions()
             if width != 0:
                 x_ratio = optimal_x / width
@@ -1668,32 +1708,41 @@ class ygGlyphScene(QGraphicsScene):
             if self.owner:
                 self.owner.centerOn(self.center_x, self.mid_point_y())
 
-
-        painter.scale(1.0, -1.0)
-        painter.translate(QPointF(self.xTranslate, self.yTranslate * -1))
+        # this_ft_glyph = self.yg_glyph.ft_glyph
+        if self.yg_glyph.is_composite:
+            pass
+        else:
+            painter.scale(1.0, -1.0)
+            painter.translate(QPointF(self.xTranslate, self.yTranslate * -1))
 
         pen = painter.pen()
 
-        if self.preferences["show_metrics"]:
-            pen.setWidth(1)
-            if self.dark_theme:
-                pen.setColor(QColor(220, 220, 220, 75))
-                HINT_COLOR = _HINT_DARK
-                SELECTED_HINT_COLOR = _SELECTED_HINT_DARK
-            else:
-                pen.setColor(QColor(50, 50, 50, 50))
-                HINT_COLOR = _HINT_COLOR
-                SELECTED_HINT_COLOR = _SELECTED_HINT_COLOR
-            painter.setPen(pen)
-            painter.drawLine(QLine(-abs(self.xTranslate), 0, round(self.width()), 0))
-            ya = -abs(self.yTranslate)
-            painter.drawLine(QLine(0, ya, 0, round(self.height())))
-            painter.drawLine(QLine(self.adv, ya, self.adv, round(self.height())))
+        if self.yg_glyph.is_composite:
+            pass
+            # For now, anyway, we're not displaying anything for composites in the
+            # main editing window. This should change, but don't get elaborate: this
+            # display is of much less interest than (e.g.) the preview.
+        else:
+            if self.preferences["show_metrics"]:
+                pen.setWidth(1)
+                if self.dark_theme:
+                    pen.setColor(QColor(220, 220, 220, 75))
+                    HINT_COLOR = _HINT_DARK
+                    SELECTED_HINT_COLOR = _SELECTED_HINT_DARK
+                else:
+                    pen.setColor(QColor(50, 50, 50, 50))
+                    HINT_COLOR = _HINT_COLOR
+                    SELECTED_HINT_COLOR = _SELECTED_HINT_COLOR
+                painter.setPen(pen)
+                painter.drawLine(QLine(-abs(self.xTranslate), 0, round(self.width()), 0))
+                ya = -abs(self.yTranslate)
+                painter.drawLine(QLine(0, ya, 0, round(self.height())))
+                painter.drawLine(QLine(self.adv, ya, self.adv, round(self.height())))
 
-        pen.setWidth(CHAR_OUTLINE_WIDTH)
-        pen.setColor(QColor("gray"))
-        painter.setPen(pen)
-        painter.drawPath(self.path)
+            pen.setWidth(CHAR_OUTLINE_WIDTH)
+            pen.setColor(QColor("gray"))
+            painter.setPen(pen)
+            painter.drawPath(self.path)
 
     #
     # Editing slots
@@ -1731,7 +1780,7 @@ class ygGlyphScene(QGraphicsScene):
             except Exception:
                 pass
 
-    def guess_cv_for_hint(self, hint: ygHint) -> None:
+    def guess_cv_for_new_hint(self, hint: ygHint) -> None:
         """Like guess_cv(), but this is called as part of the process of constructing
         a hint, and therefore should not trigger a signal.
         """
@@ -1764,20 +1813,23 @@ class ygGlyphScene(QGraphicsScene):
 
     @pyqtSlot()
     def toggle_off_curve_visibility(self) -> None:
+        if self.yg_glyph.is_composite:
+            return
         self.off_curve_points_showing = not self.off_curve_points_showing
         self.preferences.top_window().show_off_curve_points = (
             self.off_curve_points_showing
         )
-        for p in self.yg_point_view_list:
-            if not p.yg_point.on_curve:
-                if self.off_curve_points_showing:
-                    p.show()
-                    if self.point_numbers_showing:
-                        p.add_label()
-                else:
-                    p.hide()
-                    if self.point_numbers_showing:
-                        p.del_label()
+        if not self.yg_glyph.is_composite:
+            for p in self.yg_point_view_list:
+                if not p.yg_point.on_curve:
+                    if self.off_curve_points_showing:
+                        p.show()
+                        if self.point_numbers_showing:
+                            p.add_label()
+                    else:
+                        p.hide()
+                        if self.point_numbers_showing:
+                            p.del_label()
 
     def make_control_value(self) -> None:
         """ With one or two points selected, launch a dialog for making a pos or dist CV.
@@ -1835,6 +1887,8 @@ class ygGlyphScene(QGraphicsScene):
 
     @pyqtSlot()
     def toggle_point_numbers(self) -> None:
+        if self.yg_glyph.is_composite:
+            return
         self.point_numbers_showing = not self.point_numbers_showing
         self.preferences.top_window().show_point_numbers = self.point_numbers_showing
         for p in self.yg_point_view_list:
@@ -1855,6 +1909,8 @@ class ygGlyphScene(QGraphicsScene):
             self.yg_glyph.set_category(c)
 
     def set_point_display(self, pv: str) -> None:
+        if self.yg_glyph.is_composite:
+            return
         for p in self.yg_point_view_list:
             p.yg_point.label_pref = pv
             if self.point_numbers_showing:
@@ -2345,7 +2401,7 @@ class ygGlyphScene(QGraphicsScene):
                 if dr != None:
                     new_yg_hint.set_round(dr)
                 if ctrl:
-                    self.guess_cv_for_hint(new_yg_hint)
+                    self.guess_cv_for_new_hint(new_yg_hint)
                 if shift:
                     new_yg_hint.set_round(True)
                 self.sig_new_hint.emit(new_yg_hint)
@@ -2380,7 +2436,7 @@ class ygGlyphScene(QGraphicsScene):
                 if dr != None:
                     new_yg_hint.set_round(dr)
                 if ctrl and hint_type_num == 3:
-                    self.guess_cv_for_hint(new_yg_hint)
+                    self.guess_cv_for_new_hint(new_yg_hint)
                 if shift:
                     new_yg_hint.set_round(True)
                 self.sig_new_hint.emit(new_yg_hint)

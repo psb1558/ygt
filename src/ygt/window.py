@@ -84,7 +84,13 @@ class ygPreviewFontMaker(QThread):
         super().__init__()
         self.ft_font = font
         self.source = source
-        self.glyph_list = glyph_list
+        self.glyph_list = []
+        for g in glyph_list:
+            try:
+                self.glyph_list.append(g.decode(encoding="utf-8"))
+            except Exception:
+                self.glyph_list.append(g)
+        # self.glyph_list = glyph_list
         self.error = False
 
     def run(self) -> None:
@@ -375,8 +381,8 @@ class MainWindow(QMainWindow):
 
         self.pv_theme_menu = self.preview_menu.addMenu("Theme")
         self.pv_theme_auto_action = self.pv_theme_menu.addAction("Auto")
-        self.pv_theme_light_action = self.pv_theme_menu.addAction("Light")
-        self.pv_theme_dark_action = self.pv_theme_menu.addAction("Dark")
+        self.pv_theme_light_action = self.pv_theme_menu.addAction("Black on white")
+        self.pv_theme_dark_action = self.pv_theme_menu.addAction("White on black")
         self.theme_action_group = QActionGroup(self.pv_theme_menu)
         self.theme_action_group.addAction(self.pv_theme_auto_action)
         self.theme_action_group.addAction(self.pv_theme_light_action)
@@ -702,11 +708,19 @@ class MainWindow(QMainWindow):
         preview_text = self.yg_string_preview.panel._text
         self.preview_glyph_name_list = []
         if preview_text != None and len(preview_text) > 0:
-            l = self.yg_font.string_to_name_list(preview_text)
-            # l is the list with reduncancies removed.
+            # Here's where we need to do Harfbuzz stuff. We need a list of glyph names, not indices.
+            # l = self.yg_font.string_to_name_list(preview_text)
+            l_full = self.yg_font.harfbuzz_font.get_shaped_names(preview_text)
+            # l is the list with redundancies removed (for making a subsetted font)
+            l = list(set(l_full))
             self.preview_glyph_name_list.extend(l)
+            # Store the full list for later use.
+            self.yg_string_preview.full_glyph_list = l_full
         if not self.preview_glyph_name in self.preview_glyph_name_list:
             self.preview_glyph_name_list.append(self.preview_glyph_name)
+            self.preview_glyph_name_list.extend(
+                list(set(self.yg_font.additional_component_names([self.preview_glyph_name])))
+            )
 
         # What function does this line serve?
         self.yg_string_preview.set_face(self.yg_preview.face)

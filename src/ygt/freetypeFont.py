@@ -1,4 +1,3 @@
-# from functools import lru_cache
 from typing import Optional
 import freetype as ft # type: ignore
 import numpy
@@ -7,7 +6,7 @@ import copy
 from tempfile import SpooledTemporaryFile
 from PyQt6.QtGui import QColor, QPen, QImage, QRegion, QBitmap, QPixmap
 from PyQt6.QtCore import QRect, QLine
-import uharfbuzz as uhb
+# import uharfbuzz as uhb
 
 def adjust_gamma(image, gamma):
 	invGamma = 1.0 / gamma
@@ -60,39 +59,19 @@ class freetypeFont:
         size: int = 30,
         render_mode: int = RENDER_LCD_1,
         hinting_on: bool = True,
-        instance: str = None
+        instance: str = None,
+        keep_open: bool = False
     ) -> None:
         self.valid = True
         try:
             if type(font) is SpooledTemporaryFile:
                 font.seek(0)
                 self.face = ft.Face(font)
-                # Experimental code, for harfbuzz.
-                # Here's what we're going to have to do.
-                #    1. Load the whole font into Harfbuzz (shall we do this just once for
-                #       the session?)
-                #    2. Display features, let user choose.
-                #    3. Let hb.shape get us a new string
-                #    4. Get glyph names.
-                #    5. Send list of names to Xgridfit, get back list of indices.
-                #    6. Draw the glyphs.
-                #font.seek(0)
-                #font_data = font.read()
-                #hb_face = uhb.Face(font_data)
-                #hb_font = uhb.Font(hb_face)
-                #buf = uhb.Buffer()
-                #buf.add_str("first flat office")
-                #buf.guess_segment_properties()
-                #features = {"kern": True, "liga": True}
-                #uhb.shape(hb_font, buf, features)
-                #print(uhb._harfbuzz.ot_layout_language_get_feature_tags(hb_face, "GSUB"))
-                # End of harfbuzz experiment.
-                font.close()
-                #import uharfbuzz as hb
-                #test = hb.Blob(self.face)
-                #print(test)
+                if not keep_open:
+                    font.close()
             else:
                 self.face = ft.Face(font)
+
         except Exception as e:
             print(e.args)
             print(e)
@@ -205,7 +184,6 @@ class freetypeFont:
         r["bitmap_top"] = self.glyph_slot.bitmap_top
         r["bitmap_left"] = self.glyph_slot.bitmap_left
         r["advance"] = round(self.glyph_slot.advance.x / 64)
-        # r["advance_width"] = round(self.glyph_slot.linearHoriAdvance / 65536)
         return r
 
     def mk_array(self, metrics, render_mode):
@@ -237,13 +215,6 @@ class freetypeFont:
         return ZZ
 
         
-    #@lru_cache(maxsize = 2048)
-    #def _get_lcd_color(self, rgb, dark_theme):
-    #    if dark_theme:
-    #        return QColor(rgb[0], rgb[1], rgb[2])
-    #    return QColor(255 - rgb[0], 255 - rgb[1], 255 - rgb[2])
-
-
     def _draw_char_lcd(
             self,
             painter,
@@ -252,7 +223,8 @@ class freetypeFont:
             spacing_mark = False,
             dark_theme = False,
             is_target = False,
-            bg_color = QColor("white")
+            bg_color = QColor("white"),
+            alpha = None,
         ):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
@@ -264,22 +236,10 @@ class freetypeFont:
 
         y (int): The baseline
 
+        spacing_mark: True if this is a mark with non-zero advance width.
+
         """
         gdata = self._get_bitmap_metrics()
-
-        # Here we try (1) getting bitmap into linear space with a standard gamma;
-        # (2) alpha blending of fg and bg color and (3) applying inverse gamma.
-        # Note that I don't really know what I'm doing here, but just trying to
-        # follow FreeType instructions. Corrections welcome.
-
-        # 1. Get the bitmap into a numpy array.
-        # 2. Get a mask.
-        # 3. Apply gamma.
-        # 4. blend fg and bg colors.
-        # 5. Apply gamma.
-        # 6. Do some metrics and positioning stuff.
-        # 7. Apply mask to bitmap.
-        # 8. Draw image.
 
         # Get the Freetype bitmap into a numpy array.
         Z = self.mk_array(gdata, RENDER_LCD_1)
@@ -290,10 +250,11 @@ class freetypeFont:
         img = QImage(Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888)
         qmask = QBitmap.fromImage(img.createMaskFromColor(QColor("black").rgb()))
         # Different alpha blending for dark and light themes.
-        if dark_theme:
-            alpha = 0.95
-        else:
-            alpha = 0.88
+        if alpha == None:
+            if dark_theme:
+                alpha = 0.95
+            else:
+                alpha = 0.88
         # If we have a bitmap (we may not for space, etc.), do: (1) invert for
         # black-on-white text; (2) apply gamma to get bitmap into linear space;
         # (3) apply alpha blending; (4) apply inverse gamma.
@@ -305,8 +266,8 @@ class freetypeFont:
                     # Z = cv2.bitwise_not(Z)
 
                 Z = adjust_gamma(Z, 2.2)
-                Z = cv2.addWeighted(Z, alpha, self.mk_bg_array(Z, bg_color), 1.0 - alpha, 0)
-                Z = adjust_gamma(Z, 1.0 / 1.8)
+                Z = cv2.addWeighted(Z, 1, self.mk_bg_array(Z, bg_color), 0, 0)
+                Z = adjust_gamma(Z, 1 / 1.8)
         else:
             have_outline = False
 
@@ -328,8 +289,7 @@ class freetypeFont:
             pm.setMask(qmask)
             painter.drawPixmap(starting_xpos, starting_ypos, pm)
 
-        # Draw a red line under target glyph (the one in the current resolution); get
-        # a QRect for this glyph (will be a target for clicks).
+        # Draw a red line under target glyph (the one in the current resolution).
         ending_xpos = starting_xpos + round(gdata["advance"])
         ending_ypos = starting_ypos + gdata["rows"]
         if is_target:
@@ -341,6 +301,8 @@ class freetypeFont:
         if abs(ending_ypos - starting_ypos) <= 5:
             starting_ypos -= 3
             ending_ypos += 3
+
+        # Get a QRect for this glyph (will be a target for clicks).
         self.rect_list.append(
             ygLetterBox(
                 starting_xpos,
@@ -362,7 +324,8 @@ class freetypeFont:
             spacing_mark=False,
             dark_theme = False,
             is_target = False,
-            bg_color = QColor("white")
+            bg_color = QColor("white"),
+            alpha = None
         ):
         """Draws a bitmap with grayscale rendering
 
@@ -424,12 +387,17 @@ class freetypeFont:
         return gdata["advance"]
 
     def name_to_index(self, gname):
-        s = bytes(gname, "utf8")
         try:
-            return self.face.get_name_index(s)
+            r = self.face.get_name_index(gname)
+            return r
         except Exception as e:
-            print(e)
             return None
+        
+    def names_to_indices(self, l):
+        result = []
+        for n in l:
+            result.append(self.name_to_index(n))
+        return result
 
     def index_to_name(self, index):
         try:
@@ -437,12 +405,17 @@ class freetypeFont:
         except Exception as e:
             print(e)
             return ".notdef"
+        
+    def indices_to_names(self, index_list):
+        result = []
+        for i in index_list:
+            result.append(self.index_to_name(i))
+        return result
+
 
     def char_to_index(self, char):
         try:
             return self.face.get_char_index(char)
-            # u = ord(char)
-            # return self.face.get_char_index(u)
         except Exception:
             return None
 
@@ -459,17 +432,23 @@ class freetypeFont:
 
     def draw_string(self,
                     painter,
-                    s,
+                    s: str | list,
                     x,
                     y,
                     x_limit = 200,
                     y_increment = 67,
                     dark_theme = False,
-                    bg_color = QColor("white")
+                    bg_color = QColor("white"),
         ):
+
         self.last_glyph_index = None
         self.reset_rect_list()
-        indices = self.string_to_indices(s)
+
+        if type(s) is str:
+            indices = self.string_to_indices(s)
+        else:
+            indices = self.names_to_indices(s)
+
         xpos = x
         ypos = y
         for i in indices:
@@ -479,8 +458,8 @@ class freetypeFont:
                     self.last_glyph_index, i, ft.FT_KERNING_DEFAULT
                 )
                 xpos += k.x
-            # Need a bg color here.
-            xpos += self.draw_char(painter, xpos, ypos, dark_theme = dark_theme, bg_color = bg_color)
+            adv = self.draw_char(painter, xpos, ypos, dark_theme = dark_theme, bg_color = bg_color)
+            xpos += adv
             if xpos >= x_limit:
                 xpos = x
                 ypos += y_increment

@@ -1,10 +1,10 @@
-from .freetypeFont import freetypeFont, RENDER_GRAYSCALE
+from .freetypeFont import freetypeFont, RENDER_LCD_1, RENDER_GRAYSCALE
 from fontTools import subset
 from .ygModel import ygFont
 from math import ceil
-from PyQt6.QtCore import Qt, QRect, pyqtSignal
-from PyQt6.QtWidgets import QWidget, QDialog, QGridLayout, QVBoxLayout, QScrollArea, QLabel
-from PyQt6.QtGui import QPainter, QBrush, QPen, QColor, QPalette, QPixmap
+from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QScrollArea, QLabel
+from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap
 from tempfile import SpooledTemporaryFile
 import copy
 
@@ -35,20 +35,22 @@ class fontViewWindow(QWidget):
         for g in glyph_list:
             self.glyph_name_list.append(g[1])
         self.yg_font = yg_font
-        if self.yg_font.source_file.source_type == "yaml":
-            self.face = freetypeFont(filename, size=24, render_mode=RENDER_GRAYSCALE)
-        else:
-            temp_font = copy.deepcopy(self.yg_font.preview_font)
-            tf = SpooledTemporaryFile(max_size=3000000, mode='b')
-            options = subset.Options(glyph_names=True)
-            options.layout_features = []
-            subsetter = subset.Subsetter(options)
-            subsetter.populate(glyphs=self.glyph_name_list)
-            subsetter.subset(temp_font)
-            temp_font.save(tf, 1)
-            tf.seek(0)
-            self.face = freetypeFont(tf, size=24, render_mode=RENDER_GRAYSCALE)
-            tf.close()
+        self.face = self.yg_font.freetype_font
+        self.face.set_size(24)
+        #if self.yg_font.source_file.source_type == "yaml":
+        #    self.face = freetypeFont(filename, size=24, render_mode=RENDER_LCD_1)
+        #else:
+        #    temp_font = copy.deepcopy(self.yg_font.preview_font)
+        #    tf = SpooledTemporaryFile(max_size=3000000, mode='b')
+        #    options = subset.Options(glyph_names=True)
+        #    options.layout_features = []
+        #    subsetter = subset.Subsetter(options)
+        #    subsetter.populate(glyphs=self.glyph_name_list)
+        #    subsetter.subset(temp_font)
+        #    temp_font.save(tf, 1)
+        #    tf.seek(0)
+        #    self.face = freetypeFont(tf, size=24, render_mode=RENDER_LCD_1)
+        #    tf.close()
         if not self.face.valid:
             self.valid = False
             return
@@ -72,7 +74,6 @@ class fontViewWindow(QWidget):
 
     def update_cell(self, g):
         gc = self.glyph_index[g]
-        # print("via update_cell " + str(id(gc)))
         gc.make_pixmap()
         gc.update()
 
@@ -129,6 +130,7 @@ class fontViewCell(QLabel):
             cell.
         """
         # Test to see if we really need to paint the pixmap.
+        is_composite = self.dialog.yg_font.is_composite(self.glyph)
         has_hints_now = self.dialog.yg_font.has_hints(self.glyph)
         if self.pixmap != None and self.has_hints == has_hints_now:
             return
@@ -138,27 +140,46 @@ class fontViewCell(QLabel):
         if self.pixmap == None:
             self.pixmap = QPixmap(36,36)
 
+        fill_color = None
+        alpha = 0.88
         if self.dialog.dark_theme:
-            if self.has_hints:
-                self.pixmap.fill(QColor(0, 0, 186, 128))
+            if is_composite:
+                # fill_color = QColor(169, 169, 169)
+                fill_color = QColor(64, 42, 9)
+                alpha = 0.96
+            elif self.has_hints:
+                fill_color = QColor(0, 0, 186, 128)
+                alpha = 0.95
             else:
-                self.pixmap.fill(QColor("black"))
+                fill_color = QColor("black")
+                alpha = 0.95
         else:
-            if self.has_hints:
-                self.pixmap.fill(QColor(186, 255, 255, 128))
+            if is_composite:
+                # fill_color = QColor(211, 211, 211)
+                fill_color = QColor(255, 239, 128)
+            elif self.has_hints:
+                fill_color = QColor(186, 255, 255, 128)
             else:
-                self.pixmap.fill(QColor("white"))
+                fill_color = QColor("white")
+        self.pixmap.fill(fill_color)
 
         painter = QPainter(self.pixmap)
 
-        ind = self.dialog.face.name_to_index(self.glyph)
+        # print("fontViewCell: " + self.glyph)
+        ind = self.dialog.face.name_to_index(self.glyph.encode(encoding="utf-8"))
+        self.dialog.face.set_render_mode(RENDER_GRAYSCALE)
         self.dialog.face.set_char(ind)
         baseline = (
             round((36 - self.dialog.face.face_height) / 2) + self.dialog.face.ascender
         )
         xpos = round((36 - self.dialog.face.advance) / 2)
         self.dialog.face.draw_char(
-            painter, xpos, baseline, dark_theme = self.dialog.dark_theme
+            painter,
+            xpos,
+            baseline,
+            dark_theme = self.dialog.dark_theme,
+            bg_color = fill_color,
+            alpha = alpha
         )
 
         painter.end()
@@ -166,5 +187,4 @@ class fontViewCell(QLabel):
         self.setPixmap(self.pixmap)
 
     def mousePressEvent(self, event) -> None:
-        # print("Thie is " + str(id(self)))
         self.dialog.clicked_glyph(self.glyph)
