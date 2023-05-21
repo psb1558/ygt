@@ -239,6 +239,8 @@ class MainWindow(QMainWindow):
         self.recents_display: list = []
         self.recents_actions: list = []
         self.instance_actions: list = []
+        self.feature_actions: list = []
+        self.feature_reset_action = None
         self.window_list: list = []
         self.preview_maker: Optional[ygPreviewFontMaker] = None
         self.font_generator: Optional[ygFontGenerator] = None
@@ -794,6 +796,18 @@ class MainWindow(QMainWindow):
     # Prep for menu display
     #
 
+    def setup_feature_menu(self):
+        feature_list = self.yg_font.harfbuzz_font.sub_features
+        if len(feature_list):
+            self.preview_menu.addSeparator()
+            feature_menu = self.preview_menu.addMenu("features")
+            self.feature_actions = []
+            for f in feature_list:
+                ff = feature_menu.addAction(f)
+                ff.setCheckable(True)
+                self.feature_actions.append(ff)
+            self.feature_reset_action = self.preview_menu.addAction("Reset features")
+
     @pyqtSlot()
     def view_menu_about_to_show(self) -> None:
         if self.points_as_coords:
@@ -842,6 +856,13 @@ class MainWindow(QMainWindow):
             self.pv_show_hints_action.setChecked(self.yg_preview.hinting_on)
             self.pv_show_grid_action.setChecked(self.yg_preview.show_grid)
         self.toggle_auto_preview_action.setChecked(self.auto_preview_update)
+        if len(self.feature_actions):
+            active_list = self.yg_font.harfbuzz_font.active_features
+            for f in self.feature_actions:
+                if f.text() in active_list:
+                    f.setChecked(True)
+                else:
+                    f.setChecked(False)
 
     @pyqtSlot()
     def edit_menu_about_to_show(self) -> None:
@@ -933,6 +954,9 @@ class MainWindow(QMainWindow):
         self.pv_theme_dark_action.triggered.connect(self.yg_preview.set_theme_dark)
         self.pv_show_hints_action.triggered.connect(self.yg_preview.toggle_show_hints)
         self.pv_show_grid_action.triggered.connect(self.yg_preview.toggle_grid)
+        for f in self.feature_actions:
+            f.triggered.connect(self.activate_feature)
+        self.feature_reset_action.triggered.connect(self.yg_font.harfbuzz_font.reset_features)
 
     def setup_preview_instance_connections(self) -> None:
         if self.yg_font.is_variable_font and self.instance_actions != None:
@@ -1007,6 +1031,9 @@ class MainWindow(QMainWindow):
             self.prev_instance_action.setEnabled(False)
             self.next_instance_action.setEnabled(False)
             self.instance_menu.setEnabled(False)
+
+    def set_up_feature_list(self) -> None:
+        pass
 
     def set_size_and_position(self):
         """Set size and position of the main window."""
@@ -1365,11 +1392,6 @@ class MainWindow(QMainWindow):
 
             self.preferences["current_font"] = filename
 
-            self.add_preview()
-            self.yg_preview.set_up_signal(self.update_string_preview)
-            self.source_editor = ygYAMLEditor(self.preferences)
-            self.add_editor(self.source_editor)
-
             # If opening ttf, we have both yaml_source and ygt_filename
             # If opening ufo, ygt_filename is the same as the font name
             # If opening yaml, we just pass the filename (since font is identified in the file)
@@ -1378,6 +1400,14 @@ class MainWindow(QMainWindow):
             else:
                 self.yg_font = ygFont(self, filename)
             self.yg_font.setup_error_signal(self.error_manager.new_message)
+
+            self.setup_feature_menu()
+
+            self.add_preview()
+            self.yg_preview.set_up_signal(self.update_string_preview)
+
+            self.source_editor = ygYAMLEditor(self.preferences)
+            self.add_editor(self.source_editor)
 
             if (
                 "current_glyph" in self.preferences
@@ -1397,6 +1427,7 @@ class MainWindow(QMainWindow):
             view.centerOn(view.yg_glyph_scene.center_x, view.sceneRect().center().y())
             self.set_window_title()
             self.set_up_instance_list()
+            self.set_up_feature_list()
             self.setup_editor_connections()
             self.setup_preview_instance_connections()
             self.setup_point_label_connections()
@@ -1640,6 +1671,12 @@ class MainWindow(QMainWindow):
         )
         if ok:
             self.yg_preview.set_size(i)
+
+    
+    @pyqtSlot()
+    def activate_feature(self):
+        f = self.sender().text()
+        self.yg_font.harfbuzz_font.activate_feature(f)
 
     #
     # Program exit

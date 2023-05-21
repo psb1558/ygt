@@ -1,13 +1,15 @@
 import uharfbuzz as hb
 from tempfile import SpooledTemporaryFile
 from .freetypeFont import freetypeFont
+from PyQt6.QtCore import pyqtSlot
 
 class harfbuzzFont:
     def __init__(
             self,
             font: SpooledTemporaryFile | str,
             ft_font: freetypeFont,
-            keep_open = False
+            keep_open = False,
+            top_window = None
     ):
         self.ft_font = ft_font
         if type(font) is SpooledTemporaryFile:
@@ -24,12 +26,14 @@ class harfbuzzFont:
         self.hb_font = hb.Font(self.hb_face)
 
         self._sub_features = hb._harfbuzz.ot_layout_language_get_feature_tags(self.hb_face, "GSUB")
+        self._sub_features = sorted(self._sub_features)
         self._pos_features = hb._harfbuzz.ot_layout_language_get_feature_tags(self.hb_face, "GPOS")
         self._active_features = []
         self.set_default_features()
+        self.top_window = top_window
 
     def set_default_features(self):
-        self._active_features = []
+        self._active_features.clear()
         if "ccmp" in self._sub_features:
             self._active_features.append("ccmp")
         if "liga" in self._sub_features:
@@ -62,7 +66,7 @@ class harfbuzzFont:
     def active_features(self) -> list:
         return self._active_features
     
-    def activate_feature(self, f: str) -> None:
+    def activate_feature(self, f) -> None:
         add_feature = False
         if f in self._pos_features:
             add_feature = True
@@ -98,3 +102,5 @@ class harfbuzzFont:
         buf.add_str(s)
         return buf
     
+    def reset_features(self):
+        self.set_default_features()
