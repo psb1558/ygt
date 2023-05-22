@@ -46,7 +46,6 @@ from PyQt6.QtGui import (
     QKeySequence,
     QIcon,
     QPixmap,
-    QImage,
     QActionGroup,
     QUndoStack,
     QUndoGroup,
@@ -55,6 +54,7 @@ from PyQt6.QtGui import (
     QFontDatabase,
 )
 from fontTools import ttLib, ufoLib # type: ignore
+from .harfbuzzFont import harfbuzzFont
 
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
@@ -239,7 +239,12 @@ class MainWindow(QMainWindow):
         self.recents_display: list = []
         self.recents_actions: list = []
         self.instance_actions: list = []
+        self.script_actions: list = []
+        self.script_menu = None
+        self.language_actions: list = []
+        self.language_menu = None
         self.feature_actions: list = []
+        self.feature_menu = None
         self.feature_reset_action = None
         self.window_list: list = []
         self.preview_maker: Optional[ygPreviewFontMaker] = None
@@ -333,6 +338,12 @@ class MainWindow(QMainWindow):
 
         self.preview_menu = self.menu.addMenu("&Preview")
 
+        self.pv_show_hints_action = self.preview_menu.addAction("Hint preview")
+        self.pv_show_hints_action.setShortcut(QKeySequence("Ctrl+p"))
+        self.pv_show_hints_action.setCheckable(True)
+        self.pv_show_hints_action.setChecked(True)
+        self.pv_show_hints_action.setEnabled(False)
+
         self.save_current_glyph_action = self.preview_menu.addAction("Update Preview")
         self.save_current_glyph_action.setShortcut(QKeySequence("Ctrl+u"))
         self.save_current_glyph_action.setEnabled(False)
@@ -366,11 +377,11 @@ class MainWindow(QMainWindow):
         )
         self.pv_smaller_ten_action.setEnabled(False)
 
-        self.pv_show_hints_action = self.preview_menu.addAction("Hint preview")
-        self.pv_show_hints_action.setShortcut(QKeySequence("Ctrl+p"))
-        self.pv_show_hints_action.setCheckable(True)
-        self.pv_show_hints_action.setChecked(True)
-        self.pv_show_hints_action.setEnabled(False)
+        self.pv_set_size_action = self.preview_menu.addAction("Set size...")
+        self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+l"))
+        self.pv_set_size_action.setEnabled(False)
+
+        self.preview_menu.addSeparator()
 
         self.pv_show_grid_action = self.preview_menu.addAction("Show grid")
         self.pv_show_grid_action.setCheckable(True)
@@ -378,8 +389,6 @@ class MainWindow(QMainWindow):
         self.pv_show_grid_action.setEnabled(False)
 
         self.instance_menu: Optional[QMenu] = None
-
-        self.preview_menu.addSeparator()
 
         self.pv_theme_menu = self.preview_menu.addMenu("Theme")
         self.pv_theme_auto_action = self.pv_theme_menu.addAction("Auto")
@@ -395,10 +404,6 @@ class MainWindow(QMainWindow):
         self.pv_theme_auto_action.setChecked(True)
         self.pv_theme_menu.setEnabled(False)
 
-        self.pv_set_size_action = self.preview_menu.addAction("Set resolution...")
-        self.pv_set_size_action.setShortcut(QKeySequence("Ctrl+l"))
-        self.pv_set_size_action.setEnabled(False)
-
         self.pv_render_mode_menu = self.preview_menu.addMenu("Render mode")
         self.pv_mode_1_action = self.pv_render_mode_menu.addAction("Grayscale")
         self.pv_mode_2_action = self.pv_render_mode_menu.addAction("Subpixel (1)")
@@ -412,6 +417,17 @@ class MainWindow(QMainWindow):
         self.pv_mode_2_action.setChecked(True)
         self.pv_mode_3_action.setCheckable(True)
         self.pv_render_mode_menu.setEnabled(False)
+
+        self.preview_menu.addSeparator()
+
+        self.script_menu = self.preview_menu.addMenu("Script")
+        self.script_menu.setEnabled(False)
+        self.language_menu = self.preview_menu.addMenu("Language")
+        self.language_menu.setEnabled(False)
+        self.feature_menu = self.preview_menu.addMenu("Features")
+        self.feature_menu.setEnabled(False)
+        self.feature_reset_action = self.preview_menu.addAction("Reset features")
+        self.feature_reset_action.setEnabled(False)
 
         self.preview_menu.aboutToShow.connect(self.preview_menu_about_to_show)
 
@@ -796,17 +812,43 @@ class MainWindow(QMainWindow):
     # Prep for menu display
     #
 
+    def setup_script_menu(self):
+        self.script_menu.clear()
+        self.script_actions.clear()
+        scripts = self.yg_font.harfbuzz_font.sub_scripts
+        for s in scripts:
+            sa = self.script_menu.addAction(s)
+            sa.setCheckable(True)
+            sa.setChecked(s == self.yg_font.harfbuzz_font.current_script_tag)
+            sa.triggered.connect(self.set_script)
+            self.script_actions.append(sa)
+        self.script_menu.setEnabled(len(scripts) > 0)
+
+    def setup_language_menu(self):
+        self.language_menu.clear()
+        self.language_actions.clear()
+        languages = self.yg_font.harfbuzz_font.sub_languages
+        for l in languages:
+            la = self.language_menu.addAction(l)
+            la.setCheckable(True)
+            la.setChecked(l == self.yg_font.harfbuzz_font.current_language_tag)
+            la.triggered.connect(self.set_language)
+            self.language_actions.append(la)
+        self.language_menu.setEnabled(len(languages) > 0)
+
     def setup_feature_menu(self):
-        feature_list = self.yg_font.harfbuzz_font.sub_features
-        if len(feature_list):
-            self.preview_menu.addSeparator()
-            feature_menu = self.preview_menu.addMenu("features")
-            self.feature_actions = []
-            for f in feature_list:
-                ff = feature_menu.addAction(f)
-                ff.setCheckable(True)
-                self.feature_actions.append(ff)
-            self.feature_reset_action = self.preview_menu.addAction("Reset features")
+        self.feature_menu.clear()
+        self.feature_actions.clear()
+        features = self.yg_font.harfbuzz_font.sub_features
+        for f in features:
+            fa = self.feature_menu.addAction(harfbuzzFont.expanded_feature_name(f))
+            fa.setCheckable(True)
+            fa.setChecked(f in self.yg_font.harfbuzz_font._active_features)
+            fa.triggered.connect(self.toggle_feature)
+            self.feature_actions.append(fa)
+        self.feature_menu.setEnabled(len(features) > 0)
+        self.feature_reset_action.setEnabled(len(features) > 0)
+            
 
     @pyqtSlot()
     def view_menu_about_to_show(self) -> None:
@@ -856,13 +898,12 @@ class MainWindow(QMainWindow):
             self.pv_show_hints_action.setChecked(self.yg_preview.hinting_on)
             self.pv_show_grid_action.setChecked(self.yg_preview.show_grid)
         self.toggle_auto_preview_action.setChecked(self.auto_preview_update)
-        if len(self.feature_actions):
-            active_list = self.yg_font.harfbuzz_font.active_features
-            for f in self.feature_actions:
-                if f.text() in active_list:
-                    f.setChecked(True)
-                else:
-                    f.setChecked(False)
+        self.setup_script_menu()
+        self.setup_language_menu()
+        self.setup_feature_menu()
+        #if len(self.feature_actions):
+        #    for f in self.feature_actions:
+        #        f.setChecked(harfbuzzFont.tag_only(f.text()) in self.yg_font.harfbuzz_font.active_features)
 
     @pyqtSlot()
     def edit_menu_about_to_show(self) -> None:
@@ -954,8 +995,8 @@ class MainWindow(QMainWindow):
         self.pv_theme_dark_action.triggered.connect(self.yg_preview.set_theme_dark)
         self.pv_show_hints_action.triggered.connect(self.yg_preview.toggle_show_hints)
         self.pv_show_grid_action.triggered.connect(self.yg_preview.toggle_grid)
-        for f in self.feature_actions:
-            f.triggered.connect(self.activate_feature)
+        #for f in self.feature_actions:
+        #    f.triggered.connect(self.toggle_feature)
         self.feature_reset_action.triggered.connect(self.yg_font.harfbuzz_font.reset_features)
 
     def setup_preview_instance_connections(self) -> None:
@@ -1401,6 +1442,8 @@ class MainWindow(QMainWindow):
                 self.yg_font = ygFont(self, filename)
             self.yg_font.setup_error_signal(self.error_manager.new_message)
 
+            self.setup_script_menu()
+            self.setup_language_menu()
             self.setup_feature_menu()
 
             self.add_preview()
@@ -1663,20 +1706,36 @@ class MainWindow(QMainWindow):
     def show_ppem_dialog(self):
         i, ok = QInputDialog().getInt(
             self,
-            "Set Points per Em",
-            "Points per em:",
-            value = 30,
+            "Set Size",
+            "Pixels per em:",
+            value = 25,
             min = 10,
             max = 400,
         )
         if ok:
             self.yg_preview.set_size(i)
-
     
     @pyqtSlot()
-    def activate_feature(self):
-        f = self.sender().text()
-        self.yg_font.harfbuzz_font.activate_feature(f)
+    def toggle_feature(self):
+        f = harfbuzzFont.tag_only(self.sender().text())
+        if f in self.yg_font.harfbuzz_font.active_features:
+            self.yg_font.harfbuzz_font.deactivate_feature(f)
+        else:
+            self.yg_font.harfbuzz_font.activate_feature(f)
+
+    @pyqtSlot()
+    def set_script(self):
+        tag = self.sender().text()
+        self.yg_font.harfbuzz_font.select_script(tag)
+        for s in self.script_actions:
+            s.setChecked(tag == s.text())
+
+    @pyqtSlot()
+    def set_language(self):
+        tag = self.sender().text()
+        self.yg_font.harfbuzz_font.select_language(tag)
+        for l in self.language_actions:
+            l.setChecked(tag == l.text())
 
     #
     # Program exit
@@ -1813,13 +1872,11 @@ def main():
     app = QApplication([])
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        print(sys._MEIPASS)
         font_path = os.path.join(
             sys._MEIPASS,
             "fonts",
             "SourceCodePro-Regular.ttf"
         )
-        print(font_path)
     else:
         font_path = os.path.join(
             os.path.dirname(__file__),
