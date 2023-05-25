@@ -106,12 +106,27 @@ HINT_INTERPOLATE_DARK = QColor(212, 187, 106, 192)
 HINT_INTERPOLATE_SELECT_COLOR = QColor(215, 87, 0, 128)
 HINT_INTERPOLATE_SELECT_DARK = QColor(255, 195, 0, 192)
 
+PTFILL_COLOR = QColor("white")
+PTFILL_DARK = QColor("black")
+PTFILL_SELECT_COLOR = QColor(100, 105, 108, 192)
+PTFILL_SELECT_DARK = QColor(137, 207, 240)
+PTFILL_TOUCH_COLOR = QColor(255, 182, 193, 192)
+PTFILL_TOUCH_DARK = QColor(170, 51, 106, 192)
+PTFILL_TOUCH_SELECT_COLOR = QColor(138, 41, 86, 128)
+PTFILL_TOUCH_SELECT_DARK = QColor(255, 233, 236, 128)
+
 POINT_ONCURVE_OUTLINE = QColor("red")
-POINT_OFFCURVE_FILL = QColor("white")
-POINT_ONCURVE_FILL = QColor("white")
 POINT_OFFCURVE_OUTLINE = QColor(127, 127, 255, 255)
-POINT_OFFCURVE_SELECTED = QColor(127, 127, 255, 255)
-POINT_ONCURVE_SELECTED = QColor(127, 127, 255, 255)
+
+POINT_OFFCURVE_FILL = PTFILL_COLOR
+POINT_ONCURVE_FILL = PTFILL_COLOR
+#POINT_OFFCURVE_SELECTED = QColor(127, 127, 255, 255)
+#POINT_ONCURVE_SELECTED = QColor(127, 127, 255, 255)
+POINT_OFFCURVE_SELECTED = PTFILL_SELECT_COLOR
+POINT_ONCURVE_SELECTED = PTFILL_SELECT_COLOR
+POINT_TOUCHED = PTFILL_TOUCH_COLOR
+POINT_TOUCHED_SELECTED = PTFILL_TOUCH_SELECT_COLOR
+
 PREVIEW_BASE_COLOR = QColor(64, 33, 31, 255)
 POINT_OUTLINE_WIDTH = 1
 POINT_ANCHORED_OUTLINE_WIDTH = 3
@@ -121,6 +136,11 @@ GLYPH_WIDGET_MARGIN = 50
 POINT_ONCURVE_DIA = 8
 POINT_OFFCURVE_DIA = 6
 HINT_BUTTON_DIA = 6
+
+PTFILL_ANCHOR_TOUCH_COLOR = QColor(255, 233, 236, 128)
+PTFILL_ANCHOR_TOUCH_DARK = QColor(170, 51, 106, 192)
+PTFILL_ANCHOR_TOUCH_SELECT_COLOR = QColor(255, 233, 236, 128)
+PTFILL_ANCHOR_TOUCH_SELECT_DARK = QColor(170, 51, 106, 192)
 
 HINT_COLOR = {}
 
@@ -453,6 +473,8 @@ class ygHintView(QGraphicsItem, ygSelectable):
                 if touch:
                     try:
                         ptindex[p.id].touched = True
+                        if ptindex[p.id].changed:
+                            ptindex[p.id]._prepare_graphics()
                         ptindex[p.id].owners.append(self)
                     except Exception:
                         pass
@@ -461,6 +483,8 @@ class ygHintView(QGraphicsItem, ygSelectable):
                         ptindex[p.id].owners.remove(self)
                         if len(ptindex[p.id].owners) == 0:
                             ptindex[p.id].touched = False
+                            if ptindex[p.id].changed:
+                                ptindex[p.id]._prepare_graphics()
                     except Exception as e:
                         #print(str(e.args))
                         #print(str(e))
@@ -1270,12 +1294,29 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
         self.yg_glyph_scene = yg_glyph_scene
         self.point_number_label: Optional[QLabel] = None
         self.point_number_label_proxy: Optional[QGraphicsProxyWidget] = None
-        self.touched = False
+        self._touched = False
+        self._changed = False
         # These are the ygHintView objects that touch this point. When a hint
         # is removed from ygGlyphScene, remove the reference from this list.
         # If a hint being removed makes this list empty, remove the "touched"
         # flag from this ygPointView.
         self.owners: List[ygHintView] = []
+
+    @property
+    def touched(self) -> bool:
+        return self._touched
+
+    @touched.setter
+    def touched(self, b: bool) -> None:
+        if b != self._touched:
+            self._touched = b
+            self._changed = True
+        else:
+            self._changed = False
+
+    @property
+    def changed(self) -> bool:
+        return self._changed
 
     def attachment_point(self, pt: Any) -> QPointF:
         return self.glocation
@@ -1286,12 +1327,15 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
     def _prepare_graphics(self) -> None:
         # For ygPointView
         if self.selected():
-            if self.yg_point.on_curve:
-                brushColor = POINT_ONCURVE_SELECTED
+            if self.touched:
+                brushColor = POINT_TOUCHED_SELECTED
             else:
-                brushColor = POINT_OFFCURVE_SELECTED
+                brushColor = POINT_ONCURVE_SELECTED
         else:
-            brushColor = POINT_ONCURVE_FILL
+            if self.touched:
+                brushColor = POINT_TOUCHED
+            else:
+                brushColor = POINT_ONCURVE_FILL
         if self.yg_point.on_curve:
             penColor = POINT_ONCURVE_OUTLINE
         else:
@@ -1301,6 +1345,7 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
         brush = QBrush(brushColor)
         self.setBrush(brush)
         self.setPen(pen)
+        self._changed = False
 
     #def get_scene(self) -> "ygGlyphScene":
     #    return self.yg_glyph_scene
@@ -1401,7 +1446,7 @@ class ygGlyphScene(QGraphicsScene):
             yg_glyph: ygGlyph,
             owner: Optional["ygGlyphView"] = None) -> None:
         """yg_glyph is a ygGlyph object from ygModel."""
-        global HINT_COLOR, SELECTED_HINT_COLOR, POINT_OFFCURVE_FILL, POINT_ONCURVE_FILL, POINT_OFFCURVE_SELECTED, POINT_ONCURVE_SELECTED
+        global HINT_COLOR, SELECTED_HINT_COLOR, POINT_OFFCURVE_FILL, POINT_ONCURVE_FILL, POINT_OFFCURVE_SELECTED, POINT_ONCURVE_SELECTED, POINT_TOUCHED_SELECTED, POINT_TOUCHED
 
         self.preferences = preferences
 
@@ -1426,15 +1471,26 @@ class ygGlyphScene(QGraphicsScene):
         bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
         self.dark_theme = text_hsv_value > bg_hsv_value
         if self.dark_theme:
+            # These two are dicts
             HINT_COLOR = _HINT_DARK
             SELECTED_HINT_COLOR = _SELECTED_HINT_DARK
-            POINT_OFFCURVE_FILL = QColor("black")
-            POINT_ONCURVE_FILL = QColor("black")
-            POINT_OFFCURVE_SELECTED = QColor(QColor(137, 207, 240))
-            POINT_ONCURVE_SELECTED = QColor(QColor(137, 207, 240))
+            # Fill colors. We don't have to distinguish between fill for on-
+            # and off-curve points
+            POINT_OFFCURVE_FILL = PTFILL_DARK
+            POINT_ONCURVE_FILL = PTFILL_DARK
+            POINT_OFFCURVE_SELECTED = PTFILL_SELECT_DARK
+            POINT_ONCURVE_SELECTED = PTFILL_SELECT_DARK
+            POINT_TOUCHED = PTFILL_TOUCH_DARK
+            POINT_TOUCHED_SELECTED = PTFILL_TOUCH_SELECT_DARK
         else:
             HINT_COLOR = _HINT_COLOR
             SELECTED_HINT_COLOR = _SELECTED_HINT_COLOR
+            POINT_OFFCURVE_FILL = PTFILL_COLOR
+            POINT_ONCURVE_FILL = PTFILL_COLOR
+            POINT_OFFCURVE_SELECTED = PTFILL_SELECT_COLOR
+            POINT_ONCURVE_SELECTED = PTFILL_SELECT_COLOR
+            POINT_TOUCHED = PTFILL_TOUCH_COLOR
+            POINT_TOUCHED_SELECTED = PTFILL_TOUCH_SELECT_COLOR
         if self.preferences.top_window().show_off_curve_points != None:
             self.off_curve_points_showing = self.preferences.top_window().show_off_curve_points
         else:
@@ -1513,6 +1569,11 @@ class ygGlyphScene(QGraphicsScene):
         # Get and display the hints.
 
         self.install_hints(self.yg_glyph.hints)
+        # review the list of points and mark the ones that are touched.
+        if not self.yg_glyph.is_composite:
+            for p in self.yg_point_view_list:
+                if p.touched:
+                    p._prepare_graphics()
 
     #
     # Sizing and zooming
@@ -1871,7 +1932,9 @@ class ygGlyphScene(QGraphicsScene):
     def untouch_all(self):
         for p in self.yg_point_view_list:
             p.touched = False
-            p.owners.clear()
+            if p.changed:
+                p.owners.clear()
+                p._prepare_graphics()
 
     @pyqtSlot(object)
     def change_hint_color(self, _params: dict) -> None:

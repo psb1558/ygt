@@ -924,8 +924,7 @@ class miscDefaultsWidget(QWidget):
         self.layout_obj.addWidget(self.replaceprep, 3, 2)
         self.functionbase.setFixedWidth(int(self.functionbase.width() /4))
         function_base_layout = QHBoxLayout()
-        # function_base_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        function_base_layout.addWidget(QLabel("function base"))
+        function_base_layout.addWidget(QLabel("Function base"))
         function_base_layout.addWidget(self.functionbase, alignment = Qt.AlignmentFlag.AlignLeft)
         self.layout_obj.addLayout(function_base_layout, 4, 2)
 
@@ -1018,6 +1017,10 @@ class miscDefaultsWidget(QWidget):
 
         t = self.defaults.get_default("replace-prep")
         self.replaceprep.setChecked(bool(t))
+
+        if not bool(t):
+            self.replaceprep.setEnabled(False)
+            self.functionbase.setEnabled(False)
 
         self.ignore_signal = False
 

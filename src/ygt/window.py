@@ -52,6 +52,7 @@ from PyQt6.QtGui import (
     QCloseEvent,
     QAction,
     QFontDatabase,
+    QPainter,
 )
 from fontTools import ttLib, ufoLib # type: ignore
 from .harfbuzzFont import harfbuzzFont
@@ -726,19 +727,19 @@ class MainWindow(QMainWindow):
         preview_text = self.yg_string_preview.panel._text
         self.preview_glyph_name_list = []
         if preview_text != None and len(preview_text) > 0:
-            # Here's where we need to do Harfbuzz stuff. We need a list of glyph names, not indices.
-            # l = self.yg_font.string_to_name_list(preview_text)
             l_full = self.yg_font.harfbuzz_font.get_shaped_names(preview_text)
+            l_full_fixed = [c.decode() for c in l_full]
             # l is the list with redundancies removed (for making a subsetted font)
-            l = list(set(l_full))
+            l = list(set(l_full_fixed))
             self.preview_glyph_name_list.extend(l)
             # Store the full list for later use.
-            self.yg_string_preview.full_glyph_list = l_full
+            self.yg_string_preview.full_glyph_list = l_full_fixed
         if not self.preview_glyph_name in self.preview_glyph_name_list:
             self.preview_glyph_name_list.append(self.preview_glyph_name)
             self.preview_glyph_name_list.extend(
                 list(set(self.yg_font.additional_component_names([self.preview_glyph_name])))
             )
+        # print(self.preview_glyph_name_list)
 
         # What function does this line serve?
         self.yg_string_preview.set_face(self.yg_preview.face)
@@ -772,6 +773,7 @@ class MainWindow(QMainWindow):
         else:
             self.yg_string_preview.set_size_array()
         self.yg_string_preview.set_face(self.yg_preview.face)
+        self.yg_string_preview.panel.make_pixmap()
         self.yg_string_preview.update()
 
     #
@@ -1865,7 +1867,8 @@ class mainWinEventFilter(QObject):
 def main():
     #import uharfbuzz as hb
     #from inspect import getfullargspec, signature
-    # print(dir(QImage.Format))
+    #print(dir(QImage.Format))
+    # print(dir(QPainter))
     #print(dir(hb._harfbuzz.Font))
     #print(dir(hb._harfbuzz.Buffer))
 

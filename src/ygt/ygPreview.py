@@ -6,7 +6,7 @@ from .freetypeFont import (
     RENDER_GRAYSCALE,
     RENDER_LCD_1,
     RENDER_LCD_2,
-    adjust_gamma,
+    #adjust_gamma,
 )
 from PyQt6.QtWidgets import (
     QWidget,
@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
-import cv2
+#import cv2
 
 
 PREVIEW_WIDTH = 450
@@ -144,7 +144,8 @@ class ygPreview(QLabel):
             if dark_theme:
                 l[count] = QColor(255, 255, 255, count) # type: ignore
             else:
-                l[count] = QColor(101, 53, 15, count) # type: ignore
+                # l[count] = QColor(101, 53, 15, count) # type: ignore
+                l[count] = QColor(0, 0, 0, count) # type: ignore
         return l # type: ignore
 
     def fetch_glyph(self, font, glyph_index):
@@ -406,6 +407,7 @@ class ygPreview(QLabel):
                 painter.drawLine(QLine(left, y_top, left, y_bot))
                 left += self.pixel_size
 
+
     def make_pixmap_grayscale(self) -> None:
         """Paint grayscale glyph."""
         dark_theme = (self.theme_choice == "dark")
@@ -438,7 +440,10 @@ class ygPreview(QLabel):
         self.setPixmap(self.pixmap)
         self.sig_preview_paint_done.emit(None)
 
+
     def make_pixmap_lcd1(self) -> None:
+        """ Make glyph rendered as subpixel 1
+        """
         dark_theme = (self.theme_choice == "dark")
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
@@ -457,16 +462,7 @@ class ygPreview(QLabel):
         # Get a copy of the pre-corrected bitmap to use as a mask. We'll skip drawing any
         # pixels with color 0,0,0.
         mask = copy.deepcopy(self.Z)
-        if dark_theme:
-            alpha = 0.95
-        else:
-            alpha = 0.88
-        if not 0 in list(self.Z.shape):
-            self.Z = adjust_gamma(self.Z, 2.2)
-            self.Z  = cv2.addWeighted(
-                self.Z, alpha, self.face.mk_bg_array(self.Z, self.background_color), 1.0 - alpha, 0
-            )
-            self.Z = adjust_gamma(self.Z, 1 / 1.8)
+
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
 
@@ -497,8 +493,10 @@ class ygPreview(QLabel):
 
         self.sig_preview_paint_done.emit(None)
 
+
     def make_pixmap_lcd2(self) -> None:
-        """Paint subpixel rendering with rgb pixel trios."""
+        """ Make glyph rendered as subpixel 1
+        """
         dark_theme = (self.theme_choice == "dark")
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
@@ -553,7 +551,7 @@ class ygPreview(QLabel):
         self.sig_preview_paint_done.emit(None)
 
 
-class ygStringPreviewPanel(QWidget):
+class ygStringPreviewPanel(QLabel):
     sig_go_to_glyph = pyqtSignal(object)
 
     def __init__(self, yg_preview: ygPreview, top_window) -> None:
@@ -566,9 +564,11 @@ class ygStringPreviewPanel(QWidget):
         self.minimum_y = 200
         self.setFixedSize(PREVIEW_WIDTH, STRING_PREVIEW_HEIGHT)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.paintEvent = self.paintEvent_a # type: ignore
+        # self.paintEvent = self.paintEvent_a # type: ignore
         self.rect_list: list = []
         self._full_glyph_list = []
+        self.make_pixmap = self.make_pixmap_a
+        self.pixmap = None
 
     def set_go_to_signal(self, func: Callable) -> None:
         self.sig_go_to_glyph.connect(func)
@@ -598,9 +598,14 @@ class ygStringPreviewPanel(QWidget):
         rect = QRect(0, 0, self.width(), self.height())
         painter.fillRect(rect, brush)
 
-    def paintEvent_a(self, event) -> None:
+    def make_pixmap_a(self) -> None:
+        """ Draw the size array.
+        """
         target_size = self.yg_preview.char_size
-        painter = QPainter(self)
+        if self.pixmap == None:
+            self.pixmap = QPixmap(self.width(), self.height())
+        self.pixmap.fill(self.yg_preview.background_color)
+        painter = QPainter(self.pixmap)
         self._fill_background(painter)
         if self.face == None:
             painter.end()
@@ -642,9 +647,13 @@ class ygStringPreviewPanel(QWidget):
                     break
         self.rect_list = self.face.rect_list
         painter.end()
+        self.setPixmap(self.pixmap)
 
-    def paintEvent_b(self, event) -> None:
-        painter = QPainter(self)
+    def make_pixmap_b(self) -> None:
+        if self.pixmap == None:
+            self.pixmap == QPixmap(self.width(), self.height())
+        self.pixmap.fill(self.yg_preview.background_color)
+        painter = QPainter(self.pixmap)
         self._fill_background(painter)
         if not self.yg_preview:
             return
@@ -660,11 +669,13 @@ class ygStringPreviewPanel(QWidget):
             self._full_glyph_list,
             xposition,
             yposition,
+            self.pixmap.toImage(),
             x_limit = PREVIEW_WIDTH - 50,
             dark_theme = dark_theme,
             bg_color = self.yg_preview.background_color
         )
         painter.end()
+        self.setPixmap(self.pixmap)
 
     def mousePressEvent(self, event) -> None:
         qp = event.position()
@@ -676,7 +687,7 @@ class ygStringPreviewPanel(QWidget):
                 rr = r
                 break
         if rr != None:
-            if self.paintEvent == self.paintEvent_a:
+            if self.make_pixmap == self.make_pixmap_a:
                 self.yg_preview.set_size(rr.size)
             else:
                 self.sig_go_to_glyph.emit(rr.gname.decode())
@@ -736,10 +747,12 @@ class ygStringPreview(QWidget):
         self.panel.set_go_to_signal(func)
 
     def set_string_preview(self) -> None:
-        self.panel.paintEvent = self.panel.paintEvent_b # type: ignore
+        self.panel.make_pixmap = self.panel.make_pixmap_b
+        # self.panel.paintEvent = self.panel.paintEvent_b # type: ignore
 
     def set_size_array(self) -> None:
-        self.panel.paintEvent = self.panel.paintEvent_a # type: ignore
+        self.panel.make_pixmap = self.panel.make_pixmap_a
+        # self.panel.paintEvent = self.panel.paintEvent_a # type: ignore
 
     def set_face(self, f: freetypeFont) -> None:
         if self.panel != None:
