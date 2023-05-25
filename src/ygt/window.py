@@ -60,7 +60,7 @@ from .harfbuzzFont import harfbuzzFont
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
-ygt_version = "0.2.2"
+ygt_version = "0.2.3"
 
 
 class ygPreviewFontMaker(QThread):
