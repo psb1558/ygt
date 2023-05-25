@@ -28,7 +28,6 @@ dependencies = [
     "fs >= 2.4.15",
     "ufo2ft >= 2.28.0",
     "numpy",
-    "opencv-python",
 ]
 
 [project.scripts]
