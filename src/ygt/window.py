@@ -739,7 +739,6 @@ class MainWindow(QMainWindow):
             self.preview_glyph_name_list.extend(
                 list(set(self.yg_font.additional_component_names([self.preview_glyph_name])))
             )
-        # print(self.preview_glyph_name_list)
 
         # What function does this line serve?
         self.yg_string_preview.set_face(self.yg_preview.face)
@@ -903,9 +902,7 @@ class MainWindow(QMainWindow):
         self.setup_script_menu()
         self.setup_language_menu()
         self.setup_feature_menu()
-        #if len(self.feature_actions):
-        #    for f in self.feature_actions:
-        #        f.setChecked(harfbuzzFont.tag_only(f.text()) in self.yg_font.harfbuzz_font.active_features)
+
 
     @pyqtSlot()
     def edit_menu_about_to_show(self) -> None:
@@ -997,8 +994,6 @@ class MainWindow(QMainWindow):
         self.pv_theme_dark_action.triggered.connect(self.yg_preview.set_theme_dark)
         self.pv_show_hints_action.triggered.connect(self.yg_preview.toggle_show_hints)
         self.pv_show_grid_action.triggered.connect(self.yg_preview.toggle_grid)
-        #for f in self.feature_actions:
-        #    f.triggered.connect(self.toggle_feature)
         self.feature_reset_action.triggered.connect(self.yg_font.harfbuzz_font.reset_features)
 
     def setup_preview_instance_connections(self) -> None:
@@ -1801,7 +1796,6 @@ class MainWindow(QMainWindow):
             exiting = True
             del_list = []
             for w in self.win_list:
-                # if not w.yg_font.clean():
                 if not w.is_file_clean():
                     r = w.save_query()
                     if r in [0, 2]:
