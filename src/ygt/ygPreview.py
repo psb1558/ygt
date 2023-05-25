@@ -564,9 +564,9 @@ class ygStringPreviewPanel(QLabel):
         self.minimum_y = 200
         self.setFixedSize(PREVIEW_WIDTH, STRING_PREVIEW_HEIGHT)
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        # self.paintEvent = self.paintEvent_a # type: ignore
         self.rect_list: list = []
         self._full_glyph_list = []
+        self._full_pos_list = []
         self.make_pixmap = self.make_pixmap_a
         self.pixmap = None
 
@@ -636,7 +636,6 @@ class ygStringPreviewPanel(QLabel):
                 spacing_mark = True,
                 dark_theme = dark_theme,
                 is_target=this_is_target,
-                bg_color = self.yg_preview.background_color
             )
             xposition += advance
             if xposition + advance > (PREVIEW_WIDTH - 50):
@@ -650,6 +649,7 @@ class ygStringPreviewPanel(QLabel):
         self.setPixmap(self.pixmap)
 
     def make_pixmap_b(self) -> None:
+        """ Draw a string. """
         if self.pixmap == None:
             self.pixmap == QPixmap(self.width(), self.height())
         self.pixmap.fill(self.yg_preview.background_color)
@@ -670,9 +670,9 @@ class ygStringPreviewPanel(QLabel):
             xposition,
             yposition,
             self.pixmap.toImage(),
+            positions = self._full_pos_list,
             x_limit = PREVIEW_WIDTH - 50,
-            dark_theme = dark_theme,
-            bg_color = self.yg_preview.background_color
+            dark_theme = dark_theme
         )
         painter.end()
         self.setPixmap(self.pixmap)
@@ -742,6 +742,14 @@ class ygStringPreview(QWidget):
         self.panel._full_glyph_list.clear()
         for ll in l:
             self.panel._full_glyph_list.append(ll)
+
+    @property
+    def full_pos_list(self):
+        return self.panel._full_pos_list
+
+    @full_pos_list.setter
+    def full_pos_list(self, l):
+        self.panel._full_pos_list = l
 
     def set_go_to_signal(self, func: Callable) -> None:
         self.panel.set_go_to_signal(func)

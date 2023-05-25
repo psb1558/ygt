@@ -334,7 +334,7 @@ class harfbuzzFont:
         indices = []
         for i in info:
             indices.append(i.codepoint)
-        return self.ft_font.indices_to_names(indices)
+        return self.ft_font.indices_to_names(indices), pos
 
     def shape(self, buf):
         buf.guess_segment_properties()

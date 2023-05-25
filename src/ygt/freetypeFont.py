@@ -138,6 +138,9 @@ class freetypeFont:
         self.face.set_char_size(i * 64)
         self._get_font_metrics()
 
+    def font_to_pixels(self, val):
+        return round(ft.FT_MulDiv(val, self.face.size.x_scale, 0x10000) / 64)
+
     def _get_font_metrics(self):
         """Populate class variables with basic metrics info for this font
         at the current size.
@@ -190,24 +193,8 @@ class freetypeFont:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, width)
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
-        
-    def mk_bg_array(self, ar, bg_color):
-        ZZ = copy.deepcopy(ar)
-        red =   bg_color.red()
-        green = bg_color.green()
-        blue =  bg_color.blue()
-        for row in ZZ:
-            for col in row:
-                for en, elem in enumerate(col):
-                    if en == 0:
-                        col[en] = red
-                    elif en == 1:
-                        col[en] = green
-                    elif en == 2:
-                        col[en] = blue
-        return ZZ
 
-        
+
     def _draw_char_lcd(
             self,
             painter,
@@ -216,8 +203,8 @@ class freetypeFont:
             spacing_mark = False,
             dark_theme = False,
             is_target = False,
-            bg_color = QColor("white"),
-            alpha = None,
+            x_offset = 0,
+            y_offset = 0
         ):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
@@ -229,7 +216,11 @@ class freetypeFont:
 
         y (int): The baseline
 
-        spacing_mark: True if this is a mark with non-zero advance width.
+        spacing_mark: Make nonspacing mark a spacing char.
+
+        dark_theme: true if letters lighter than background.
+
+        is_target: Whether this glyph matches the one in the big preview.
 
         """
         gdata = self._get_bitmap_metrics()
@@ -246,15 +237,14 @@ class freetypeFont:
 
         # Get starting position and metrics. For zero-width marks, we expand the width,
         # but only if spacing_mark=True.
-        ypos = y - gdata["bitmap_top"]
-        starting_ypos = ypos
-        is_mark = spacing_mark and gdata["advance"] == 0
+        starting_ypos = (y - gdata["bitmap_top"]) - y_offset
+        is_mark = spacing_mark and (gdata["advance"] == 0)
         if is_mark:
             starting_xpos = xpos = x
             xpos += 2
             gdata["advance"] = self.advance = round(gdata["width"] / 3) + 4
         else:
-            starting_xpos = xpos = x + gdata["bitmap_left"]
+            starting_xpos = xpos = (x + gdata["bitmap_left"]) + x_offset
 
         # Get QImage from Z; set composition mode; draw the glyph.
         if have_outline:
@@ -263,6 +253,7 @@ class freetypeFont:
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Screen)
             else:
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Multiply)
+            # painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, on=False)
             painter.drawImage(starting_xpos, starting_ypos, img)
 
         # Draw a red line under target glyph (the one in the current resolution).
@@ -301,8 +292,8 @@ class freetypeFont:
             spacing_mark=False,
             dark_theme = False,
             is_target = False,
-            bg_color = QColor("white"),
-            alpha = None
+            x_offset = 0,
+            y_offset = 0,
         ):
         """Draws a bitmap with grayscale rendering
 
@@ -317,15 +308,15 @@ class freetypeFont:
         """
         gdata = self._get_bitmap_metrics()
         Z = self.mk_array(gdata, RENDER_GRAYSCALE)
-        ypos = y - gdata["bitmap_top"]
+        ypos = (y - gdata["bitmap_top"]) - y_offset
         starting_ypos = ypos
-        is_mark = spacing_mark and gdata["advance"] == 0
+        is_mark = spacing_mark and (gdata["advance"] == 0)
         if is_mark:
             starting_xpos = xpos = x
             xpos += 2
             gdata["advance"] = self.advance = gdata["width"] + 4
         else:
-            starting_xpos = xpos = x + gdata["bitmap_left"]
+            starting_xpos = xpos = (x + gdata["bitmap_left"]) + x_offset
         qp = QPen(QColor("black"))
         qp.setWidth(1)
         for row in Z:
@@ -416,10 +407,10 @@ class freetypeFont:
                     x,
                     y,
                     background_image: QImage,
+                    positions: list = [],
                     x_limit = 200,
                     y_increment = 67,
                     dark_theme = False,
-                    bg_color = QColor("white"),
         ):
 
         self.last_glyph_index = None
@@ -432,14 +423,26 @@ class freetypeFont:
 
         xpos = x
         ypos = y
-        for i in indices:
+        for count, i in enumerate(indices):
             self.set_char(i)
+            x_offset = 0
+            y_offset = 0
+            x_advance = -1
+            # If possible, use positions from Harfbuzz. This will include kerning
+            # and correct positioning of diacritics.
+            if len(positions):
+                x_offset = self.font_to_pixels(positions[count].x_offset)
+                y_offset = self.font_to_pixels(positions[count].y_offset)
+                x_advance = self.font_to_pixels(positions[count].x_advance)
+
             #if self.last_glyph_index != None:
             #    k = self.face.get_kerning(
             #        self.last_glyph_index, i, ft.FT_KERNING_DEFAULT
             #    )
             #    xpos += k.x
-            adv = self.draw_char(painter, xpos, ypos, background_image, dark_theme = dark_theme, bg_color = bg_color)
+            adv = self.draw_char(painter, xpos, ypos, dark_theme = dark_theme, x_offset = x_offset, y_offset = y_offset)
+            if x_advance >= 0:
+                adv = x_advance
             xpos += adv
             if xpos >= x_limit:
                 xpos = x

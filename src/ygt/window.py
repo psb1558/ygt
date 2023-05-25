@@ -727,13 +727,14 @@ class MainWindow(QMainWindow):
         preview_text = self.yg_string_preview.panel._text
         self.preview_glyph_name_list = []
         if preview_text != None and len(preview_text) > 0:
-            l_full = self.yg_font.harfbuzz_font.get_shaped_names(preview_text)
+            l_full, p_full = self.yg_font.harfbuzz_font.get_shaped_names(preview_text)
             l_full_fixed = [c.decode() for c in l_full]
             # l is the list with redundancies removed (for making a subsetted font)
             l = list(set(l_full_fixed))
             self.preview_glyph_name_list.extend(l)
             # Store the full list for later use.
             self.yg_string_preview.full_glyph_list = l_full_fixed
+            self.yg_string_preview.full_pos_list = p_full
         if not self.preview_glyph_name in self.preview_glyph_name_list:
             self.preview_glyph_name_list.append(self.preview_glyph_name)
             self.preview_glyph_name_list.extend(
@@ -814,6 +815,8 @@ class MainWindow(QMainWindow):
     #
 
     def setup_script_menu(self):
+        if not self.yg_font:
+            return
         self.script_menu.clear()
         self.script_actions.clear()
         scripts = self.yg_font.harfbuzz_font.sub_scripts
@@ -826,6 +829,8 @@ class MainWindow(QMainWindow):
         self.script_menu.setEnabled(len(scripts) > 0)
 
     def setup_language_menu(self):
+        if not self.yg_font:
+            return
         self.language_menu.clear()
         self.language_actions.clear()
         languages = self.yg_font.harfbuzz_font.sub_languages
@@ -838,6 +843,8 @@ class MainWindow(QMainWindow):
         self.language_menu.setEnabled(len(languages) > 0)
 
     def setup_feature_menu(self):
+        if not self.yg_font:
+            return
         self.feature_menu.clear()
         self.feature_actions.clear()
         features = self.yg_font.harfbuzz_font.sub_features
@@ -1859,9 +1866,9 @@ class mainWinEventFilter(QObject):
 
 
 def main():
-    #import uharfbuzz as hb
+    import uharfbuzz
     #from inspect import getfullargspec, signature
-    #print(dir(QImage.Format))
+    print(dir(uharfbuzz._harfbuzz.GlyphPosition))
     # print(dir(QPainter))
     #print(dir(hb._harfbuzz.Font))
     #print(dir(hb._harfbuzz.Buffer))
