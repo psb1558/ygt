@@ -167,7 +167,7 @@ class fontViewCell(QLabel):
 
         # print("fontViewCell: " + self.glyph)
         ind = self.dialog.face.name_to_index(self.glyph.encode(encoding="utf-8"))
-        self.dialog.face.set_render_mode(RENDER_GRAYSCALE)
+        self.dialog.face.set_render_mode(RENDER_LCD_1)
         self.dialog.face.set_char(ind)
         baseline = (
             round((36 - self.dialog.face.face_height) / 2) + self.dialog.face.ascender
@@ -177,9 +177,7 @@ class fontViewCell(QLabel):
             painter,
             xpos,
             baseline,
-            dark_theme = self.dialog.dark_theme,
-            bg_color = fill_color,
-            alpha = alpha
+            dark_theme = self.dialog.dark_theme
         )
 
         painter.end()
