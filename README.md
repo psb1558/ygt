@@ -18,7 +18,27 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
-### Verasion 0.2.0
+### Version 0.2.3 (2023-5-25)
+
+Enable OpenType features in string preview panel (via Harfbuzz).
+
+Better lcd/subpixel rendering in string preview panel.
+
+Touched points are tinted pink.
+
+Previews of composite glyphs can now be displayed.
+
+Editing panels are disabled when there are no outlines.
+
+Pyinstaller spec file for Linux added.
+
+### Version 0.2.1 (2023-5-11)
+
+Fixed a bug.
+
+### Version 0.2.0 (2023-5-11)
+
+Enabled merge (Ygt can add its hints to existing hints).
 
 Added files supporting creation of executables.
 
