@@ -737,16 +737,12 @@ class ygStringPreview(QWidget):
 
         self.setLayout(self._layout)
 
-        # list of glyph names correspond
-
     def update_hb_string_data(self):
+        """Update metrics from harfbuzz font."""
         t = self.panel._text
         hb_font = self.top_window.yg_font.harfbuzz_font
         l_full, p_full = hb_font.get_shaped_names(t)
-        # self.full_glyph_list = [c.decode() for c in l_full]
-        self.full_pos_list = p_full # ***
-        # self.top_window.yg_font.ft_font.names_to_indices(self.full_glyph_list)
-        # Need to translate to small font gids. Then what to do with it?
+        self.full_pos_list = p_full
 
     @property
     def full_glyph_list(self):
