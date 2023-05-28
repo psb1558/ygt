@@ -6,7 +6,7 @@
 - it emphasizes modern requirements for TrueType hinting while deemphasizing the obsolete;
 - the most common commands use unmodified shortcut keys so you can work quickly with one hand on the keyboard and one on the mouse;
 - it will read either a TrueType font or a UFO;
-- it can save hints in an easily understood and edited YAML file,
+- it saves hints in an easily understood and edited YAML file,
 - which can be compiled to a hinted font either from inside the program or from the command line,
 - or it can save compiled hints to a UFO (from which fontmake can produce a hinted font)
 
