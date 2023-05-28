@@ -770,6 +770,9 @@ class MainWindow(QMainWindow):
         preview_text = self.yg_string_preview.panel._text
         if preview_text != None and len(preview_text) > 0:
             self.yg_string_preview.set_string_preview()
+            if self.yg_preview.hb_instance_changed:
+                self.yg_preview.hb_instance_changed = False
+                self.yg_string_preview.update_hb_string_data()
         else:
             self.yg_string_preview.set_size_array()
         self.yg_string_preview.set_face(self.yg_preview.face)
@@ -1868,10 +1871,10 @@ class mainWinEventFilter(QObject):
 def main():
     import uharfbuzz
     #from inspect import getfullargspec, signature
-    print(dir(uharfbuzz._harfbuzz.GlyphPosition))
+    print(dir(uharfbuzz.Font))
     # print(dir(QPainter))
-    #print(dir(hb._harfbuzz.Font))
-    #print(dir(hb._harfbuzz.Buffer))
+    # print(dir(hb._harfbuzz.hb_font_set_var_named_instance))
+    # print(dir(hb._harfbuzz.Buffer))
 
     app = QApplication([])
 

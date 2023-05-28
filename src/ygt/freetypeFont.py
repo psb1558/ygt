@@ -3,8 +3,8 @@ import freetype as ft # type: ignore
 import numpy
 import copy
 from tempfile import SpooledTemporaryFile
-from PyQt6.QtGui import QColor, QPen, QImage, QRegion, QBitmap, QPixmap, QPainter
-from PyQt6.QtCore import QRect, QLine
+from PyQt6.QtGui import QColor, QPen, QImage, QPainter
+from PyQt6.QtCore import QLine
 
 RENDER_GRAYSCALE = 1
 RENDER_LCD_1 = 2
@@ -204,7 +204,7 @@ class freetypeFont:
             dark_theme = False,
             is_target = False,
             x_offset = 0,
-            y_offset = 0
+            y_offset = 0,
         ):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
@@ -253,7 +253,7 @@ class freetypeFont:
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Screen)
             else:
                 painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Multiply)
-            # painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, on=False)
+            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, on=False)
             painter.drawImage(starting_xpos, starting_ypos, img)
 
         # Draw a red line under target glyph (the one in the current resolution).
@@ -406,7 +406,6 @@ class freetypeFont:
                     s: str | list,
                     x,
                     y,
-                    background_image: QImage,
                     positions: list = [],
                     x_limit = 200,
                     y_increment = 67,
@@ -429,18 +428,24 @@ class freetypeFont:
             y_offset = 0
             x_advance = -1
             # If possible, use positions from Harfbuzz. This will include kerning
-            # and correct positioning of diacritics.
+            # and correct positioning of diacritics. These will still be valid
+            # for our mini-font--only we've got to translate gids in Harfbuzz's
+            # cooy of our font to gids in the subsetted font returned by
+            # window.ygPreviewFontMaker. We do this by doing gid-->gname before
+            # running window.ygPreviewFontMaker and gname-->gid afterwards.
             if len(positions):
                 x_offset = self.font_to_pixels(positions[count].x_offset)
                 y_offset = self.font_to_pixels(positions[count].y_offset)
                 x_advance = self.font_to_pixels(positions[count].x_advance)
 
-            #if self.last_glyph_index != None:
-            #    k = self.face.get_kerning(
-            #        self.last_glyph_index, i, ft.FT_KERNING_DEFAULT
-            #    )
-            #    xpos += k.x
-            adv = self.draw_char(painter, xpos, ypos, dark_theme = dark_theme, x_offset = x_offset, y_offset = y_offset)
+            adv = self.draw_char(
+                painter,
+                xpos,
+                ypos,
+                dark_theme = dark_theme,
+                x_offset = x_offset,
+                y_offset = y_offset,
+                )
             if x_advance >= 0:
                 adv = x_advance
             xpos += adv

@@ -1,6 +1,7 @@
 from .freetypeFont import freetypeFont, RENDER_LCD_1, RENDER_GRAYSCALE
 from fontTools import subset
 from .ygModel import ygFont
+from .ygLabel import ygLabel
 from math import ceil
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QScrollArea, QLabel
@@ -113,7 +114,7 @@ class fontViewPanel(QWidget):
             self.setStyleSheet("background-color: white;")
 
 
-class fontViewCell(QLabel):
+class fontViewCell(ygLabel):
     def __init__(self, dialog: fontViewWindow, glyph: list) -> None:
         super().__init__()
         self.dialog = dialog

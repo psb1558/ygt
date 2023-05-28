@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
 #import cv2
+from .ygLabel import ygLabel
 
 
 PREVIEW_WIDTH = 450
@@ -39,7 +40,6 @@ class ygPreviewContainer(QScrollArea):
         self._layout.addWidget(preview)
         self._layout.addWidget(string_preview)
         self.setLayout(self._layout)
-
 
 class ygPreview(QLabel):
 
@@ -90,6 +90,7 @@ class ygPreview(QLabel):
         self.Z: list = []
         self.instance_dict: Optional[dict] = None
         self.instance: Optional[str] = None
+        self.hb_instance_changed = False
 
         # Figure out if we have a dark or a light theme.
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
@@ -338,7 +339,13 @@ class ygPreview(QLabel):
         self._set_instance()
 
     def _set_instance(self) -> None:
+        # Set the instance in the FreeType font
         self.face.set_instance(self.instance)
+        # Set the instance in the harfbuzz font.
+        ygf = self.top_window.yg_font
+        ygf.harfbuzz_font.set_coordinates(ygf.instance_coordinates(self.instance))
+        self.hb_instance_changed = True
+        # Leave the rest of the harfbuzz stuff for updating the string preview.
         self.set_label_text()
         self.make_pixmap()
         self.update()
@@ -551,7 +558,7 @@ class ygPreview(QLabel):
         self.sig_preview_paint_done.emit(None)
 
 
-class ygStringPreviewPanel(QLabel):
+class ygStringPreviewPanel(ygLabel):
     sig_go_to_glyph = pyqtSignal(object)
 
     def __init__(self, yg_preview: ygPreview, top_window) -> None:
@@ -669,7 +676,6 @@ class ygStringPreviewPanel(QLabel):
             self._full_glyph_list,
             xposition,
             yposition,
-            self.pixmap.toImage(),
             positions = self._full_pos_list,
             x_limit = PREVIEW_WIDTH - 50,
             dark_theme = dark_theme
@@ -732,7 +738,16 @@ class ygStringPreview(QWidget):
         self.setLayout(self._layout)
 
         # list of glyph names correspond
-        
+
+    def update_hb_string_data(self):
+        t = self.panel._text
+        hb_font = self.top_window.yg_font.harfbuzz_font
+        l_full, p_full = hb_font.get_shaped_names(t)
+        # self.full_glyph_list = [c.decode() for c in l_full]
+        self.full_pos_list = p_full # ***
+        # self.top_window.yg_font.ft_font.names_to_indices(self.full_glyph_list)
+        # Need to translate to small font gids. Then what to do with it?
+
     @property
     def full_glyph_list(self):
         return self.panel._full_glyph_list

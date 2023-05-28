@@ -9,6 +9,7 @@ class harfbuzzFont:
 
     SCRIPT_DEFAULT = 0
 
+    # We omit cvNN and ssNN tags, but instead construct these when needed.
     LAYOUT_TAGS = {
         "abvf": "Above-base Forms",
         "abvm": "Above-base Mark Positioning",
@@ -207,6 +208,10 @@ class harfbuzzFont:
         if "mkmk" in self._pos_features:
             self._active_features.append("mkmk")
 
+    def set_coordinates(self, d: dict):
+        print(self.hb_font.funcs)
+        self.hb_font.set_variations(d)
+
     @property
     def current_script_index(self) -> int:
         try:
@@ -325,6 +330,7 @@ class harfbuzzFont:
             pass
 
     def get_shaped_names(self, s):
+        print("running get_shaped_names")
         buf = self.hb_buffer(s)
         if self.current_script_tag:
             buf.script = self.current_script_tag
@@ -337,11 +343,10 @@ class harfbuzzFont:
         return self.ft_font.indices_to_names(indices), pos
 
     def shape(self, buf):
+        print("Running shape")
         buf.guess_segment_properties()
         features = {f: True for f in self.active_features}
         hb.shape(self.hb_font, buf, features)
-        char_info = buf.glyph_infos
-        char_pos = buf.glyph_positions
         return buf.glyph_infos, buf.glyph_positions
 
     def hb_buffer(self, s: str) -> hb.Buffer:

@@ -636,6 +636,9 @@ class ygFont(QObject):
                 def_inst = k
                 break
         return def_inst
+    
+    def instance_coordinates(self, inst: str) -> dict:
+        return self.instances[inst]
 
     @property
     def axis_tags(self) -> list:
