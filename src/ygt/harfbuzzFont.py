@@ -165,7 +165,7 @@ class harfbuzzFont:
         self._sub_scripts = hb.ot_layout_table_get_script_tags(self.hb_face, "GSUB")
         self._sub_languages = ["dflt"]
         self._sub_features = []
-        self._active_features = []
+        self._active_features = {}
         self.current_script_tag = ""
         self.current_language_tag = ""
         if "DFLT" in self._sub_scripts:
@@ -192,24 +192,23 @@ class harfbuzzFont:
     def set_default_features(self):
         self._active_features.clear()
         if "ccmp" in self._sub_features:
-            self._active_features.append("ccmp")
+            self._active_features["ccmp"] = True
         if "liga" in self._sub_features:
-            self._active_features.append("liga")
+            self._active_features["liga"] = True
         if "calt" in self._sub_features:
-            self._active_features.append("calt")
+            self._active_features["calt"] = True
         if "rlig" in self._sub_features:
-            self._active_features.append("rlig")
+            self._active_features["rlig"] = True
         if "locl" in self._sub_features:
-            self._active_features.append("locl")
+            self._active_features["locl"] = True
         if "kern" in self._pos_features:
-            self._active_features.append("kern")
+            self._active_features["kern"] = True
         if "mark" in self._pos_features:
-            self._active_features.append("mark")
+            self._active_features["mark"] = True
         if "mkmk" in self._pos_features:
-            self._active_features.append("mkmk")
+            self._active_features["mkmk"] = True
 
     def set_coordinates(self, d: dict):
-        print(self.hb_font.funcs)
         self.hb_font.set_variations(d)
 
     @property
@@ -314,23 +313,28 @@ class harfbuzzFont:
         self._sub_features = sorted(self._sub_features)
         self.set_default_features()
 
-    def activate_feature(self, f) -> None:
+    def activate_feature(self, f: str, index: int = -1) -> None:
         add_feature = False
         if f in self._pos_features:
             add_feature = True
+        val = True
         if f in self._sub_features:
-            add_feature = True
+            # If index == 0, that means don't add the feature.
+            if index > 0:
+                val = index - 1
+                add_feature = True
+            elif index < 0:
+                add_feature = True
         if add_feature and not f in self._active_features:
-            self._active_features.append(f)
+            self._active_features[f] = val
 
     def deactivate_feature(self, f: str) -> None:
         try:
-            self._active_features.remove(f)
+            del self._active_features[f]
         except ValueError:
             pass
 
     def get_shaped_names(self, s):
-        print("running get_shaped_names")
         buf = self.hb_buffer(s)
         if self.current_script_tag:
             buf.script = self.current_script_tag
@@ -343,10 +347,8 @@ class harfbuzzFont:
         return self.ft_font.indices_to_names(indices), pos
 
     def shape(self, buf):
-        print("Running shape")
         buf.guess_segment_properties()
-        features = {f: True for f in self.active_features}
-        hb.shape(self.hb_font, buf, features)
+        hb.shape(self.hb_font, buf, self.active_features)
         return buf.glyph_infos, buf.glyph_positions
 
     def hb_buffer(self, s: str) -> hb.Buffer:

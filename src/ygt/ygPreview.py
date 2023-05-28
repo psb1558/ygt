@@ -738,10 +738,9 @@ class ygStringPreview(QWidget):
         self.setLayout(self._layout)
 
     def update_hb_string_data(self):
-        """Update metrics from harfbuzz font."""
+        """Update metrics from harfbuzz font. Call if instance has been changed."""
         t = self.panel._text
-        hb_font = self.top_window.yg_font.harfbuzz_font
-        l_full, p_full = hb_font.get_shaped_names(t)
+        l_full, p_full = self.top_window.yg_font.harfbuzz_font.get_shaped_names(t)
         self.full_pos_list = p_full
 
     @property

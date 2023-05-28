@@ -852,10 +852,14 @@ class MainWindow(QMainWindow):
         self.feature_actions.clear()
         features = self.yg_font.harfbuzz_font.sub_features
         for f in features:
+            prefix = f[0:2]
             fa = self.feature_menu.addAction(harfbuzzFont.expanded_feature_name(f))
             fa.setCheckable(True)
-            fa.setChecked(f in self.yg_font.harfbuzz_font._active_features)
-            fa.triggered.connect(self.toggle_feature)
+            fa.setChecked(f in self.yg_font.harfbuzz_font._active_features.keys())
+            if f == "salt" or prefix == "cv":
+                fa.triggered.connect(self.set_indexed_feature)
+            else:
+                fa.triggered.connect(self.toggle_feature)
             self.feature_actions.append(fa)
         self.feature_menu.setEnabled(len(features) > 0)
         self.feature_reset_action.setEnabled(len(features) > 0)
@@ -1376,6 +1380,7 @@ class MainWindow(QMainWindow):
         """Returns 0 if file opened in this window
         Returns 1 if this window already has a file open
         Returns 2 if the file is already open (the window is activated and brought to top)
+        Returns 3 if there was an error and the file could not be opened.
 
         f param can be:
         - the name of a .yaml file
@@ -1447,6 +1452,9 @@ class MainWindow(QMainWindow):
                 self.yg_font = ygFont(self, yaml_source, ygt_filename=ygt_filename)
             else:
                 self.yg_font = ygFont(self, filename)
+            if not self.yg_font.load_successful:
+                self.yg_font = None
+                return 3
             self.yg_font.setup_error_signal(self.error_manager.new_message)
 
             self.setup_script_menu()
@@ -1731,6 +1739,33 @@ class MainWindow(QMainWindow):
             self.yg_font.harfbuzz_font.activate_feature(f)
 
     @pyqtSlot()
+    def set_indexed_feature(self):
+        i = 1
+        f = harfbuzzFont.tag_only(self.sender().text())
+        if f in self.yg_font.harfbuzz_font.active_features:
+            self.yg_font.harfbuzz_font.deactivate_feature(f)
+        else:
+            i, ok = QInputDialog().getInt(
+                self,
+                "Index for " + f,
+                "Index (0 to remove feature):",
+                value = 1,
+                min = 0,
+                max = 100,
+            )
+            if ok:
+                if i > 0:
+                    self.yg_font.harfbuzz_font.activate_feature(f, index = i)
+                else:
+                    self.yg_font.harfbuzz_font.deactivate_feature(f)
+            # Do an appropriately titled dialog that only accepts int > 0.
+            # If necessary, alter activate_feature() to accept an int
+            # argument and put that in the _active_features instead of
+            # a bool.
+            # Call activate_feature() if int > 0; else call
+            # deactivate_feature(). ***
+
+    @pyqtSlot()
     def set_script(self):
         tag = self.sender().text()
         self.yg_font.harfbuzz_font.select_script(tag)
@@ -1871,7 +1906,7 @@ class mainWinEventFilter(QObject):
 def main():
     import uharfbuzz
     #from inspect import getfullargspec, signature
-    print(dir(uharfbuzz.Font))
+    # print(dir(uharfbuzz.Font))
     # print(dir(QPainter))
     # print(dir(hb._harfbuzz.hb_font_set_var_named_instance))
     # print(dir(hb._harfbuzz.Buffer))

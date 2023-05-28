@@ -245,6 +245,7 @@ class SourceFile:
         yaml_source can be either a dict (containing newly initialized ygt code) or
         the name of either a .yaml file or a ufo.
         """
+        self.load_successful = True
         # Determine the filename
         if type(yaml_source) is str:
             self.filename = yaml_source
@@ -261,22 +262,27 @@ class SourceFile:
             self.source_type = "ufo"
         else:
             # This shouldn't happen.
-            raise Exception("Bad filename " + str(self.filename))
+            self.load_successful = False
+            return
+            #raise Exception("Bad filename " + str(self.filename))
 
         # Read the yaml source. Either the skeleton created earlier (but shouldn't
         # it be here?), a yaml file, or a yaml file in a ufo.
         if type(yaml_source) is dict:
             self.y_doc = copy.deepcopy(yaml_source)
         else:
-            if self.source_type == "yaml":
-                y_stream = open(self.filename, "r")
-                self.y_doc = yaml.safe_load(y_stream)
-                y_stream.close()
-            else:
-                ufo = ufoLib.UFOReader(self.filename)
-                if ufo.formatVersionTuple[0] == 3:
-                    doc = ufo.readData("org.ygthinting/source.yaml")
-                    self.y_doc = yaml.safe_load(doc)
+            try:
+                if self.source_type == "yaml":
+                    y_stream = open(self.filename, "r")
+                    self.y_doc = yaml.safe_load(y_stream)
+                    y_stream.close()
+                else:
+                    ufo = ufoLib.UFOReader(self.filename)
+                    if ufo.formatVersionTuple[0] == 3:
+                        doc = ufo.readData("org.ygthinting/source.yaml")
+                        self.y_doc = yaml.safe_load(doc)
+            except Exception:
+                self.load_successful = False
 
     @property
     def source(self) -> dict:
@@ -342,6 +348,7 @@ class ygFont(QObject):
         self, main_window: Any, source_file: Union[str, dict], ygt_filename: str = ""
     ) -> None:
         super().__init__()
+        self.load_successful = True
         self.main_window = main_window
 
         #
@@ -354,6 +361,19 @@ class ygFont(QObject):
         # Open the font
         #
         self.source_file = SourceFile(source_file, yaml_filename=ygt_filename)
+        if not self.source_file.load_successful:
+            if self.main_window:
+                self.main_window.show_error_message(
+                    [
+                        "Error",
+                        "File load error",
+                        "Can't load Ygt source, probably because the file can't be found."
+                    ]
+                )
+                self.load_successful = False
+                return
+            else:
+                raise Exception("Can't load Ygt source.")
 
         # Fix directory (change to directory where source file is located)
         d = None
@@ -368,14 +388,21 @@ class ygFont(QObject):
         self.font_files = FontFiles(self.source)
         fontfile = self.font_files.in_font
         if not fontfile:
-            raise Exception("Need the name of an existing font")
+            if self.main_window:
+                self.main_window.show_error_message(
+                    ["Error", "Font not specified", "Didn't find the name of a font file in the source"]
+                    )
+                self.load_successful = False
+                return
+            else:
+                raise Exception("Need the name of an existing font")
             # Need to let user try again.
         split_fn = os.path.splitext(str(fontfile))
         extension = split_fn[1]
         ft_open_error = False
         # self.freetype_font = None
-        # Here we get *two* copies of the font in memory: one in FontTools format,
-        # the other FreeType.
+        # Here we get *three* copies of the font in memory: one in FontTools format,
+        # one FreeType, one Harfbuzz. Is there any way around this?
         if extension == ".ttf":
             try:
                 self.ft_font = ttLib.TTFont(fontfile)
@@ -396,7 +423,18 @@ class ygFont(QObject):
                 print(e)
                 ft_open_error = True
         if ft_open_error:
-            raise Exception("Can't find font file " + str(fontfile))
+            if self.main_window:
+                self.main_window.show_error_message(
+                    [
+                        "Error",
+                        "Font file not found",
+                        "Can't find font file" + str(fontfile)
+                    ]
+                )
+                self.load_successful = False
+                return
+            else:
+                raise Exception("Can't find font file " + str(fontfile))
             # Fix this! Need a dialog box and a chance to try again for a valid font.
             #
             # Do this: open a file dialog for locating the font file, and place this
