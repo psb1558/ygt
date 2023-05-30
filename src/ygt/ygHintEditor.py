@@ -3206,6 +3206,24 @@ class ygGlyphView(QGraphicsView):
             self.yg_glyph_scene.delete_selected_hints()
         elif event.key() == Qt.Key.Key_Plus:
             self.yg_glyph_scene.add_to_set()
+        elif event.key() == Qt.Key.Key_J:
+            with_ctrl = (
+                QApplication.keyboardModifiers() & Qt.KeyboardModifier.ControlModifier
+            ) == Qt.KeyboardModifier.ControlModifier
+            with_shift = (
+                QApplication.keyboardModifiers() & Qt.KeyboardModifier.ShiftModifier
+            ) == Qt.KeyboardModifier.ShiftModifier
+            if with_ctrl and with_shift:
+                print("========= locals() =========")
+                g = locals()
+                gg = g.keys()
+                for ggg in gg:
+                    print(str(ggg)+ ": " + str(sys.getsizeof(g[ggg])))
+                print("========= globals() =========")
+                g = globals()
+                gg = g.keys()
+                for ggg in gg:
+                    print(str(ggg)+ ": " + str(sys.getsizeof(g[ggg])))
         elif event.key() == Qt.Key.Key_Minus:
             self.yg_glyph_scene.delete_from_set()
         elif event.key() == 32 and not event.isAutoRepeat():
