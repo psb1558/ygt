@@ -1,3 +1,6 @@
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QDialogButtonBox, QComboBox, QLineEdit
+from PyQt6.QtGui import QRegularExpressionValidator
+from PyQt6.QtCore import QRegularExpression
 import uharfbuzz as hb
 from tempfile import SpooledTemporaryFile
 from .freetypeFont import freetypeFont
@@ -8,6 +11,14 @@ class harfbuzzFont:
     LANG_DEFAULT = 0xFFFF
 
     SCRIPT_DEFAULT = 0
+
+    DEFAULT_LAYOUT_TAGS = [
+        "ccmp",
+        "liga",
+        "calt",
+        "rlig",
+        "locl"
+    ]
 
     # We omit cvNN and ssNN tags, but instead construct these when needed.
     LAYOUT_TAGS = {
@@ -201,6 +212,18 @@ class harfbuzzFont:
             self._active_features["rlig"] = True
         if "locl" in self._sub_features:
             self._active_features["locl"] = True
+        if "abvm" in self._pos_features:
+            self._active_features["abvm"] = True
+        if "blwm" in self._pos_features:
+            self._active_features["blwm"] = True
+        if "clig" in self._sub_features:
+            self._active_features["clig"] = True
+        if "curs" in self._sub_features:
+            self._active_features["curs"] = True
+        if "dist" in self._sub_features:
+            self._active_features["dist"] = True
+        if "rclt" in self._sub_features:
+            self._active_features["rclt"] = True
         if "kern" in self._pos_features:
             self._active_features["kern"] = True
         if "mark" in self._pos_features:
@@ -256,7 +279,7 @@ class harfbuzzFont:
     @property
     def active_features(self) -> list:
         return self._active_features
-
+    
     @classmethod
     def expanded_feature_name(self, tag) -> str:
         assert len(tag) == 4, "Length of layout tag must be 4 (1)."
@@ -280,16 +303,16 @@ class harfbuzzFont:
         return tag
 
     def select_script(self, s: str) -> None:
-        """If the currently selected language is not available for the newly
-        selected script, change language to 'dflt'.
+        """ If the currently selected language is not available for the newly
+            selected script, change language to 'dflt'.
         """
         if s in self._sub_scripts:
             self.current_script_tag = s
         self.select_language(self.current_language_tag)
 
     def select_language(self, l: str) -> None:
-        """New tag should have been selected from a list of available tags.
-        And set up feature list for newly selected language.
+        """ New tag should have been selected from a list of available tags.
+            And set up feature list for newly selected language.
         """
         self.current_language_tag = ""
         self._sub_languages.clear()
@@ -314,6 +337,9 @@ class harfbuzzFont:
         self.set_default_features()
 
     def activate_feature(self, f: str, index: int = -1) -> None:
+        """ Activate an OT feature. if index > 0, that is included
+            as well, for indexed features like salt.
+        """
         add_feature = False
         if f in self._pos_features:
             add_feature = True
@@ -331,10 +357,14 @@ class harfbuzzFont:
     def deactivate_feature(self, f: str) -> None:
         try:
             del self._active_features[f]
-        except ValueError:
+        except KeyError:
             pass
 
     def get_shaped_names(self, s):
+        """ Run shape() (below) on string s, and return:
+            1. A list of glyph names
+            2. Hb's buf.glyph_positions (all the metrics data we need)
+        """
         buf = self.hb_buffer(s)
         if self.current_script_tag:
             buf.script = self.current_script_tag
@@ -347,11 +377,16 @@ class harfbuzzFont:
         return self.ft_font.indices_to_names(indices), pos
 
     def shape(self, buf):
+        """ Run hb.shape() on a Harfbuzz buffer and return buf.glyph_infos
+            and buf.glyph_positions exactly as hb returns them.
+        """
         buf.guess_segment_properties()
-        hb.shape(self.hb_font, buf, self.active_features)
+        hb.shape(self.hb_font, buf, self._active_features)
         return buf.glyph_infos, buf.glyph_positions
 
     def hb_buffer(self, s: str) -> hb.Buffer:
+        """ Create an empty hb.Buffer and add string s to it.
+        """
         buf = hb.Buffer.create()
         buf.add_str(s)
         return buf
@@ -359,3 +394,58 @@ class harfbuzzFont:
     # @pyqtSlot()
     def reset_features(self):
         self.set_default_features()
+
+
+class hbFeatureDialog(QDialog):
+    def __init__(self, top_window, hb_font):
+        super().__init__()
+        self.valid = True
+        self.top_window = top_window
+        self.hb_font = hb_font
+        self.setWindowTitle("Set an OpenType feature")
+        self._layout = QVBoxLayout()
+        self.input_layout = QHBoxLayout()
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self.feature_list = []
+        for s in self.hb_font._sub_features:
+            self.feature_list.append(harfbuzzFont.expanded_feature_name(s))
+        for s in self.hb_font._pos_features:
+            self.feature_list.append(harfbuzzFont.expanded_feature_name(s))
+        self.feature_list = sorted(self.feature_list)
+        if len(self.feature_list):
+            self.feature_box = QComboBox()
+            for f in self.feature_list:
+                self.feature_box.addItem(f)
+            self.line_editor = QLineEdit()
+            validator = QRegularExpressionValidator()
+            re = QRegularExpression("\\b(on|off|[1-9]|[1-9][0-9])\\b")
+            validator.setRegularExpression(re)
+            self.line_editor.setValidator(validator)
+            self.input_layout.addWidget(self.feature_box)
+            self.input_layout.addWidget(self.line_editor)
+            self._layout.addLayout(self.input_layout)
+            self._layout.addWidget(self.buttonBox)
+            self.setLayout(self._layout)
+        else:
+            self.valid = False
+
+    def accept(self) -> None:
+        t = self.line_editor.text()
+        current_tag = harfbuzzFont.tag_only(self.feature_box.currentText())
+        val = None
+        if len(t):
+            try:
+                val = int(t)
+            except ValueError:
+                if t == "on":
+                    val = True
+                elif t == "off":
+                    val = False
+        if val != None:
+            self.hb_font.active_features[current_tag] = val
+        super().accept()

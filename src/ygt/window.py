@@ -55,7 +55,7 @@ from PyQt6.QtGui import (
     QPainter,
 )
 from fontTools import ttLib, ufoLib # type: ignore
-from .harfbuzzFont import harfbuzzFont
+from .harfbuzzFont import harfbuzzFont, hbFeatureDialog
 
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
@@ -247,6 +247,7 @@ class MainWindow(QMainWindow):
         self.feature_actions: list = []
         self.feature_menu = None
         self.feature_reset_action = None
+        self.custom_feature_action = None
         self.window_list: list = []
         self.preview_maker: Optional[ygPreviewFontMaker] = None
         self.font_generator: Optional[ygFontGenerator] = None
@@ -427,6 +428,8 @@ class MainWindow(QMainWindow):
         self.language_menu.setEnabled(False)
         self.feature_menu = self.preview_menu.addMenu("Features")
         self.feature_menu.setEnabled(False)
+        self.custom_feature_action = self.preview_menu.addAction("Feature...")
+        self.custom_feature_action.setEnabled(False)
         self.feature_reset_action = self.preview_menu.addAction("Reset features")
         self.feature_reset_action.setEnabled(False)
 
@@ -853,16 +856,19 @@ class MainWindow(QMainWindow):
         features = self.yg_font.harfbuzz_font.sub_features
         for f in features:
             prefix = f[0:2]
-            fa = self.feature_menu.addAction(harfbuzzFont.expanded_feature_name(f))
-            fa.setCheckable(True)
-            fa.setChecked(f in self.yg_font.harfbuzz_font._active_features.keys())
-            if f == "salt" or prefix == "cv":
-                fa.triggered.connect(self.set_indexed_feature)
-            else:
-                fa.triggered.connect(self.toggle_feature)
-            self.feature_actions.append(fa)
+            if not f in harfbuzzFont.DEFAULT_LAYOUT_TAGS:
+                fa = self.feature_menu.addAction(harfbuzzFont.expanded_feature_name(f))
+                fa.setCheckable(True)
+                fa.setChecked(f in self.yg_font.harfbuzz_font._active_features)
+                # fa.setChecked(self.yg_font.harfbuzz_font.feature_is_active(f))
+                if f == "salt" or prefix == "cv":
+                    fa.triggered.connect(self.set_indexed_feature)
+                else:
+                    fa.triggered.connect(self.toggle_feature)
+                self.feature_actions.append(fa)
         self.feature_menu.setEnabled(len(features) > 0)
         self.feature_reset_action.setEnabled(len(features) > 0)
+        self.custom_feature_action.setEnabled(len(features) > 0)
             
 
     @pyqtSlot()
@@ -1009,6 +1015,7 @@ class MainWindow(QMainWindow):
         self.pv_show_hints_action.triggered.connect(self.yg_preview.toggle_show_hints)
         self.pv_show_grid_action.triggered.connect(self.yg_preview.toggle_grid)
         self.feature_reset_action.triggered.connect(self.yg_font.harfbuzz_font.reset_features)
+        self.custom_feature_action.triggered.connect(self.hb_custom_feature)
 
     def setup_preview_instance_connections(self) -> None:
         if self.yg_font.is_variable_font and self.instance_actions != None:
@@ -1729,6 +1736,14 @@ class MainWindow(QMainWindow):
         )
         if ok:
             self.yg_preview.set_size(i)
+
+    @pyqtSlot()
+    def hb_custom_feature(self):
+        d = hbFeatureDialog(self, self.yg_font.harfbuzz_font)
+        d.exec()
+        # We need to launch harfbuzzFont.hbFeatureDialog, passing
+        # ref to self and the current harfbuzzFont.
+        pass
     
     @pyqtSlot()
     def toggle_feature(self):
@@ -1748,10 +1763,10 @@ class MainWindow(QMainWindow):
             i, ok = QInputDialog().getInt(
                 self,
                 "Index for " + f,
-                "Index (0 to remove feature):",
+                "Index: ",
                 value = 1,
-                min = 0,
-                max = 100,
+                min = 1,
+                max = 99,
             )
             if ok:
                 if i > 0:
@@ -1886,9 +1901,13 @@ class MainWindow(QMainWindow):
         self.preferences.set_show_off_curve_points(self.show_off_curve_points)
         self.preferences.set_show_point_numbers(self.show_point_numbers)
 
-    # Could be property
+    @property
     def current_glyph(self):
         return self.glyph_pane.yg_glyph_scene.yg_glyph
+    
+    @property
+    def current_glyph_name(self):
+        return self.current_glyph.gname
 
 
 class mainWinEventFilter(QObject):

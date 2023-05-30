@@ -38,20 +38,6 @@ class fontViewWindow(QWidget):
         self.yg_font = yg_font
         self.face = self.yg_font.freetype_font
         self.face.set_size(24)
-        #if self.yg_font.source_file.source_type == "yaml":
-        #    self.face = freetypeFont(filename, size=24, render_mode=RENDER_LCD_1)
-        #else:
-        #    temp_font = copy.deepcopy(self.yg_font.preview_font)
-        #    tf = SpooledTemporaryFile(max_size=3000000, mode='b')
-        #    options = subset.Options(glyph_names=True)
-        #    options.layout_features = []
-        #    subsetter = subset.Subsetter(options)
-        #    subsetter.populate(glyphs=self.glyph_name_list)
-        #    subsetter.subset(temp_font)
-        #    temp_font.save(tf, 1)
-        #    tf.seek(0)
-        #    self.face = freetypeFont(tf, size=24, render_mode=RENDER_LCD_1)
-        #    tf.close()
         if not self.face.valid:
             self.valid = False
             return

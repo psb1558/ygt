@@ -358,7 +358,7 @@ class ygFont(QObject):
         self.main_window.add_undo_stack(self.undo_stack)
 
         #
-        # Open the font
+        # Open the Ygt source and the font.
         #
         self.source_file = SourceFile(source_file, yaml_filename=ygt_filename)
         if not self.source_file.load_successful:
@@ -435,14 +435,9 @@ class ygFont(QObject):
                 return
             else:
                 raise Exception("Can't find font file " + str(fontfile))
-            # Fix this! Need a dialog box and a chance to try again for a valid font.
-            #
-            # Do this: open a file dialog for locating the font file, and place this
-            # in the SourceFile object. If user doesn't choose a font, then close
-            # this window (send signal to top_window?). The application can continue
-            # if other windows are open.
 
-        # Making a deepcopy so we can always have a clean copy of the font to work with.
+        # Make a deepcopy so we can always have a clean copy of the font to work with.
+
         self.preview_font = copy.deepcopy(self.ft_font)
 
         #
@@ -469,7 +464,8 @@ class ygFont(QObject):
         #
         self.glyphs = ygGlyphs(self.source).data
         self.defaults = ygDefaults(self, self.source)
-        self.defaults._set_default({"init-graphics": False, "cleartype": True})
+        if not "defaults" in self.source:
+            self.defaults._set_default({"init-graphics": False, "cleartype": True})
         if not "cvt" in self.source:
             self.source["cvt"] = {}
         if len(self.source["cvt"]) == 0:
@@ -622,17 +618,13 @@ class ygFont(QObject):
         for order_index, gn in enumerate(raw_order_list):
             self.name_to_index[gn] = order_index
 
-        # Get a list of tuples containing unicodes and glyph names (still
-        # omitting composites). Sort first by unicode, then by name. This
-        # is our order for the font.
+        # Get a list of tuples containing unicodes and glyph names.
+        # Sort first by unicode, then by name. This is our order for the font.
         for gn in glyph_names:
             g = self.ft_font["glyf"][gn]
-            # Remove this test if we're going to display composites.
-            # if not g.isComposite():
-            if True:
-                cc = g.getCoordinates(self.ft_font["glyf"])
-                if len(cc) > 0:
-                    self.glyph_list.append((self.get_unicode(gn), gn))
+            cc = g.getCoordinates(self.ft_font["glyf"])
+            if len(cc) > 0:
+                self.glyph_list.append((self.get_unicode(gn), gn))
         self.glyph_list.sort(key=lambda x: x[1])
         self.glyph_list.sort(key=lambda x: x[0])
 
@@ -640,8 +632,8 @@ class ygFont(QObject):
         for g in self.glyph_list:
             self.unicode_to_name[g[0]] = g[1]
 
-        # Like name_to_index, but this one looks up the index in a slimmed-down,
-        # non-composite-only list. This is for navigating in this program.
+        # Like name_to_index, but this returns the glyph's index in Ygt order.
+        # This is for navigating in this program.
         self.glyph_index = {}
         for glyph_counter, g in enumerate(self.glyph_list):
             self.glyph_index[g[1]] = glyph_counter
@@ -756,8 +748,6 @@ class ygFont(QObject):
             )
 
     def is_composite(self, gname: str) -> bool:
-        if not gname in self.name_to_index:
-            return False
         return self.ft_font['glyf'][gname].isComposite()
 
     def has_hints(self, gname: str) -> bool:
@@ -1229,7 +1219,7 @@ class fontInfoEditCommand(QUndoCommand):
     def __init__(self, yg_font: ygFont) -> None:
         super().__init__()
         self.yg_font = yg_font
-        self.yg_glyph = self.yg_font.main_window.current_glyph()
+        self.yg_glyph = self.yg_font.main_window.current_glyph
         self.undo_state = fontInfoSaver(self.yg_font)
         self.redo_state: Union[fontInfoSaver, None] = None
 
