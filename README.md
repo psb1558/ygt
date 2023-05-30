@@ -18,7 +18,7 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
-### Version 0.2.4 (circa 2023-5-31)
+### Version 0.2.4 (2023-5-30)
 
 Qt was adding extra antialiasing in string/array preview. We now display only FreeType antialiasing.
 
@@ -27,6 +27,10 @@ Harfbuzz metrics updated when instance is changed.
 Can now pass indices to cvNN and salt.
 
 Fixed crash on file not found.
+
+Preview->Features launches a dialog with which you can supply values, on, off, or 1-99 to any GSUB feature. Use it (among other things) to turn off features that are on by default.
+
+Enhanced Preview->Script and Preview->Language menus (descriptions as well as tags).
 
 ### Version 0.2.3 (2023-5-25)
 
