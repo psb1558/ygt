@@ -827,7 +827,7 @@ class MainWindow(QMainWindow):
         self.script_actions.clear()
         scripts = self.yg_font.harfbuzz_font.sub_scripts
         for s in scripts:
-            sa = self.script_menu.addAction(s)
+            sa = self.script_menu.addAction(harfbuzzFont.expanded_script_name(s))
             sa.setCheckable(True)
             sa.setChecked(s == self.yg_font.harfbuzz_font.current_script_tag)
             sa.triggered.connect(self.set_script)
@@ -841,7 +841,7 @@ class MainWindow(QMainWindow):
         self.language_actions.clear()
         languages = self.yg_font.harfbuzz_font.sub_languages
         for l in languages:
-            la = self.language_menu.addAction(l)
+            la = self.language_menu.addAction(harfbuzzFont.expanded_language_name(l))
             la.setCheckable(True)
             la.setChecked(l == self.yg_font.harfbuzz_font.current_language_tag)
             la.triggered.connect(self.set_language)
@@ -1782,17 +1782,17 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def set_script(self):
-        tag = self.sender().text()
+        tag = harfbuzzFont.tag_only(self.sender().text())
         self.yg_font.harfbuzz_font.select_script(tag)
         for s in self.script_actions:
-            s.setChecked(tag == s.text())
+            s.setChecked(tag == harfbuzzFont.tag_only(s.text()))
 
     @pyqtSlot()
     def set_language(self):
-        tag = self.sender().text()
+        tag = harfbuzzFont.tag_only(self.sender().text())
         self.yg_font.harfbuzz_font.select_language(tag)
         for l in self.language_actions:
-            l.setChecked(tag == l.text())
+            l.setChecked(tag == harfbuzzFont.tag_only(l.text()))
 
     #
     # Program exit
@@ -1925,7 +1925,7 @@ class mainWinEventFilter(QObject):
 def main():
     import uharfbuzz
     #from inspect import getfullargspec, signature
-    # print(dir(uharfbuzz.Font))
+    # print(dir(Qt.Key))
     # print(dir(QPainter))
     # print(dir(hb._harfbuzz.hb_font_set_var_named_instance))
     # print(dir(hb._harfbuzz.Buffer))
