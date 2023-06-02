@@ -452,11 +452,6 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addSeparator()
 
-        self.index_label_action = self.view_menu.addAction("Point indices")
-        self.coord_label_action = self.view_menu.addAction("Point coordinates")
-
-        self.view_menu.addSeparator()
-
         self.next_glyph_action = self.view_menu.addAction("Next Glyph")
         self.next_glyph_action.setShortcut(QKeySequence.StandardKey.MoveToNextChar)
 
@@ -469,7 +464,7 @@ class MainWindow(QMainWindow):
 
         self.font_view_action = self.view_menu.addAction("Show Font Viewer")
 
-        self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
+        # self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
 
         self.view_menu.setEnabled(False)
 
@@ -806,15 +801,12 @@ class MainWindow(QMainWindow):
     # Indices vs. coordinates outline display
     #
 
-    @pyqtSlot()
-    def index_labels(self) -> None:
-        self.points_as_coords = False
-        self.glyph_pane.yg_glyph_scene.set_point_display("index")
-
-    @pyqtSlot()
-    def coord_labels(self) -> None:
-        self.points_as_coords = True
-        self.glyph_pane.yg_glyph_scene.set_point_display("coord")
+    def toggle_points_as_coords(self):
+        self.points_as_coords = not self.points_as_coords
+        if self.points_as_coords:
+            self.glyph_pane.yg_glyph_scene.set_point_display("coord")
+        else:
+            self.glyph_pane.yg_glyph_scene.set_point_display("index")
 
     #
     # Prep for menu display
@@ -871,14 +863,14 @@ class MainWindow(QMainWindow):
         self.custom_feature_action.setEnabled(len(features) > 0)
             
 
-    @pyqtSlot()
-    def view_menu_about_to_show(self) -> None:
-        if self.points_as_coords:
-            self.index_label_action.setEnabled(True)
-            self.coord_label_action.setEnabled(False)
-        else:
-            self.index_label_action.setEnabled(False)
-            self.coord_label_action.setEnabled(True)
+    #@pyqtSlot()
+    #def view_menu_about_to_show(self) -> None:
+    #    if self.points_as_coords:
+    #        self.index_label_action.setEnabled(True)
+    #        self.coord_label_action.setEnabled(False)
+    #    else:
+    #        self.index_label_action.setEnabled(False)
+    #        self.coord_label_action.setEnabled(True)
 
     @pyqtSlot()
     def file_menu_about_to_show(self) -> None:
@@ -1028,10 +1020,6 @@ class MainWindow(QMainWindow):
         self.zoom_in_action.triggered.connect(self.glyph_pane.zoom)
         self.zoom_out_action.triggered.connect(self.glyph_pane.zoom)
         self.original_size_action.triggered.connect(self.glyph_pane.zoom)
-
-    def setup_point_label_connections(self) -> None:
-        self.index_label_action.triggered.connect(self.index_labels)
-        self.coord_label_action.triggered.connect(self.coord_labels)
 
     def setup_nav_connections(self) -> None:
         self.next_glyph_action.triggered.connect(self.glyph_pane.next_glyph)
@@ -1495,7 +1483,7 @@ class MainWindow(QMainWindow):
             self.set_up_feature_list()
             self.setup_editor_connections()
             self.setup_preview_instance_connections()
-            self.setup_point_label_connections()
+            # self.setup_point_label_connections()
             # Should we send a signal for preview update from here?
             self._preview_current_glyph()
         return 0

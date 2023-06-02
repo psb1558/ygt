@@ -1438,6 +1438,7 @@ class ygGlyphScene(QGraphicsScene):
     sig_min_dist = pyqtSignal(object)
     sig_swap_macfunc_points = pyqtSignal(object)
     sig_toggle_point_numbers = pyqtSignal()
+    sig_toggle_points_as_coords = pyqtSignal()
     sig_set_category = pyqtSignal(object)
     sig_name_points = pyqtSignal(object)
 
@@ -1561,6 +1562,7 @@ class ygGlyphScene(QGraphicsScene):
         self.sig_off_curve_visibility.connect(self.toggle_off_curve_visibility)
         self.sig_make_macfunc.connect(self.make_macfunc)
         self.sig_toggle_point_numbers.connect(self.toggle_point_numbers)
+        self.sig_toggle_points_as_coords.connect(self.toggle_points_as_coords)
         self.sig_set_category.connect(self.set_category)
         self.sig_round_hint.connect(self.toggle_hint_rounding)
         self.sig_min_dist.connect(self.toggle_min_dist)
@@ -1947,6 +1949,10 @@ class ygGlyphScene(QGraphicsScene):
     @pyqtSlot(object)
     def toggle_min_dist(self, hint: ygHintView) -> None:
         self._model_hint(hint).toggle_min_dist()
+
+    @pyqtSlot()
+    def toggle_points_as_coords(self):
+        self.preferences.top_window().toggle_points_as_coords()
 
     @pyqtSlot()
     def toggle_point_numbers(self) -> None:
@@ -2681,9 +2687,16 @@ class ygGlyphScene(QGraphicsScene):
         # Show/hide point numbers
 
         if self.point_numbers_showing:
-            toggle_point_number_visibility = cmenu.addAction("Hide point numbers")
+            toggle_point_number_visibility = cmenu.addAction("Hide point labels")
         else:
-            toggle_point_number_visibility = cmenu.addAction("Show point numbers")
+            toggle_point_number_visibility = cmenu.addAction("Show point labels")
+
+        # Toggle point labels as coordinates
+
+        if self.preferences.top_window().points_as_coords:
+            toggle_points_as_coords = cmenu.addAction("On-curve labels as indices")
+        else:
+            toggle_points_as_coords = cmenu.addAction("On-curve labels as coordinates")
 
         # Set an override for Unicode category detection
 
@@ -2969,6 +2982,8 @@ class ygGlyphScene(QGraphicsScene):
             self.sig_off_curve_visibility.emit()
         if action == toggle_point_number_visibility:
             self.sig_toggle_point_numbers.emit()
+        if action == toggle_points_as_coords:
+            self.sig_toggle_points_as_coords.emit()
         if action in category_actions:
             self.sig_set_category.emit(action.text())
         if hint and (action == reverse_hint):
