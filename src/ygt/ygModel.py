@@ -2164,9 +2164,9 @@ class ygGlyph(QObject):
         except KeyError:
             l = list(yg_font.ft_font.getGlyphSet())
             if "A" in l:
-                self.gname = "A"
+                self._gname = "A"
             elif len(l) >= 2:
-                self.gname = l[1]
+                self._gname = l[1]
             else:
                 raise Exception("Tried to load nonexistent glyph " + self.gname)
             self.ft_glyph = yg_font.ft_font["glyf"][self.gname]
