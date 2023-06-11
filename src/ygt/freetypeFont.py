@@ -1,7 +1,7 @@
 from typing import Optional
 import freetype as ft # type: ignore
 import numpy
-import copy
+# import copy
 from tempfile import SpooledTemporaryFile
 from PyQt6.QtGui import QColor, QPen, QImage, QPainter
 from PyQt6.QtCore import QLine
@@ -63,7 +63,6 @@ class freetypeFont:
                     font.close()
             else:
                 self.face = ft.Face(font)
-
         except Exception as e:
             print("Error in freetypeFont.__init__:")
             print(e.args)
@@ -89,7 +88,7 @@ class freetypeFont:
         self.set_render_mode(render_mode)
         self.face.set_char_size(self.char_size)
         self._get_font_metrics()
-        self.last_glyph_index = None
+        #self.last_glyph_index = None
         self.rect_list: list = []
 
     def mk_bw_color_list(self, dark: bool = False) -> list:
@@ -221,6 +220,10 @@ class freetypeFont:
         dark_theme: true if letters lighter than background.
 
         is_target: Whether this glyph matches the one in the big preview.
+
+        x_offset (int): How much to move glyph in x direction (independent of advance)
+
+        y_offset (int): How much to move glyph in y direction (independent of advance)
 
         """
         gdata = self._get_bitmap_metrics()
@@ -383,7 +386,6 @@ class freetypeFont:
             result.append(self.index_to_name(i))
         return result
 
-
     def char_to_index(self, char):
         try:
             return self.face.get_char_index(char)
@@ -412,7 +414,7 @@ class freetypeFont:
                     dark_theme = False,
         ):
 
-        self.last_glyph_index = None
+        #self.last_glyph_index = None
         self.reset_rect_list()
 
         if type(s) is str:
@@ -452,8 +454,8 @@ class freetypeFont:
             if xpos >= x_limit:
                 xpos = x
                 ypos += y_increment
-                self.last_glyph_index = None
+                #self.last_glyph_index = None
             if ypos > y + y_increment:
                 break
-            self.last_glyph_index = i
+            #self.last_glyph_index = i
         return self.rect_list

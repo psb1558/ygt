@@ -999,7 +999,7 @@ class harfbuzzFont:
             self._sub_features = sorted(self._sub_features)
             self.set_default_features()
 
-    def set_default_features(self):
+    def set_default_features(self) -> None:
         self._active_features.clear()
         if "ccmp" in self._sub_features:
             self._active_features["ccmp"] = True
@@ -1030,7 +1030,7 @@ class harfbuzzFont:
         if "mkmk" in self._pos_features:
             self._active_features["mkmk"] = True
 
-    def set_coordinates(self, d: dict):
+    def set_coordinates(self, d: dict) -> None:
         self.hb_font.set_variations(d)
 
     @property
@@ -1064,9 +1064,9 @@ class harfbuzzFont:
     def sub_languages(self) -> list:
         return self._sub_languages
 
-    @property
-    def pos_features(self) -> list:
-        return self._pos_features
+    #@property
+    #def pos_features(self) -> list:
+    #    return self._pos_features
 
     #@property
     #def all_features(self) -> list:
@@ -1081,7 +1081,6 @@ class harfbuzzFont:
     
     @classmethod
     def expanded_script_name(self, tag: str) -> str:
-        assert len(tag) == 4, "Length of layout tag must be 4 (1)."
         try:
             return tag + " - " + harfbuzzFont.SCRIPT_TAGS[tag]
         except KeyError:
@@ -1089,7 +1088,6 @@ class harfbuzzFont:
 
     @classmethod
     def expanded_language_name(self, tag: str) -> str:
-        assert len(tag) == 4, "Length of layout tag must be 4 (" + str(tag) + ")"
         try:
             return tag + " - " + harfbuzzFont.LANGUAGE_TAGS[tag]
         except KeyError:
@@ -1097,7 +1095,6 @@ class harfbuzzFont:
 
     @classmethod
     def expanded_feature_name(self, tag) -> str:
-        assert len(tag) == 4, "Length of layout tag must be 4 (1)."
         ss = tag
         prefix = tag[0:2]
         try:
@@ -1166,7 +1163,7 @@ class harfbuzzFont:
         if f in self._sub_features:
             # If index == 0, that means don't add the feature.
             if index > 0:
-                val = index - 1
+                val = index
                 add_feature = True
             elif index < 0:
                 add_feature = True
@@ -1179,7 +1176,7 @@ class harfbuzzFont:
         except KeyError:
             pass
 
-    def get_shaped_names(self, s):
+    def get_shaped_names(self, s: str):
         """ Run shape() (below) on string s, and return:
             1. A list of glyph names
             2. Hb's buf.glyph_positions (all the metrics data we need)

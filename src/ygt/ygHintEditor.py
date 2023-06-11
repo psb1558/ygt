@@ -1,6 +1,5 @@
-from typing import Any, TypeVar, Union, Optional, List, Dict, Callable, overload, Tuple
+from typing import Any, Union, Optional, List, Dict, Callable, Tuple
 import sys
-import numpy
 import uuid
 import copy
 from .macfuncDialog import macfuncDialog
@@ -41,9 +40,6 @@ from PyQt6.QtGui import (
     QAction,
     QPainter,
     QPalette,
-    QImage,
-    QPixmap,
-    QBitmap,
 )
 from PyQt6.QtWidgets import (
     QWidget,
@@ -66,14 +62,14 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
 )
 from fontTools.pens.basePen import BasePen  # type: ignore
-from fontTools.pens.freetypePen import FreeTypePen
+# from fontTools.pens.freetypePen import FreeTypePen
 from .ygPreferences import ygPreferences
 # from .freetypeFont import freetypeFont
 
 
 HINT_ARROW_WIDTH = 3
 HINT_ANCHOR_WIDTH = 3
-HINT_LINK_WIDTH = 1
+#HINT_LINK_WIDTH = 1
 HINT_ARROWHEAD_WIDTH = 2
 
 HINT_ANCHOR_COLOR = QColor(255, 0, 255, 128)
@@ -336,10 +332,6 @@ class ygHintView(QGraphicsItem, ygSelectable):
         result = self.yg_hint.hint_type
         if hasattr(self.yg_hint, "cvt"):
             result += " (" + str(self.yg_hint.cv) + ")"
-        # Tooltip not yet. By default, the tooltip appears when the mouse is
-        # anywhere in a widget's bounding rect. For hints that is not helpful.
-        # *** There is a way to change this behavior: figure it out later.
-        # self.setToolTip(result)
         return result
 
     def _set_name(self, name: str) -> None:
@@ -422,9 +414,9 @@ class ygHintView(QGraphicsItem, ygSelectable):
             mypoints.append(self.yg_glyph_scene.resolve_point_identifier(mpt))
         return mypoints
 
-    def _update_touches(self) -> None:
-        self._remove_touches()
-        self._touch_all_points()
+    #def _update_touches(self) -> None:
+    #    self._remove_touches()
+    #    self._touch_all_points()
 
     def _get_macfunc_targets(self, p: ygParams) -> list:
         """p should be the point_dict from a ygParams object. Survey all the
@@ -1505,7 +1497,7 @@ class ygGlyphScene(QGraphicsScene):
         self.yTranslate = self.canvas_size[3]
 
         # Used when we draw an image instead of rendering the glyph.
-        self.glyph_img = None
+        #self.glyph_img = None
 
         # Try to get rid of ref to this scene in the model's ygGlyph class.
         # For now, we've got to ignore the type so as to avoid circular imports.
@@ -1526,7 +1518,7 @@ class ygGlyphScene(QGraphicsScene):
         self.yTranslate = 0
         self.original_coordinates: Any = None
         self.center_x = self.xTranslate + round(self.adv / 2)
-        self.optimal_size = (0, 0)
+        #self.optimal_size = (0, 0)
 
         # Setup for selecting
 
@@ -1754,7 +1746,7 @@ class ygGlyphScene(QGraphicsScene):
             visible_y = rect.height()
             optimal_x = round(visible_x * 0.8)
             optimal_y = round(visible_y * 0.8)
-            self.optimal_size = (optimal_x, optimal_y)
+            #self.optimal_size = (optimal_x, optimal_y)
             width, height = self.yg_glyph.dimensions()
             if width != 0:
                 x_ratio = optimal_x / width
@@ -2293,17 +2285,17 @@ class ygGlyphScene(QGraphicsScene):
     def current_axis(self) -> str:
         return self.yg_glyph.axis
 
-    def _distance(
-        self, pt_a: Union[ygPointView, ygPoint], pt_b: Union[ygPointView, ygPoint]
-    ) -> int:
-        """Returns the distance between two points (in font units) along
-        the current axis.
-        """
-        pa = self._model_point(pt_a)
-        pb = self._model_point(pt_b)
-        if self.current_axis() == "y":
-            return abs(pa.font_y - pb.font_y)
-        return abs(pa.font_x - pb.font_x)
+    #def _distance(
+    #    self, pt_a: Union[ygPointView, ygPoint], pt_b: Union[ygPointView, ygPoint]
+    #) -> int:
+    #    """Returns the distance between two points (in font units) along
+    #    the current axis.
+    #    """
+    #    pa = self._model_point(pt_a)
+    #    pb = self._model_point(pt_b)
+    #    if self.current_axis() == "y":
+    #        return abs(pa.font_y - pb.font_y)
+    #    return abs(pa.font_x - pb.font_x)
 
     #
     # Factories
@@ -2909,14 +2901,14 @@ class ygGlyphScene(QGraphicsScene):
 
         # Is this stranded code? We're no longer offering "Make Set" via the context menu,
         # and the point of this code seems to be to set a variable that's never consulted.
-        touched_point = None
+        #touched_point = None
         num_of_selected_points = len(selected_points)
         try:
             if num_of_selected_points >= 2:
                 for p in selected_points:
                     if p.touched and len(p.owners) >= 1:
                         if hint_type_nums[p.owners[0].yg_hint.hint_type] in [1, 2]:
-                            touched_point = p
+                            #touched_point = p
                             break
         except Exception:
             pass

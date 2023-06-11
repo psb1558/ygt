@@ -1,13 +1,10 @@
-from .freetypeFont import freetypeFont, RENDER_LCD_1, RENDER_GRAYSCALE
-from fontTools import subset
+from .freetypeFont import RENDER_LCD_1, RENDER_GRAYSCALE
 from .ygModel import ygFont
 from .ygLabel import ygLabel
 from math import ceil
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QScrollArea, QLabel
+from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QScrollArea
 from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap
-from tempfile import SpooledTemporaryFile
-import copy
 
 
 # A window (not a dialog, despite the filename, retained to avoid complicating
@@ -128,18 +125,14 @@ class fontViewCell(ygLabel):
             self.pixmap = QPixmap(36,36)
 
         fill_color = None
-        alpha = 0.88
         if self.dialog.dark_theme:
             if is_composite:
                 # fill_color = QColor(169, 169, 169)
                 fill_color = QColor(64, 42, 9)
-                alpha = 0.96
             elif self.has_hints:
                 fill_color = QColor(0, 0, 186, 128)
-                alpha = 0.95
             else:
                 fill_color = QColor("black")
-                alpha = 0.95
         else:
             if is_composite:
                 # fill_color = QColor(211, 211, 211)

@@ -1,5 +1,5 @@
 # import inspect
-from typing import Any, TypeVar, Union, Optional
+from typing import Any, Union, Optional
 import sys
 import os
 import copy
@@ -52,7 +52,6 @@ from PyQt6.QtGui import (
     QCloseEvent,
     QAction,
     QFontDatabase,
-    QPainter,
 )
 from fontTools import ttLib, ufoLib # type: ignore
 from .harfbuzzFont import harfbuzzFont, hbFeatureDialog
@@ -171,16 +170,23 @@ class MainWindow(QMainWindow):
             parent = None
         ):
         super(MainWindow, self).__init__(parent=parent)
+
         # undo_group will hold undo stacks for each edited glyph and
         # font-level data.
         self.undo_group = QUndoGroup()
         self.undo_group.cleanChanged.connect(self.clean_changed)
+
         self.error_manager = ygErrorMessages(self)
+
+        # Each top-level window will have a reference to a list of windows.
         if not win_list:
             self.win_list = [self]
         else:
             self.win_list = win_list
+
         self.filename = ""
+
+        # Various objects controlled from this window.
         self.font_info_editor: Optional[fontInfoWindow] = None
         self.cvt_editor: Optional[editorDialog] = None
         self.prep_editor: Optional[editorDialog] = None
@@ -195,6 +201,7 @@ class MainWindow(QMainWindow):
         )
         self.statusbar.addWidget(self.statusbar_label)
 
+        # Get icons for toolbar.
         if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
             self.icon_path = os.path.split(sys._MEIPASS)[0]
             self.icon_path = os.path.join(sys._MEIPASS, "icons")
@@ -213,14 +220,14 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self.spacer_action = self.toolbar.addWidget(self.spacer)
-        self.preview_container = QVBoxLayout()
+        #self.preview_container = QVBoxLayout()
         self.qs = QSplitter(self)
         self.glyph_pane: Optional[ygGlyphView] = None
         self.preview_glyph_name: Optional[str] = None
         self.preview_glyph_name_list: list = []
         self.yg_font: Optional[ygFont] = None
         self.source_editor: Optional[ygYAMLEditor] = None
-        self.preview_scroller: Optional[QScrollArea] = None
+        #self.preview_scroller: Optional[QScrollArea] = None
         self.yg_preview = None # type: Optional[ygPreview]
         self.yg_string_preview: Optional[ygStringPreview] = None
         self.app = app
@@ -248,7 +255,7 @@ class MainWindow(QMainWindow):
         self.feature_menu = None
         self.feature_reset_action = None
         self.custom_feature_action = None
-        self.window_list: list = []
+        #self.window_list: list = []
         self.preview_maker: Optional[ygPreviewFontMaker] = None
         self.font_generator: Optional[ygFontGenerator] = None
         self.auto_preview_update = True
@@ -496,8 +503,6 @@ class MainWindow(QMainWindow):
         self.edit_cvt_action = self.code_menu.addAction("Edit cvt...")
 
         self.edit_prep_action = self.code_menu.addAction("Edit prep...")
-
-        # self.edit_cvar_action = self.code_menu.addAction("Edit cvar...")
 
         self.edit_functions_action = self.code_menu.addAction("Edit Functions...")
 
@@ -852,7 +857,6 @@ class MainWindow(QMainWindow):
                 fa = self.feature_menu.addAction(harfbuzzFont.expanded_feature_name(f))
                 fa.setCheckable(True)
                 fa.setChecked(f in self.yg_font.harfbuzz_font._active_features)
-                # fa.setChecked(self.yg_font.harfbuzz_font.feature_is_active(f))
                 if f == "salt" or prefix == "cv":
                     fa.triggered.connect(self.set_indexed_feature)
                 else:
@@ -1079,8 +1083,8 @@ class MainWindow(QMainWindow):
             self.next_instance_action.setEnabled(False)
             self.instance_menu.setEnabled(False)
 
-    def set_up_feature_list(self) -> None:
-        pass
+    #def set_up_feature_list(self) -> None:
+    #    pass
 
     def set_size_and_position(self):
         """Set size and position of the main window."""
@@ -1492,8 +1496,8 @@ class MainWindow(QMainWindow):
     # GUI management
     #
 
-    def setup_stem_buttons(self, axis):
-        pass
+    #def setup_stem_buttons(self, axis):
+    #    pass
 
     @pyqtSlot(object)
     def selection_changed(self, selection_profile: list):
