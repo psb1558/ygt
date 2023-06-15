@@ -805,6 +805,7 @@ class MainWindow(QMainWindow):
             self.error_manager.new_message(
                 {"msg": "Can't create the font view dialog.", "mode": "console"}
             )
+            self.font_viewer = None
 
     #
     # Indices vs. coordinates outline display
