@@ -723,6 +723,7 @@ class ygStringPreview(QWidget):
         self.button_widget_layout = QHBoxLayout()
         self.button_widget_layout.addWidget(QLabel("Text:"))
         self.qle = QLineEdit()
+        self.qle.setClearButtonEnabled(True)
         self.button_widget_layout.addWidget(self.qle)
         self.submit_button = QPushButton("Submit")
         self.button_widget_layout.addWidget(self.submit_button)
