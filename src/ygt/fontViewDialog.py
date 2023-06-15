@@ -2,9 +2,18 @@ from .freetypeFont import RENDER_LCD_1, RENDER_GRAYSCALE
 from .ygModel import ygFont
 from .ygLabel import ygLabel
 from math import ceil
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import pyqtSignal, QRect
 from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QScrollArea
-from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap
+from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap, QPen
+
+
+FONT_VIEW_DARK_COMPOSITE = QColor(64, 42, 9)
+FONT_VIEW_DARK_HINTED    = QColor(0, 0, 186, 128)
+FONT_VIEW_DARK_UNHINTED  = QColor("black")
+FONT_VIEW_COMPOSITE      = QColor(255, 239, 128)
+FONT_VIEW_HINTED         = QColor(186, 255, 255, 128)
+FONT_VIEW_UNHINTED       = QColor("white")
+FONT_VIEW_HIGHLIGHT      = QColor(255, 0, 0, 128)
 
 
 # A window (not a dialog, despite the filename, retained to avoid complicating
@@ -48,18 +57,29 @@ class fontViewWindow(QWidget):
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
         fvp = fontViewPanel(self)
-        scroll_area = QScrollArea()
-        scroll_area.setWidget(fvp)
-        self._layout.addWidget(scroll_area)
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidget(fvp)
+        self._layout.addWidget(self.scroll_area)
 
         self.sig_switch_to_glyph.connect(
             self.top_window.glyph_pane.switch_from_font_viewer
         )
 
-    def update_cell(self, g):
+    def set_glyph_visible(self, g: str) -> None:
         gc = self.glyph_index[g]
-        gc.make_pixmap()
+        self.scroll_area.ensureWidgetVisible(gc, xMargin=0)
+
+    def update_cell(self, g, force_redraw: bool = False):
+        gc = self.glyph_index[g]
+        gc.make_pixmap(force_redraw = force_redraw)
         gc.update()
+
+    def set_current_glyph(self, g: str, b: bool) -> None:
+        gc = self.glyph_index[g]
+        gc._current_glyph = b
+        self.update_cell(g, force_redraw = True)
+        #gc.make_pixmap()
+        #gc.update()
 
     def clicked_glyph(self, g: str) -> None:
         self.sig_switch_to_glyph.emit(g)
@@ -105,9 +125,18 @@ class fontViewCell(ygLabel):
         self.setFixedSize(36, 36)
         self.has_hints = False
         self.pixmap = None
+        self._current_glyph = False
         self.make_pixmap()
 
-    def make_pixmap(self) -> None:
+    #@property
+    #def current_glyph(self) -> bool:
+    #    return self._current_glyph
+    
+    #@current_glyph.setter
+    #def current_glyph(self, b: bool) -> None:
+    #    self._current_glyph = b
+
+    def make_pixmap(self, force_redraw: bool = False) -> None:
         """ Make a pixmap for this cell and draw the glyph on it.
             This makes for rapid painting and fast scrolling. If there's
             a change, simply repaint the pixmap and call update() on the
@@ -116,7 +145,7 @@ class fontViewCell(ygLabel):
         # Test to see if we really need to paint the pixmap.
         is_composite = self.dialog.yg_font.is_composite(self.glyph)
         has_hints_now = self.dialog.yg_font.has_hints(self.glyph)
-        if self.pixmap != None and self.has_hints == has_hints_now:
+        if self.pixmap != None and self.has_hints == has_hints_now and not force_redraw:
             return
         else:
             self.has_hints = has_hints_now
@@ -127,25 +156,30 @@ class fontViewCell(ygLabel):
         fill_color = None
         if self.dialog.dark_theme:
             if is_composite:
-                # fill_color = QColor(169, 169, 169)
-                fill_color = QColor(64, 42, 9)
+                fill_color = FONT_VIEW_DARK_COMPOSITE
             elif self.has_hints:
-                fill_color = QColor(0, 0, 186, 128)
+                fill_color = FONT_VIEW_DARK_HINTED
             else:
-                fill_color = QColor("black")
+                fill_color = FONT_VIEW_DARK_UNHINTED
         else:
             if is_composite:
-                # fill_color = QColor(211, 211, 211)
-                fill_color = QColor(255, 239, 128)
+                fill_color = FONT_VIEW_COMPOSITE
             elif self.has_hints:
-                fill_color = QColor(186, 255, 255, 128)
+                fill_color = FONT_VIEW_HINTED
             else:
-                fill_color = QColor("white")
+                fill_color = FONT_VIEW_UNHINTED
         self.pixmap.fill(fill_color)
 
         painter = QPainter(self.pixmap)
 
-        # print("fontViewCell: " + self.glyph)
+        if self._current_glyph:
+            highlight_color = FONT_VIEW_HIGHLIGHT
+            r = QRect(1, 1, 34, 34)
+            qp = QPen(highlight_color)
+            qp.setWidth(2)
+            painter.setPen(qp)
+            painter.drawRect(r)
+
         ind = self.dialog.face.name_to_index(self.glyph.encode(encoding="utf-8"))
         self.dialog.face.set_render_mode(RENDER_LCD_1)
         self.dialog.face.set_char(ind)

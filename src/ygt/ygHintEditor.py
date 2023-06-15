@@ -3115,6 +3115,7 @@ class ygGlyphView(QGraphicsView):
         self.preferences["top_window"].connect_editor_signals()
 
     def switch_to(self, gname: str) -> None:
+        self.preferences.top_window().font_viewer.set_current_glyph(self.yg_glyph_scene.yg_glyph.gname, False)
         self.yg_glyph_scene.reset_scale()
         self.yg_glyph_scene.yg_glyph.cleanup_glyph()
         # Store the current glyph if it is changed.
@@ -3137,6 +3138,7 @@ class ygGlyphView(QGraphicsView):
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
         new_glyph.sig_hints_changed.emit(new_glyph.hints)
+        self.preferences.top_window().font_viewer.set_current_glyph(new_glyph.gname, True)
 
     @pyqtSlot()
     def guess_cv(self) -> None:

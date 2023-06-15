@@ -788,13 +788,17 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_font_view(self) -> None:
-        """Display the modeless dialog in fontViewWindow.py."""
-        if not self.font_viewer:
+        """Display the window in fontViewDialog.py."""
+        initial_view = not self.font_viewer
+        if initial_view:
             font_name = self.yg_font.font_files.in_font
             glyph_list = self.yg_font.glyph_list
             self.font_viewer = fontViewWindow(font_name, self.yg_font, glyph_list, self)
+            self.font_viewer.set_current_glyph(self.glyph_pane.yg_glyph_scene.yg_glyph.gname, True)
         if self.font_viewer.valid:
             self.font_viewer.show()
+            if initial_view:
+                self.font_viewer.set_glyph_visible(self.glyph_pane.yg_glyph_scene.yg_glyph.gname)
             self.font_viewer.raise_()
             self.font_viewer.activateWindow()
         else:
@@ -1083,8 +1087,8 @@ class MainWindow(QMainWindow):
             self.next_instance_action.setEnabled(False)
             self.instance_menu.setEnabled(False)
 
-    #def set_up_feature_list(self) -> None:
-    #    pass
+    def set_up_feature_list(self) -> None:
+        pass
 
     def set_size_and_position(self):
         """Set size and position of the main window."""
