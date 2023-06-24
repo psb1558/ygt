@@ -1178,6 +1178,7 @@ class MainWindow(QMainWindow):
             self.set_all_clean()
             self.set_window_title()
 
+    @pyqtSlot()
     def save_as(self) -> None:
         self.yg_font.source_file.filename = QFileDialog(parent=self).getSaveFileName()[
             0
@@ -1842,6 +1843,7 @@ class MainWindow(QMainWindow):
                 return False
         return True
 
+    @pyqtSlot()
     def quit(self) -> None:
         if self.yg_font == None:
             self.app.quit()

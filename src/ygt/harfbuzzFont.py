@@ -1,10 +1,9 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QDialogButtonBox, QComboBox, QLineEdit
 from PyQt6.QtGui import QRegularExpressionValidator
-from PyQt6.QtCore import QRegularExpression
+from PyQt6.QtCore import QRegularExpression, pyqtSlot
 import uharfbuzz as hb
 from tempfile import SpooledTemporaryFile
 from .freetypeFont import freetypeFont
-# from PyQt6.QtCore import pyqtSlot
 
 
 class harfbuzzFont:
@@ -1250,6 +1249,7 @@ class hbFeatureDialog(QDialog):
         else:
             self.valid = False
 
+    @pyqtSlot()
     def accept(self) -> None:
         t = self.line_editor.text()
         current_tag = harfbuzzFont.tag_only(self.feature_box.currentText())

@@ -387,6 +387,7 @@ class mastersWidget(QWidget):
             )
             self.layout_obj.addWidget(self.edit_pane)
 
+    @pyqtSlot()
     def add_master(self) -> None:
         master_dict = {}
         axis_tags = self.yg_font.axis_tags
@@ -397,6 +398,7 @@ class mastersWidget(QWidget):
         self.yg_font.masters.add_master(master_id, master_vals)
         self.refresh()
 
+    @pyqtSlot()
     def del_master(self) -> None:
         self.yg_font.masters.del_by_name(self.current_master_name())
         self.master_list.clear()
@@ -676,6 +678,7 @@ class cvWidget(QWidget):
         self.layout_obj.addWidget(self.tabs)
         self.setLayout(self.layout_obj)
 
+    @pyqtSlot()
     def del_delta_row(self) -> None:
         i = self.delta_pane.selectedIndexes()
         if len(i) > 0:
@@ -815,6 +818,7 @@ class hintRoundWidget(QWidget):
 
         self.setLayout(self.layout_obj)
 
+    @pyqtSlot()
     def button_state_changed(self) -> None:
         if self.ignore_signal:
             return
@@ -940,6 +944,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("counterclockwise")
 
+    @pyqtSlot()
     def toggle_tt_defaults(self) -> None:
         if self.ignore_signal:
             return
@@ -948,6 +953,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("use-truetype-defaults")
 
+    @pyqtSlot()
     def toggle_init_graphics(self) -> None:
         if self.ignore_signal:
             return
@@ -956,6 +962,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("init-graphics")
 
+    @pyqtSlot()
     def toggle_assume_always_y(self) -> None:
         if self.ignore_signal:
             return
@@ -964,6 +971,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("assume-always-y")
 
+    @pyqtSlot()
     def toggle_cleartype(self) -> None:
         if self.ignore_signal:
             return
@@ -972,6 +980,7 @@ class miscDefaultsWidget(QWidget):
         else:
             self.defaults.del_default("cleartype")
 
+    @pyqtSlot()
     def toggle_mergemode(self) -> None:
         if self.ignore_signal:
             return
@@ -984,6 +993,7 @@ class miscDefaultsWidget(QWidget):
             self.replaceprep.setEnabled(False)
             self.functionbase.setEnabled(False)
 
+    @pyqtSlot()
     def toggle_replaceprep(self) -> None:
         if self.ignore_signal:
             return
@@ -1173,6 +1183,7 @@ class cvNameWidget(QLineEdit):
     def _text(self) -> str:
         return self.text().strip()
 
+    @pyqtSlot()
     def set_dirty(self) -> None:
         self.dirty = True
 
@@ -1195,6 +1206,7 @@ class cvNameWidget(QLineEdit):
             self.last_val = t
             self.set_clean()
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         self.fixup()
 
@@ -1232,7 +1244,8 @@ class cvTypeWidget(QComboBox):
             self.cv_source.set_in_current_cv("type", self.currentText(), None)
             self.last_val = t
 
-    def text_changed(self, event) -> None:
+    @pyqtSlot()
+    def text_changed(self) -> None:
         self.fixup()
 
     def refresh(self, cv_source: cvSource) -> None:
@@ -1274,7 +1287,8 @@ class cvColorWidget(QComboBox):
                     self.cv_source.del_key("col")
             self.last_val = new_text
 
-    def text_changed(self, s) -> None:
+    @pyqtSlot()
+    def text_changed(self) -> None:
         self.fixup()
 
     def refresh(self, cv_source: cvSource) -> None:
@@ -1313,7 +1327,8 @@ class cvAxisWidget(QComboBox):
             self.cv_source.set_in_current_cv("axis", self.currentText(), None)
             self.last_val = t
 
-    def text_changed(self, s) -> None:
+    @pyqtSlot()
+    def text_changed(self) -> None:
         self.fixup()
 
     def refresh(self, cv_source) -> None:
@@ -1361,7 +1376,8 @@ class cvUCatWidget(QComboBox):
                 )
             self.last_val = new_text
 
-    def text_changed(self, s) -> None:
+    @pyqtSlot()
+    def text_changed(self) -> None:
         self.fixup()
 
     def refresh(self, cv_source) -> None:
@@ -1397,6 +1413,7 @@ class cvSuffixWidget(QLineEdit):
     def _text(self) -> str:
         return self.text().strip()
 
+    @pyqtSlot()
     def set_dirty(self) -> None:
         self.dirty = True
 
@@ -1408,6 +1425,7 @@ class cvSuffixWidget(QLineEdit):
             self.cv_source.set_in_current_cv("suffix", self._text(), None)
             self.set_clean()
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
@@ -1450,6 +1468,7 @@ class cvVarWidget(QLineEdit):
     def _text(self) -> str:
         return self.text().strip()
 
+    @pyqtSlot()
     def set_dirty(self) -> None:
         self.dirty = True
 
@@ -1476,6 +1495,7 @@ class cvVarWidget(QLineEdit):
                     self.refresh(self.cv_source)
             self.set_clean()
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
@@ -1516,6 +1536,7 @@ class functionBaseWidget(QLineEdit):
                 i = 0
             self.defaults.set_default({"function-base": i})
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
@@ -1568,6 +1589,7 @@ class cvValueWidget(QLineEdit):
             self.cv_source.set_in_current_cv("val", i, fallback = 0)
             self.set_clean()
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
@@ -1613,6 +1635,7 @@ class cvPPEMWidget(QLineEdit):
     def _text(self) -> str:
         return self.text().strip()
 
+    @pyqtSlot()
     def set_dirty(self) -> None:
         self.dirty = True
 
@@ -1631,6 +1654,8 @@ class cvPPEMWidget(QLineEdit):
             s = self.cv_source.from_current_cv("same-as")
             if not s:
                 s = {self.above_below: {}}
+            if not self.above_below in s:
+                s[self.above_below] = {}
             s[self.above_below]["cv"] = new_name
             s[self.above_below]["ppem"] = new_val
             self.cv_source.set_in_current_cv("same-as", s, None)
@@ -1643,6 +1668,7 @@ class cvPPEMWidget(QLineEdit):
                     self.cv_source.del_key("same-as")
         self.set_clean()
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if t != self.last_val:
@@ -1705,7 +1731,8 @@ class cvNamesWidget(QComboBox):
         if self.ppem_widget:
             self.ppem_widget.fixup()
 
-    def text_changed(self, s) -> None:
+    @pyqtSlot()
+    def text_changed(self) -> None:
         self.fixup()
 
     def refresh(self, cv_source: cvSource) -> None:
@@ -1744,6 +1771,7 @@ class masterNameWidget(QLineEdit):
     def _text(self) -> str:
         return self.text().strip()
 
+    @pyqtSlot()
     def set_dirty(self) -> None:
         self.dirty = True
 
@@ -1763,6 +1791,7 @@ class masterNameWidget(QLineEdit):
         self.masters.set_master_name(self.m_id, self._text())
         self.set_clean()
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if self.dirty and t != self.last_val:
@@ -1801,6 +1830,7 @@ class masterValWidget(QLineEdit):
     def _text(self) -> str:
         return self.text().strip()
 
+    @pyqtSlot()
     def set_dirty(self) -> None:
         self.dirty = True
 
@@ -1833,6 +1863,7 @@ class masterValWidget(QLineEdit):
             print(e)
             pass
 
+    @pyqtSlot()
     def text_changed(self) -> None:
         t = self._text()
         if self.dirty and t != self.last_val:

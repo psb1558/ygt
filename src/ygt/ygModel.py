@@ -1456,8 +1456,8 @@ class deleteMasterCommand(fontInfoEditCommand):
             self.redo_state.restore()
         else:
             try:
-                del self.yg_font.source["masters"][id]
-            except Exception:
+                del self.yg_font.source["masters"][self.id]
+            except Exception as e:
                 pass
             self.redo_state = fontInfoSaver(self.yg_font)
         self.send_signal()
@@ -3006,6 +3006,7 @@ class ygGlyph(QObject):
             [yaml.dump(new_yaml, sort_keys=False, Dumper=Dumper), self.is_composite]
         )
 
+    @pyqtSlot(object)
     def hint_changed(self, h: Union["ygHint", None]):
         """Called by signal from ygHint. Sends a list of hints in response."""
         self.set_dirty()
@@ -3021,6 +3022,10 @@ class ygGlyph(QObject):
             hint_list: list,
             dirty: bool = True
         ) -> None:
+        """
+            This method interacts directly with graphical objects: ygGlyphScene
+            and fontViewWindow. Try to do it a different way.
+        """
         if dirty:
             self.set_dirty()
         from .ygHintEditor import ygGlyphScene
@@ -3774,9 +3779,9 @@ class ygDefaults(ygSourceable):
 
 
 class ygCVDeltas(QAbstractTableModel):
-    """Provides a view of the 'deltas' section of a CV and
-    implements a model to work with the QTableView for CVs
-    in the CV editing pane.
+    """ Provides a view of the 'deltas' section of a CV and
+        implements a model to work with the QTableView for CVs
+        in the CV editing pane.
 
     """
 

@@ -15,19 +15,27 @@ FONT_VIEW_HINTED         = QColor(186, 255, 255, 128)
 FONT_VIEW_UNHINTED       = QColor("white")
 FONT_VIEW_HIGHLIGHT      = QColor(255, 0, 0, 128)
 
+# The font view is now a window, not a dialog. "Dialog" is retained in the
+# file name to avoid obscuring the history in the repository.
 
-# A window (not a dialog, despite the filename, retained to avoid complicating
-# the history in the repository) that displays all the non-composite glyphs
-# in the font, with those already hinted highlighted in blue. Click on any
-# glyph in the window to navigate to that glyph.
+# A window that displays all the glyphs
+# in the font, with those already hinted highlighted in blue and composites
+# in gold. The current glyph is outlined in red. Current glyph is guaranteed to
+# be visible when the font view window is first opened, but this is not necessarily
+# true afterwards. Click on any glyph in the window to navigate to that glyph.
 
 
 class fontViewWindow(QWidget):
-    """This window presents a grid showing all the glyphs in glyph_list--
-    that is, those glyphs that are not made of composites. This display
-    indicates which characters are hinted (their cells have blue backgrounds).
-    It also works as a navigation aid: just click on any character.
+    """ A window that displays all the glyphs
+        in the font, with those already hinted highlighted in blue and composites
+        in gold. The current glyph is outlined in red. Current glyph is guaranteed to
+        be visible when the font view window is first opened, but this is not necessarily
+        true afterwards. Click on any glyph in the window to navigate to that glyph.
 
+        Glyphs in the font view are painted with Freetype rather than using system
+        facilities. The Freetype font is the one already loaded by the ygFont object
+        for the current window. The font view may employ hints already in the font, but
+        it will not show the current hinting of the font.
     """
     sig_switch_to_glyph = pyqtSignal(object)
 

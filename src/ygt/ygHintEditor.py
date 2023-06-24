@@ -1902,6 +1902,7 @@ class ygGlyphScene(QGraphicsScene):
         if r == QDialog.DialogCode.Accepted:
             self.yg_glyph.yg_font.cvt.set_clean(False)
 
+    @pyqtSlot(object)
     def name_points(self, pts: List[ygPointView]) -> None:
         msg = "Name the point"
         if len(pts) > 1:
@@ -3034,6 +3035,9 @@ class ygGlyphView(QGraphicsView):
     buttons and controls, plus (I hope) a preview of the hinted glyph.
 
     Parameters:
+
+    preferences (ygPreferences): The preferences object for the current window.
+
     yg_glyph_scene (ygGlyphScene): The QGraphicsScene that the user interacts with.
 
     font (ygModel.ygFont): The font object, including both a fontTools Font
@@ -3062,10 +3066,9 @@ class ygGlyphView(QGraphicsView):
         self.visited_glyphs: Dict[str, ygGlyphScene] = {}
         self.drag_mode_backup = QGraphicsView.DragMode.NoDrag
 
-
-    @pyqtSlot()
-    def make_control_value(self) -> None:
-        self.yg_glyph_scene.make_control_value()
+    #
+    # Setup
+    #
 
     def setup_goto_signal(self, o: Callable) -> None:
         self.sig_goto.connect(o)
@@ -3073,10 +3076,18 @@ class ygGlyphView(QGraphicsView):
     def setup_toggle_drag_mode_signal(self, o: Callable) -> None:
         self.sig_toggle_drag_mode.connect(o)
 
+    #
+    # Info
+    #
+
     def _current_index(self) -> int:
         return self.yg_font.get_glyph_index(
             self.yg_glyph_scene.yg_glyph.gname, short_index=True
         )
+
+    #
+    # Signals and Slots (with helpers)
+    #
 
     def go_to_glyph(self, g: str) -> None:
         self.preferences["top_window"].disconnect_editor_signals()
@@ -3090,7 +3101,10 @@ class ygGlyphView(QGraphicsView):
             )
         self.preferences["top_window"].connect_editor_signals()
 
-    # sender returns None when we use the decorator. Rethink these signals?
+    @pyqtSlot()
+    def make_control_value(self) -> None:
+        self.yg_glyph_scene.make_control_value()
+
     @pyqtSlot()
     def next_glyph(self) -> None:
         current_index = self._current_index()
@@ -3109,13 +3123,16 @@ class ygGlyphView(QGraphicsView):
             self.switch_to(gname)
             self.preferences["top_window"].connect_editor_signals()
 
+    @pyqtSlot(object)
     def switch_from_font_viewer(self, gname: str) -> None:
         self.preferences["top_window"].disconnect_editor_signals()
         self.switch_to(gname)
         self.preferences["top_window"].connect_editor_signals()
 
     def switch_to(self, gname: str) -> None:
-        self.preferences.top_window().font_viewer.set_current_glyph(self.yg_glyph_scene.yg_glyph.gname, False)
+        font_viewer = self.preferences.top_window().font_viewer
+        if font_viewer:
+            font_viewer.set_current_glyph(self.yg_glyph_scene.yg_glyph.gname, False)
         self.yg_glyph_scene.reset_scale()
         self.yg_glyph_scene.yg_glyph.cleanup_glyph()
         # Store the current glyph if it is changed.
@@ -3138,7 +3155,8 @@ class ygGlyphView(QGraphicsView):
         ed = self.preferences.top_window().source_editor
         new_glyph.set_yaml_editor(ed)
         new_glyph.sig_hints_changed.emit(new_glyph.hints)
-        self.preferences.top_window().font_viewer.set_current_glyph(new_glyph.gname, True)
+        if font_viewer:
+            font_viewer.set_current_glyph(new_glyph.gname, True)
 
     @pyqtSlot()
     def guess_cv(self) -> None:
@@ -3189,11 +3207,8 @@ class ygGlyphView(QGraphicsView):
             menu_to_hint_type[self.sender().text()], ctrl=with_ctrl, shift=with_shift  # type: ignore
         )
 
-    # Why does sender return None when we use the decorator? What's best in this
-    # situation? Here are problems: sender_text param is not consulted. Should it be
-    # omitted? Make sure params match, esp. if we change them.
-    # @pyqtSlot(object)
-    def zoom(self, sender_text: str) -> None:
+    @pyqtSlot()
+    def zoom(self) -> None:
         sender_text = self.sender().text()  # type: ignore
         if sender_text == "Original Size":
             self.yg_glyph_scene.set_zoom_factor(self.yg_glyph_scene.initial_zoom_factor)
@@ -3205,12 +3220,18 @@ class ygGlyphView(QGraphicsView):
                 self.yg_glyph_scene.set_zoom_factor(self.yg_glyph_scene.zoom_factor - 0.25)
         self.centerOn(self.yg_glyph_scene.center_x, self.yg_glyph_scene.mid_point_y())
 
+    #
+    # Events
+    #
+
     def keyPressEvent(self, event) -> None:
-        # 1. Delete key will delete any selected hints.
-        # 2. Spacebar will shift Qt drag mode to ScrollHandDrag while it is
-        #    down. For panning the screen.
-        # 3. Hyphen (minus) removes a target point from a hint.
-        # 4. Plus adds a point to a hint.
+        """ 1. Delete key will delete any selected hints.
+            2. Spacebar will shift Qt drag mode to ScrollHandDrag while it is
+                down. For panning the screen.
+            3. Hyphen (minus) removes a target point from a hint.
+            4. Plus adds a point to a hint.
+            5. For diagnostics: Ctrl-Shift-J will list objects with sizes.
+        """
         if event.key() in [16777219, 16777223]:
             self.yg_glyph_scene.delete_selected_hints()
         elif event.key() == Qt.Key.Key_Plus:
