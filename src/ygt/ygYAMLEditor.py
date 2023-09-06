@@ -379,3 +379,27 @@ class ygGlyphHighlighter(QSyntaxHighlighter):
                 start = match.start()
                 end = match.end()
                 self.setFormat(start, end - start, format)
+
+class ygDeleteGlyphProgramsDialog(QDialog):
+    def __init__(self, parent = None) -> None:
+        super().__init__()
+        self.result = ""
+        self.ed_pane = QPlainTextEdit()
+        self.setWindowTitle("Delete Glyph Programs")
+        self._layout = QVBoxLayout()
+        self._layout.addWidget(self.ed_pane)
+        QBtn = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.buttonBox = QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        self._layout.addWidget(self.buttonBox)
+        self.setLayout(self._layout)
+
+    def reject(self) -> None:
+        self.done(QDialog.DialogCode.Rejected)
+
+    def accept(self) -> None:
+        self.result = self.ed_pane.toPlainText()
+        self.done(QDialog.DialogCode.Accepted)

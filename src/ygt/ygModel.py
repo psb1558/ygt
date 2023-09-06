@@ -384,7 +384,7 @@ class ygFont(QObject):
         if d and os.path.isdir(d) and d != os.getcwd():
             os.chdir(d)
 
-        self.source = self.source_file.source
+        # self.source = self.source_file.source
         self.font_files = FontFiles(self.source)
         fontfile = self.font_files.in_font
         if not fontfile:
@@ -462,7 +462,7 @@ class ygFont(QObject):
         # Set up access to YAML font data (if there is no cvt table yet, get some
         # values from the font).
         #
-        self.glyphs = ygGlyphs(self.source).data
+        self.glyphs = ygGlyphs(self)
         self.defaults = ygDefaults(self, self.source)
         if not "defaults" in self.source:
             self.defaults._set_default({"init-graphics": False, "cleartype": True})
@@ -653,6 +653,10 @@ class ygFont(QObject):
             instanceChecker(self.preview_font, self.cvt, self.masters).refresh()
 
     @property
+    def source(self):
+        return self.source_file.source
+
+    @property
     def default_instance(self) -> Optional[str]:
         if not self.is_variable_font:
             return None
@@ -751,9 +755,9 @@ class ygFont(QObject):
         return self.ft_font['glyf'][gname].isComposite()
 
     def has_hints(self, gname: str) -> bool:
-        if not gname in self.glyphs:
+        if not self.glyphs.has_glyph(gname):
             return False
-        glyph_program = self.glyphs[gname]
+        glyph_program = self.glyphs.get_glyph(gname)
         if not ("y" in glyph_program or "x" in glyph_program):
             return False
         y_len = 0
@@ -770,16 +774,30 @@ class ygFont(QObject):
         try:
             self.glyphs.del_glyph(gname)
         except Exception:
+            print("Couldn't delete!")
             pass
+
+    def delete_glyph_programs(self, s: str) -> None:
+        s_list = s.split()
+        if len(s_list) > 0:
+            for g in s_list:
+                try:
+                    self.del_glyph(g)
+                except Exception as e:
+                    print(e)
+                    print("Exception '", g, "'", sep="")
+                    pass
+                if self.glyphs.has_glyph(g):
+                    print("glyph ", g, " is still hanging around!", sep="")
 
     def get_glyph(self, gname: str) -> "dict":
         """Get the source for a glyph's hints. If the glyph has no hints yet,
         return an empty hint program.
 
         """
-        if not gname in self.glyphs:
-            self.glyphs[gname] = {"y": {"points": []}, "x": {"points": []}}
-        return self.glyphs[gname]
+        if not self.glyphs.has_glyph(gname):
+            self.glyphs.init_glyph(gname)
+        return self.glyphs.get_glyph(gname)
 
     def get_glyph_index(self, gname: str, short_index: bool = False) -> int:
         if short_index:
@@ -818,11 +836,15 @@ class ygFont(QObject):
         result.extend(self.additional_component_names(result))
         return list(set(result))
 
-    def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
-        """Save a y or x block to the in-memory source."""
-        if not gname in self.glyphs:
-            self.glyphs[gname] = {}
-        self.glyphs[gname][axis] = source
+    # It appears that this never gets called. And if this doesn't get called,
+    # neither does glyphs.save().
+    #def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
+    #    """Save a y or x block to the in-memory source."""
+    #    self.glyphs.save(gname, axis, source)
+    #    #if not self.glyphs.has_glyph(gname):
+    #    #    # Treating self.glyphs like a dict here. But it's not! it's a ygGlyphs object.
+    #    #    self.glyphs[gname] = {}
+    #    #self.glyphs[gname][axis] = source
 
     def setup_signal(self, func) -> None:
         self.sig_cvt_changed.connect(func)
@@ -2109,6 +2131,11 @@ class glyphSourceTester:
 
     def test(self) -> None:
         try:
+            if self.yg_glyph.yg_font.glyphs._data is not self.yg_glyph.yg_font.source["glyphs"]:
+                print("Glyph blocks not the same")
+            if not self.yg_glyph.yg_font.glyphs.has_glyph(self.yg_glyph.gname):
+                # If this fails, the next will throw an exception.
+                print("(from", self.caller, ") glyph name ", self.yg_glyph.gname, " not in source")
             if (
                 self.yg_glyph.gsource
                 != self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]
@@ -2772,6 +2799,8 @@ class ygGlyph(QObject):
             s = self.gsource
         have_y = True
         have_x = True
+        have_names = "names" in s
+        have_properties = "props" in s
         if "y" in s and len(s["y"]["points"]) == 0:
             have_y = False
         if "x" in s and len(s["x"]["points"]) == 0:
@@ -2784,7 +2813,8 @@ class ygGlyph(QObject):
             self.yaml_strip_extraneous_nodes(s["x"]["points"])
         else:
             del s["x"]
-        if not have_y and not have_x:
+        # if not have_y and not have_x:
+        if not any([have_y, have_x, have_names, have_properties]):
             self.yg_font.del_glyph(self.gname)
 
     #
@@ -3041,24 +3071,48 @@ class ygGlyph(QObject):
 class ygGlyphs:
     """The "glyphs" section of a yaml file."""
 
-    def __init__(self, source: dict) -> None:
-        try:
-            self.data = source["glyphs"]
-        except KeyError:
-            self.data = {}
+    def __init__(self, font) -> None:
+        self.font = font
+        if not "glyphs" in font.source:
+            font.source["glyphs"] = {}
+        #try:
+        #    self._data = source["glyphs"]
+        #except KeyError:
+        #    self._data = {}
+
+    @property
+    def _data(self):
+        return self.font.source["glyphs"]
 
     def get_glyph(self, gname: str) -> dict:
-        if gname in self.data:
-            return self.data[gname]
-        else:
-            return {}
+        if not gname in self._data:
+            print("Calling init_glyph from ygGlyphs.get_glyph()")
+            self.init_glyph(gname)
+        return self._data[gname]
 
     #def glyph_list(self) -> list:
-    #    return list(self.data.keys())
+    #    return list(self._data.keys())
+
+    def install_glyph_source(self, gname: str, gsource: dict) -> None:
+        if gname in self._data:
+            print(gname, " already in glyph list; replacing it")
+        self._data[gname] = gsource
+
+    def init_glyph(self, gname) -> None:
+        self._data[gname] = {"y": {"points": []}, "x": {"points": []}}
 
     def del_glyph(self, gname: str) -> None:
-        if gname in self.data:
-            del self.data[gname]
+        if gname in self._data:
+            del self._data[gname]
+
+    def has_glyph(self, gname: str) -> bool:
+        return gname in self._data
+    
+    def save(self, gname: str, axis: str, source) -> None:
+        if not gname in self._data:
+            # print("Adding a dict in ygGlyphs.save()")
+            self._data[gname] = {}
+        self._data[gname][axis] = source
 
 
 class Comparable(object):

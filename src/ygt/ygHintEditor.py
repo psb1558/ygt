@@ -3093,7 +3093,7 @@ class ygGlyphView(QGraphicsView):
         self.preferences["top_window"].disconnect_editor_signals()
         try:
             self.yg_font.get_glyph_index(g, short_index=True)
-            self.switch_to(g)
+            self.switch_to(g, caller = "go_to_glyph")
         except Exception as e:
             # print(e)
             self.yg_font.send_error_message(
@@ -3111,7 +3111,7 @@ class ygGlyphView(QGraphicsView):
         if current_index < len(self.yg_font.glyph_list) - 1:
             gname = self.yg_font.glyph_list[current_index + 1][1]
             self.preferences["top_window"].disconnect_editor_signals()
-            self.switch_to(gname)
+            self.switch_to(gname, caller = "next_glyph")
             self.preferences["top_window"].connect_editor_signals()
 
     @pyqtSlot()
@@ -3120,16 +3120,18 @@ class ygGlyphView(QGraphicsView):
         if current_index > 0:
             gname = self.yg_font.glyph_list[current_index - 1][1]
             self.preferences["top_window"].disconnect_editor_signals()
-            self.switch_to(gname)
+            self.switch_to(gname, caller="previous_glyph")
             self.preferences["top_window"].connect_editor_signals()
 
     @pyqtSlot(object)
     def switch_from_font_viewer(self, gname: str) -> None:
         self.preferences["top_window"].disconnect_editor_signals()
-        self.switch_to(gname)
+        self.switch_to(gname, caller = "switch_from_font_viewer")
         self.preferences["top_window"].connect_editor_signals()
 
-    def switch_to(self, gname: str) -> None:
+    def switch_to(self, gname: str, caller: Optional[str] = None) -> None:
+        #if caller:
+        #    print("switch_to called by ", caller)
         font_viewer = self.preferences.top_window().font_viewer
         if font_viewer:
             font_viewer.set_current_glyph(self.yg_glyph_scene.yg_glyph.gname, False)
