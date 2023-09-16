@@ -1865,7 +1865,7 @@ class toggleMinDistCommand(glyphEditCommand):
             self.redo_state.restore()
         else:
             current_min_dist = not self.hint.min_dist
-            if current_min_dist == self.hint.min_dist_is_default():
+            if current_min_dist == self.hint.min_dist_is_default:
                 if "min" in self.hint.source:
                     del self.hint.source["min"]
             else:
@@ -1903,7 +1903,7 @@ class toggleRoundingCommand(glyphEditCommand):
         if self.redo_state:
             self.redo_state.restore()
         else:
-            if current_round == self.hint.round_is_default():
+            if current_round == self.hint.round_is_default:
                 if "round" in self.hint.source:
                     del self.hint.source["round"]
             else:
@@ -2797,24 +2797,24 @@ class ygGlyph(QObject):
             s = source
         else:
             s = self.gsource
-        have_y = True
-        have_x = True
-        have_names = "names" in s
-        have_properties = "props" in s
-        if "y" in s and len(s["y"]["points"]) == 0:
-            have_y = False
-        if "x" in s and len(s["x"]["points"]) == 0:
-            have_x = False
-        if have_y:
-            self.yaml_strip_extraneous_nodes(s["y"]["points"])
-        else:
-            del s["y"]
-        if have_x:
-            self.yaml_strip_extraneous_nodes(s["x"]["points"])
-        else:
-            del s["x"]
-        # if not have_y and not have_x:
-        if not any([have_y, have_x, have_names, have_properties]):
+        try:
+            have_y = len(s["y"]["points"]) > 0
+            have_x = len(s["x"]["points"]) > 0
+        except Exception:
+            print("x or y not in glyph source (1). This should not happen!")
+            return
+        try:
+            if have_y:
+                self.yaml_strip_extraneous_nodes(s["y"]["points"])
+            else:
+                del s["y"]
+            if have_x:
+                self.yaml_strip_extraneous_nodes(s["x"]["points"])
+            else:
+                del s["x"]
+        except Exception:
+            print("x or y not in glyph source (2). This should not happen!")
+        if not any([have_y, have_x, "names" in s, "props" in s]):
             self.yg_font.del_glyph(self.gname)
 
     #
@@ -3290,6 +3290,7 @@ class ygHint(QObject):
         return self._source["ptid"]
 
     # This is not used right now
+
     # @target.setter
     # def target(self, tgt: Any) -> None:
     #     """tgt can be a point identifier or a set of them. no ygPoint objects."""
@@ -3439,7 +3440,7 @@ class ygHint(QObject):
                 return False
             return True
         else:
-            return self.round_is_default()
+            return self.round_is_default
 
     # Should make "min" handle a value.
     @property
@@ -3448,8 +3449,9 @@ class ygHint(QObject):
             m = self.source["min"]
             return m
         except Exception:
-            return self.min_dist_is_default()
+            return self.min_dist_is_default
 
+    @property
     def min_dist_is_default(self) -> bool:
         return hint_type_nums[self.hint_type] == 3
 
@@ -3462,11 +3464,12 @@ class ygHint(QObject):
         if self.yg_glyph != None:
             self.yg_glyph.undo_stack.push(toggleRoundingCommand(self.yg_glyph, self))
 
+    @property
     def round_is_default(self) -> bool:
         return hint_type_nums[self.hint_type] in [0, 3]
 
     def set_round(self, b: bool, update: bool = False) -> None:
-        if b != self.round_is_default():
+        if b != self.round_is_default:
             self.source["round"] = b
         else:
             if "round" in self.source:
@@ -3484,6 +3487,7 @@ class ygHint(QObject):
             return self.source["cv"]
         return None
 
+    @property
     def required_cv_type(self) -> Optional[str]:
         hnum = hint_type_nums[self.hint_type]
         if hnum == 0:
@@ -3506,7 +3510,7 @@ class ygHint(QObject):
         those things, and also from ygHintEditor.guess_cv_for_hint, which guesses at a cv
         as part of constructing a hint.
         """
-        cvtype = self.required_cv_type()
+        cvtype = self.required_cv_type
         if cvtype:
             if new_cv == "None":
                 if cvtype in self.source:
@@ -3519,8 +3523,10 @@ class ygHint(QObject):
     def cut_in(self) -> bool:
         return True
 
-    def hint_has_changed(self, h: "ygHint") -> None:
-        self.hint_changed_signal.emit(h)
+    # not used right now.
+
+    #def hint_has_changed(self, h: "ygHint") -> None:
+    #    self.hint_changed_signal.emit(h)
 
     def add_hint(self, hint: "ygHint") -> None:
         """Add a hint. This simply calls add_hint in the glyph"""
@@ -3532,6 +3538,7 @@ class ygHint(QObject):
         if self.yg_glyph != None:
             self.yg_glyph.delete_hints(hint_list)
 
+    @property
     def _hint_string(self) -> str:
         result = "Hint target: "
         result += str(self.source["ptid"])
@@ -3579,12 +3586,12 @@ class ygHint(QObject):
                 setMacFuncOtherArgsCommand(self.yg_glyph, self, d)
             )
 
-    def print(*args, **kwargs):
-        __builtin__.print(self._hint_string)
-        return __builtin__.print(*args, **kwargs)
+    #def print(self, *args, **kwargs):
+    #    __builtin__.print(self._hint_string)
+    #    return __builtin__.print(*args, **kwargs)
 
     def __str__(self):
-        return self._hint_string()
+        return self._hint_string
 
     def __eq__(self, other):
         try:
