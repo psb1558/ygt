@@ -75,9 +75,9 @@ class fontViewWindow(QWidget):
         if not self.face.valid:
             self.valid = False
             return
-        # glyph_list and current_glyph_list are tuples, with the first member a Unicode number
-        # and the second the name of the glyph. fvc_index is a dict of fontViewCell objects
-        # keyed by glyph name.
+        # glyph_list and current_glyph_list are lists of tuples, with the first member a
+        # Unicode number and the second the name of the glyph. fvc_index is a dict of
+        # fontViewCell objects keyed by glyph name.
         self.glyph_list = self.current_glyph_list = glyph_list
         self.fvc_index = {}
 

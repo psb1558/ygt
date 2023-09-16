@@ -56,6 +56,7 @@ from PyQt6.QtGui import (
 )
 from fontTools import ttLib, ufoLib # type: ignore
 from .harfbuzzFont import harfbuzzFont, hbFeatureDialog
+from .glyphPicker import ygGlyphPicker
 
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
@@ -336,8 +337,8 @@ class MainWindow(QMainWindow):
         self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.paste_action.setEnabled(False)
 
-        self.goto_action = self.edit_menu.addAction("Go to...")
-        self.goto_action.setShortcut(QKeySequence("Ctrl+G"))
+        self.goto_action = self.edit_menu.addAction("Find...")
+        self.goto_action.setShortcut(QKeySequence("Ctrl+F"))
         self.goto_action.setEnabled(False)
 
         self.del_hints_action = self.edit_menu.addAction("Delete hints...")
@@ -1422,7 +1423,7 @@ class MainWindow(QMainWindow):
         self.save_font_action.setEnabled(True)
         self.font_info_action.setEnabled(True)
         self.goto_action.setEnabled(True)
-        self.del_hints_action.setEnabled(True)
+        # self.del_hints_action.setEnabled(True)
         self.vertical_action.setEnabled(True)
         self.horizontal_action.setEnabled(True)
         self.cursor_action.setEnabled(True)
@@ -1725,11 +1726,17 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def show_goto_dialog(self) -> None:
-        text, ok = QInputDialog().getText(
-            self, "Go to glyph", "Glyph name:", QLineEdit.EchoMode.Normal
-        )
-        if ok and text:
-            self.glyph_pane.go_to_glyph(text)
+        gp = ygGlyphPicker(self.yg_font.ft_font.getGlyphNames(), self)
+        ret = gp.exec()
+        if ret == QDialog.DialogCode.Accepted:
+            result = gp.result
+            if result:
+                self.glyph_pane.go_to_glyph(result)
+        #text, ok = QInputDialog().getText(
+        #    self, "Go to glyph", "Glyph name:", QLineEdit.EchoMode.Normal
+        #)
+        #if ok and text:
+        #    self.glyph_pane.go_to_glyph(text)
 
     @pyqtSlot(object)
     def go_to_glyph(self, g: str) -> None:
