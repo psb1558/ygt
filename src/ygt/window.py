@@ -7,7 +7,7 @@ import yaml
 from .ygModel import ygFont, ygGlyph, unicode_cat_names
 from .fontViewDialog import fontViewWindow
 from .ygPreview import ygPreview, ygStringPreview, ygPreviewContainer
-from .ygYAMLEditor import ygYAMLEditor, editorDialog
+from .ygYAMLEditor import ygYAMLEditor, editorDialog, ygDeleteGlyphProgramsDialog
 from .ygHintEditor import ygGlyphScene, ygGlyphView
 from .ygPreferences import ygPreferences, open_config
 from .ygSchema import (
@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QLineEdit,
     QFileDialog,
+    QDialog,
     QScrollArea,
     QSizePolicy,
     QGraphicsView,
@@ -338,6 +339,9 @@ class MainWindow(QMainWindow):
         self.goto_action = self.edit_menu.addAction("Go to...")
         self.goto_action.setShortcut(QKeySequence("Ctrl+G"))
         self.goto_action.setEnabled(False)
+
+        self.del_hints_action = self.edit_menu.addAction("Delete hints...")
+        self.del_hints_action.setEnabled(False)
 
         self.edit_menu.aboutToShow.connect(self.edit_menu_about_to_show)
 
@@ -998,6 +1002,7 @@ class MainWindow(QMainWindow):
         self.edit_properties_action.triggered.connect(self.edit_properties)
         self.to_coords_action.triggered.connect(self.indices_to_coords)
         self.to_indices_action.triggered.connect(self.coords_to_indices)
+        self.del_hints_action.triggered.connect(self.delete_glyph_hints)
 
     def setup_preview_connections(self) -> None:
         self.save_current_glyph_action.triggered.connect(self.preview_current_glyph)
@@ -1417,6 +1422,7 @@ class MainWindow(QMainWindow):
         self.save_font_action.setEnabled(True)
         self.font_info_action.setEnabled(True)
         self.goto_action.setEnabled(True)
+        self.del_hints_action.setEnabled(True)
         self.vertical_action.setEnabled(True)
         self.horizontal_action.setEnabled(True)
         self.cursor_action.setEnabled(True)
@@ -1631,6 +1637,13 @@ class MainWindow(QMainWindow):
             self.glyph_pane.yg_glyph_scene.yg_glyph.coords_to_indices()
         except Exception as e:
             print(e)
+
+    @pyqtSlot()
+    def delete_glyph_hints(self) -> None:
+        dgpd = ygDeleteGlyphProgramsDialog(parent=self)
+        r = dgpd.exec()
+        if r == QDialog.DialogCode.Accepted and dgpd.result:
+            self.yg_font.delete_glyph_programs(dgpd.result)
 
     @pyqtSlot()
     def edit_cvt(self) -> None:
