@@ -1935,9 +1935,9 @@ class mainWinEventFilter(QObject):
 
 
 def main():
-    import uharfbuzz
+    #import uharfbuzz
     #from inspect import getfullargspec, signature
-    # print(dir(Qt.Key))
+    # print(dir(Qt.ScrollBarPolicy))
     # print(dir(QPainter))
     # print(dir(hb._harfbuzz.hb_font_set_var_named_instance))
     # print(dir(hb._harfbuzz.Buffer))
