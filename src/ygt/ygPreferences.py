@@ -9,6 +9,7 @@ except ModuleNotFoundError:
 import os
 from yaml import Loader, Dumper
 
+RECENTS_LIST_LENGTH = 10
 
 class ygPreferences(dict):
     def __init__(self, *args, **kwargs) -> None:
@@ -80,7 +81,7 @@ class ygPreferences(dict):
             fl = self["recents"]
             if not f in fl:
                 fl = [f] + fl
-            if len(fl) > 5:
+            if len(fl) > RECENTS_LIST_LENGTH:
                 fl.pop()
             self["recents"] = fl
 
