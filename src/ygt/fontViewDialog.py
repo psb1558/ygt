@@ -3,8 +3,8 @@ from .freetypeFont import RENDER_LCD_1, RENDER_GRAYSCALE
 from .ygModel import ygFont
 from .ygLabel import ygLabel
 from math import ceil
-import copy
-from PyQt6.QtCore import pyqtSignal, QRect
+# import copy
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot, QRect
 from PyQt6.QtWidgets import ( QWidget,
                               QGridLayout,
                               QVBoxLayout,
@@ -89,6 +89,7 @@ class fontViewWindow(QWidget):
         self.setLayout(self._layout)
         self.fvp = fontViewPanel(self)
         self.scroll_area = QScrollArea()
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.scroll_area.setWidget(self.fvp)
         self._layout.addLayout(self.search_panel)
         self._layout.addWidget(self.scroll_area)
@@ -100,24 +101,33 @@ class fontViewWindow(QWidget):
         self.search_editor.editingFinished.connect(self.got_search_term)
 
     def set_glyph_visible(self, g: str) -> None:
+        """ Scrolls the window so that glyph g is visible. """
         gc = self.fvc_index[g]
         self.scroll_area.ensureWidgetVisible(gc, xMargin=0)
 
     def update_cell(self, g, force_redraw: bool = False):
+        """ Requests an repainting of cell for glyph g.
+            force_redraw makes the request more insistent.
+        """
         gc = self.fvc_index[g]
         gc.make_pixmap(force_redraw = force_redraw)
         gc.update()
 
     def set_current_glyph(self, g: str, b: bool) -> None:
+        """ Sets the current glyph to g. Forces repainting
+            of the cell because we need to add a red border.
+        """
         gc = self.fvc_index[g]
         gc._current_glyph = b
         self.update_cell(g, force_redraw = True)
-        #gc.make_pixmap()
-        #gc.update()
 
     def clicked_glyph(self, g: str) -> None:
+        """ When a cell is clicked, emit a signal requesting
+            that that become the current glyph.
+        """
         self.sig_switch_to_glyph.emit(g)
 
+    @pyqtSlot()
     def got_search_term(self):
         self.fvp.makeFilteredLayout(self.search_editor.text())
 
@@ -181,7 +191,7 @@ class fontViewPanel(QWidget):
                 col = 0
 
 
-    def makeFilteredLayout(self, s: str):
+    def makeFilteredLayout(self, s: str) -> None:
         """Given a string, this searches the font's glyph list and passes
             the result to makeFreshLayout, which rebuilds the display of
             glyphs. If the string is empty, it displays the whole font.
