@@ -1,9 +1,19 @@
+#from typing import Any, TypeVar, Union, Optional, List, Callable, overload, Iterable
 from .freetypeFont import RENDER_LCD_1, RENDER_GRAYSCALE
 from .ygModel import ygFont
 from .ygLabel import ygLabel
 from math import ceil
+import copy
 from PyQt6.QtCore import pyqtSignal, QRect
-from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QScrollArea
+from PyQt6.QtWidgets import ( QWidget,
+                              QGridLayout,
+                              QVBoxLayout,
+                              QScrollArea,
+                              QHBoxLayout,
+                              QLabel,
+                              QLineEdit,
+                              QPushButton )
+
 from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap, QPen
 
 
@@ -43,20 +53,33 @@ class fontViewWindow(QWidget):
             self, filename: str, yg_font: ygFont, glyph_list: list, top_window
         ) -> None:
         super().__init__()
+
+        # Creat a search panel.
+        self.search_panel = QHBoxLayout()
+        self.search_panel.addWidget(QLabel("Search:"))
+        self.search_editor = QLineEdit()
+        self.search_editor.setClearButtonEnabled(True)
+        self.search_panel.addWidget(self.search_editor)
+        self.submit_button = QPushButton("Submit")
+        self.search_panel.addWidget(self.submit_button)
+
+        # General initializations: state, data.
         self.valid = True
         self.top_window = top_window
         self.setWindowTitle("Font View")
-        self.glyph_name_list = []
-        for g in glyph_list:
-            self.glyph_name_list.append(g[1])
+        # We don't seem to have an actual use for this.
+        # self.glyph_name_list = [g[1] for g in glyph_list]
         self.yg_font = yg_font
         self.face = self.yg_font.freetype_font
         self.face.set_size(24)
         if not self.face.valid:
             self.valid = False
             return
-        self.glyph_list = glyph_list
-        self.glyph_index = {}
+        # glyph_list and current_glyph_list are tuples, with the first member a Unicode number
+        # and the second the name of the glyph. fvc_index is a dict of fontViewCell objects
+        # keyed by glyph name.
+        self.glyph_list = self.current_glyph_list = glyph_list
+        self.fvc_index = {}
 
         text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
         bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
@@ -64,26 +87,29 @@ class fontViewWindow(QWidget):
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
-        fvp = fontViewPanel(self)
+        self.fvp = fontViewPanel(self)
         self.scroll_area = QScrollArea()
-        self.scroll_area.setWidget(fvp)
+        self.scroll_area.setWidget(self.fvp)
+        self._layout.addLayout(self.search_panel)
         self._layout.addWidget(self.scroll_area)
 
         self.sig_switch_to_glyph.connect(
             self.top_window.glyph_pane.switch_from_font_viewer
         )
+        self.submit_button.clicked.connect(self.got_search_term)
+        self.search_editor.editingFinished.connect(self.got_search_term)
 
     def set_glyph_visible(self, g: str) -> None:
-        gc = self.glyph_index[g]
+        gc = self.fvc_index[g]
         self.scroll_area.ensureWidgetVisible(gc, xMargin=0)
 
     def update_cell(self, g, force_redraw: bool = False):
-        gc = self.glyph_index[g]
+        gc = self.fvc_index[g]
         gc.make_pixmap(force_redraw = force_redraw)
         gc.update()
 
     def set_current_glyph(self, g: str, b: bool) -> None:
-        gc = self.glyph_index[g]
+        gc = self.fvc_index[g]
         gc._current_glyph = b
         self.update_cell(g, force_redraw = True)
         #gc.make_pixmap()
@@ -92,37 +118,85 @@ class fontViewWindow(QWidget):
     def clicked_glyph(self, g: str) -> None:
         self.sig_switch_to_glyph.emit(g)
 
+    def got_search_term(self):
+        self.fvp.makeFilteredLayout(self.search_editor.text())
+
 
 class fontViewPanel(QWidget):
     def __init__(self, dialog: fontViewWindow) -> None:
         super().__init__()
         self.dialog = dialog
-        gl = dialog.glyph_list
-        numchars = len(gl)
+        self._layout = QGridLayout()
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self.makeFreshLayout(self.dialog.current_glyph_list, delete_old = False)
+        self.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self._layout)
+        if dialog.dark_theme:
+            self.setStyleSheet("background-color: black;")
+        else:
+            self.setStyleSheet("background-color: white;")
+
+    def makeFreshLayout(self, glyph_list: list, delete_old: bool = True) -> None:
+        """Given a list of glyphs, causes those glyphs to be displayed in
+           the font window. That is, it filters the font's glyph list to
+           reflect a search result.
+
+           params:
+
+           glyph_list: A list of tuples: (Unicode, glyph_name)
+
+           delete_old: whether to delete (or hide, actually) the cells
+           currently displayed in the font view window. Should be false
+           when initializing the window, true when displaying the result
+           of a searchk.
+        """
+        # glyph_list has got to be a list of tuples (Unicode, name)
+        if delete_old:
+            while self._layout.count() > 0:
+                i = self._layout.itemAt(0).widget()
+                self._layout.removeWidget(i)
+                i.hide()
+        numchars = len(glyph_list)
         cols = 10
         rows = ceil(numchars / 10)
         self.setMinimumSize(cols * 36, rows * 36)
-        self._layout = QGridLayout()
         self._layout.setHorizontalSpacing(0)
         self._layout.setVerticalSpacing(0)
-        self.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self._layout)
-        row = 0
-        col = 0
+        row = col = 0
         self._layout.setRowMinimumHeight(row, 36)
-        for g in gl:
-            fvc = fontViewCell(dialog, g)
+        for g in glyph_list:
+            gn = g[1]
+            try:
+                fvc = self.dialog.fvc_index[gn]
+            except KeyError:
+                fvc = fontViewCell(self.dialog, g)
+                self.dialog.fvc_index[gn] = fvc
             self._layout.addWidget(fvc, row, col)
-            self.dialog.glyph_index[g[1]] = fvc
+            if delete_old:
+                fvc.setVisible(True)
             col += 1
             if col == 10:
                 row += 1
                 self._layout.setRowMinimumHeight(row, 36)
                 col = 0
-        if dialog.dark_theme:
-            self.setStyleSheet("background-color: black;")
+
+
+    def makeFilteredLayout(self, s: str):
+        """Given a string, this searches the font's glyph list and passes
+            the result to makeFreshLayout, which rebuilds the display of
+            glyphs. If the string is empty, it displays the whole font.
+
+            param:
+
+            s: the string to search for.
+        """
+        if len(s):
+            search_result = [i for i in self.dialog.glyph_list if s in i[1]]
         else:
-            self.setStyleSheet("background-color: white;")
+            search_result = self.dialog.glyph_list
+        self.makeFreshLayout(search_result)
+        if len(s) and len(search_result):
+            self.dialog.scroll_area.ensureWidgetVisible(self._layout.itemAt(0).widget(), xMargin=0)
 
 
 class fontViewCell(ygLabel):
