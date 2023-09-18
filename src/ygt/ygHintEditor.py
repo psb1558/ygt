@@ -120,8 +120,8 @@ POINT_ONCURVE_FILL = PTFILL_COLOR
 #POINT_ONCURVE_SELECTED = QColor(127, 127, 255, 255)
 POINT_OFFCURVE_SELECTED = PTFILL_SELECT_COLOR
 POINT_ONCURVE_SELECTED = PTFILL_SELECT_COLOR
-POINT_TOUCHED = PTFILL_TOUCH_COLOR
-POINT_TOUCHED_SELECTED = PTFILL_TOUCH_SELECT_COLOR
+POINT_ROUNDED = PTFILL_TOUCH_COLOR
+POINT_ROUNDED_SELECTED = PTFILL_TOUCH_SELECT_COLOR
 
 PREVIEW_BASE_COLOR = QColor(64, 33, 31, 255)
 POINT_OUTLINE_WIDTH = 1
@@ -465,6 +465,7 @@ class ygHintView(QGraphicsItem, ygSelectable):
                 if touch:
                     try:
                         ptindex[p.id].touched = True
+                        ptindex[p.id].rounded = self.yg_hint.rounded
                         if ptindex[p.id].changed:
                             ptindex[p.id]._prepare_graphics()
                         ptindex[p.id].owners.append(self)
@@ -1287,6 +1288,7 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
         self.point_number_label: Optional[QLabel] = None
         self.point_number_label_proxy: Optional[QGraphicsProxyWidget] = None
         self._touched = False
+        self.rounded = False
         self._changed = False
         # These are the ygHintView objects that touch this point. When a hint
         # is removed from ygGlyphScene, remove the reference from this list.
@@ -1305,6 +1307,8 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
             self._changed = True
         else:
             self._changed = False
+        if not self._touched:
+            self.rounded = False
 
     @property
     def changed(self) -> bool:
@@ -1319,13 +1323,13 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
     def _prepare_graphics(self) -> None:
         # For ygPointView
         if self.selected():
-            if self.touched:
-                brushColor = POINT_TOUCHED_SELECTED
+            if self.rounded:
+                brushColor = POINT_ROUNDED_SELECTED
             else:
                 brushColor = POINT_ONCURVE_SELECTED
         else:
-            if self.touched:
-                brushColor = POINT_TOUCHED
+            if self.rounded:
+                brushColor = POINT_ROUNDED
             else:
                 brushColor = POINT_ONCURVE_FILL
         if self.yg_point.on_curve:
@@ -1439,7 +1443,7 @@ class ygGlyphScene(QGraphicsScene):
             yg_glyph: ygGlyph,
             owner: Optional["ygGlyphView"] = None) -> None:
         """yg_glyph is a ygGlyph object from ygModel."""
-        global HINT_COLOR, SELECTED_HINT_COLOR, POINT_OFFCURVE_FILL, POINT_ONCURVE_FILL, POINT_OFFCURVE_SELECTED, POINT_ONCURVE_SELECTED, POINT_TOUCHED_SELECTED, POINT_TOUCHED
+        global HINT_COLOR, SELECTED_HINT_COLOR, POINT_OFFCURVE_FILL, POINT_ONCURVE_FILL, POINT_OFFCURVE_SELECTED, POINT_ONCURVE_SELECTED, POINT_ROUNDED_SELECTED, POINT_ROUNDED
 
         self.preferences = preferences
 
@@ -1473,8 +1477,8 @@ class ygGlyphScene(QGraphicsScene):
             POINT_ONCURVE_FILL = PTFILL_DARK
             POINT_OFFCURVE_SELECTED = PTFILL_SELECT_DARK
             POINT_ONCURVE_SELECTED = PTFILL_SELECT_DARK
-            POINT_TOUCHED = PTFILL_TOUCH_DARK
-            POINT_TOUCHED_SELECTED = PTFILL_TOUCH_SELECT_DARK
+            POINT_ROUNDED = PTFILL_TOUCH_DARK
+            POINT_ROUNDED_SELECTED = PTFILL_TOUCH_SELECT_DARK
         else:
             HINT_COLOR = _HINT_COLOR
             SELECTED_HINT_COLOR = _SELECTED_HINT_COLOR
@@ -1482,8 +1486,8 @@ class ygGlyphScene(QGraphicsScene):
             POINT_ONCURVE_FILL = PTFILL_COLOR
             POINT_OFFCURVE_SELECTED = PTFILL_SELECT_COLOR
             POINT_ONCURVE_SELECTED = PTFILL_SELECT_COLOR
-            POINT_TOUCHED = PTFILL_TOUCH_COLOR
-            POINT_TOUCHED_SELECTED = PTFILL_TOUCH_SELECT_COLOR
+            POINT_ROUNDED = PTFILL_TOUCH_COLOR
+            POINT_ROUNDED_SELECTED = PTFILL_TOUCH_SELECT_COLOR
         if self.preferences.top_window().show_off_curve_points != None:
             self.off_curve_points_showing = self.preferences.top_window().show_off_curve_points
         else:
@@ -1654,6 +1658,8 @@ class ygGlyphScene(QGraphicsScene):
         glyph_set = self.yg_glyph.yg_font.ft_font.getGlyphSet()
         glyph_table = self.yg_glyph.yg_font.ft_font["glyf"]
         if self.yg_glyph.is_composite:
+            # It would be nice to have a non-editable outline when
+            # a composite is displayed, but haven't managed that yet.
             pass
             #freetype_pen = FreeTypePen(glyph_set)
             #print(type(freetype_pen))
@@ -2336,8 +2342,8 @@ class ygGlyphScene(QGraphicsScene):
                 gtarget = ygSetView(self, target, hint_type)
             else:
                 gtarget = self.yg_point_view_index[target.id]
-            # *** If this is going to crash, need to catch it and recover. Maybe
-            # mark the hint as invalid and skip it when drawing or compiling?
+            # This doesn't seem to happen much anymore. If there's an error, we
+            # handle it by substituting point zero. We don't crash.
             if hint.ref == None:
                 print("Warning: ref is None (target is " + str(target) + ")")
             ref = self.resolve_point_identifier(hint.ref)
@@ -2365,14 +2371,18 @@ class ygGlyphScene(QGraphicsScene):
             else:
                 gtarget = self.yg_point_view_index[target.id]
             ref_list = hint.ref
-            if type(ref_list) is list:
+            if type(ref_list) is list and len(ref_list) == 2:
                 ref_list = ygSet(ref_list)
-            if len(ref_list.point_list) < 2:
-                # This could come up with faulty code from the box, so handle it
-                # with an error dialog.
-                raise Exception(
-                    "There must be two reference points for an interpolation hint"
+            else:
+                errmsg = "'" + str(ref_list) + "' should be a list of two points. Substituting [0,0]."
+                self.yg_glyph.send_error_message(
+                    {"msg": errmsg, "mode": "console"}
                 )
+                ref_list = ygSet([0,0])
+            #if len(ref_list.point_list) < 2:
+            #    raise Exception(
+            #        "There must be two reference points for an interpolation hint"
+            #    )
             gref = []
             ref_one = self.resolve_point_identifier(ref_list.point_list[0])
             ref_two = self.resolve_point_identifier(ref_list.point_list[1])
