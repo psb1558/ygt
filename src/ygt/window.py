@@ -1039,8 +1039,8 @@ class MainWindow(QMainWindow):
     def setup_nav_connections(self) -> None:
         self.next_glyph_action.triggered.connect(self.glyph_pane.next_glyph)
         self.previous_glyph_action.triggered.connect(self.glyph_pane.previous_glyph)
-        self.goto_action.triggered.connect(self.show_goto_dialog)
-        self.glyph_pane.setup_goto_signal(self.show_goto_dialog)
+        self.goto_action.triggered.connect(self.show_find_dialog)
+        self.glyph_pane.setup_goto_signal(self.show_find_dialog)
         self.glyph_pane.setup_toggle_drag_mode_signal(self.set_panning_editing)
         self.font_view_action.triggered.connect(self.show_font_view)
 
@@ -1725,25 +1725,26 @@ class MainWindow(QMainWindow):
     #
 
     @pyqtSlot()
-    def show_goto_dialog(self) -> None:
+    def show_find_dialog(self) -> None:
+        """ Display 'Find Glyph' dialog.
+        """
         gp = ygGlyphPicker(self.yg_font.ft_font.getGlyphNames(), self)
         ret = gp.exec()
         if ret == QDialog.DialogCode.Accepted:
             result = gp.result
             if result:
                 self.glyph_pane.go_to_glyph(result)
-        #text, ok = QInputDialog().getText(
-        #    self, "Go to glyph", "Glyph name:", QLineEdit.EchoMode.Normal
-        #)
-        #if ok and text:
-        #    self.glyph_pane.go_to_glyph(text)
 
     @pyqtSlot(object)
     def go_to_glyph(self, g: str) -> None:
+        """ Called from the Preview windoww.
+        """
         self.glyph_pane.go_to_glyph(g)
 
     @pyqtSlot()
     def show_ppem_dialog(self):
+        """ Called via Preview->Set Size
+        """
         i, ok = QInputDialog().getInt(
             self,
             "Set Size",
@@ -1757,6 +1758,8 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def hb_custom_feature(self):
+        """ Can enter a feature with an index. Called via Preview->Feature
+        """
         d = hbFeatureDialog(self, self.yg_font.harfbuzz_font)
         d.exec()
         # We need to launch harfbuzzFont.hbFeatureDialog, passing
@@ -1765,6 +1768,8 @@ class MainWindow(QMainWindow):
     
     @pyqtSlot()
     def toggle_feature(self):
+        """ Turns a feature selected via Preview->Features on or off.
+        """
         f = harfbuzzFont.tag_only(self.sender().text())
         if f in self.yg_font.harfbuzz_font.active_features:
             self.yg_font.harfbuzz_font.deactivate_feature(f)
@@ -1773,6 +1778,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def set_indexed_feature(self):
+        """ When an indexable feature is selected via Preview->Features. """
         i = 1
         f = harfbuzzFont.tag_only(self.sender().text())
         if f in self.yg_font.harfbuzz_font.active_features:
@@ -1791,15 +1797,10 @@ class MainWindow(QMainWindow):
                     self.yg_font.harfbuzz_font.activate_feature(f, index = i)
                 else:
                     self.yg_font.harfbuzz_font.deactivate_feature(f)
-            # Do an appropriately titled dialog that only accepts int > 0.
-            # If necessary, alter activate_feature() to accept an int
-            # argument and put that in the _active_features instead of
-            # a bool.
-            # Call activate_feature() if int > 0; else call
-            # deactivate_feature(). ***
 
     @pyqtSlot()
     def set_script(self):
+        """ Select a script via Preview->Script. """
         tag = harfbuzzFont.tag_only(self.sender().text())
         self.yg_font.harfbuzz_font.select_script(tag)
         for s in self.script_actions:
@@ -1807,6 +1808,7 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot()
     def set_language(self):
+        """ Select a language via Preview->Language. """
         tag = harfbuzzFont.tag_only(self.sender().text())
         self.yg_font.harfbuzz_font.select_language(tag)
         for l in self.language_actions:
@@ -1817,6 +1819,7 @@ class MainWindow(QMainWindow):
     #
 
     def save_query(self) -> int:
+        """ For deciding what to do about an unsaved file. """
         msg_box = QMessageBox()
         msg_box.setText("This font’s hints have been modified.")
         msg_box.setInformativeText("Do you want to save your work?")
