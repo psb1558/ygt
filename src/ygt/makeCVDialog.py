@@ -120,7 +120,7 @@ class cvEditPane(QWidget, cvSource):
         self.button_layout = QHBoxLayout()
 
         self.cv_list = QListWidget()
-        self.cv_list.addItems(self._cvt.keys)
+        self.cv_list.addItems(self.sorted_cv_list)
         self.current_list_item = self.cv_list.item(0)
         self.cv_list.setCurrentItem(self.current_list_item)
         self._current_cv_name = self.current_list_item.text()
@@ -145,6 +145,10 @@ class cvEditPane(QWidget, cvSource):
         self.layout_obj.addWidget(self.edit_pane)
         self.setLayout(self.layout_obj)
 
+    @property
+    def sorted_cv_list(self) -> list:
+        return sorted(self._cvt.keys, key=lambda s: s.casefold())
+
     def send_error_message(self, d: dict) -> None:
         self.yg_font.send_error_message(d)
 
@@ -167,7 +171,7 @@ class cvEditPane(QWidget, cvSource):
         self._cvt.del_cv(self._current_cv_name)
         self.cv_list.clear()
         try:
-            self._current_cv_name = list(self._cvt.keys)[0]
+            self._current_cv_name = list(sorted(self._cvt.keys, key=lambda s: s.casefold()))[0]
         except IndexError:
             return
         self.refresh()
@@ -181,7 +185,7 @@ class cvEditPane(QWidget, cvSource):
             self.add_cv()
         self._current_cv = self._cvt.get_cv(self._current_cv_name)
         self.cv_list.clear()
-        self.cv_list.addItems(self._cvt.keys)
+        self.cv_list.addItems(sorted(self._cvt.keys, key=lambda s: s.casefold()))
         matches = self.cv_list.findItems(
             self._current_cv_name, Qt.MatchFlag.MatchExactly
         )

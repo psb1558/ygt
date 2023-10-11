@@ -56,7 +56,7 @@ class fontViewWindow(QWidget):
 
         # Creat a search panel.
         self.search_panel = QHBoxLayout()
-        self.search_panel.addWidget(QLabel("Search:"))
+        self.search_panel.addWidget(QLabel("Filter:"))
         self.search_editor = QLineEdit()
         self.search_editor.setClearButtonEnabled(True)
         self.search_panel.addWidget(self.search_editor)

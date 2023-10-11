@@ -112,7 +112,9 @@ PTFILL_TOUCH_SELECT_COLOR = QColor(138, 41, 86, 128)
 PTFILL_TOUCH_SELECT_DARK = QColor(255, 233, 236, 128)
 
 POINT_ONCURVE_OUTLINE = QColor("red")
+POINT_ONCURVE_OUTLINE_TOUCHED = QColor(191, 64, 191, 255)
 POINT_OFFCURVE_OUTLINE = QColor(127, 127, 255, 255)
+POINT_OFFCURVE_OUTLINE_TOUCHED = QColor(176, 127, 255, 255)
 
 POINT_OFFCURVE_FILL = PTFILL_COLOR
 POINT_ONCURVE_FILL = PTFILL_COLOR
@@ -1333,9 +1335,15 @@ class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
             else:
                 brushColor = POINT_ONCURVE_FILL
         if self.yg_point.on_curve:
-            penColor = POINT_ONCURVE_OUTLINE
+            if self.touched:
+                penColor = POINT_ONCURVE_OUTLINE_TOUCHED
+            else:
+                penColor = POINT_ONCURVE_OUTLINE
         else:
-            penColor = POINT_OFFCURVE_OUTLINE
+            if self.touched:
+                penColor = POINT_OFFCURVE_OUTLINE_TOUCHED
+            else:
+                penColor = POINT_OFFCURVE_OUTLINE
         pen = QPen(penColor)
         pen.setWidth(self.border_width)
         brush = QBrush(brushColor)

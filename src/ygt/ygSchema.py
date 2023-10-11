@@ -326,12 +326,12 @@ def name_checker(s: str) -> bool:
     return bool(re.match("^[a-zA-Z][0-9A-Za-z-_]*$", s))
 
 
-cvar_entry_struct = [
-    {
-        "regions": [{"tag": tag_checker, "val": float}],
-        "vals": [{"nm": name_checker, "val": int}],
-    }
-]
+#cvar_entry_struct = [
+#    {
+#        "regions": [{"tag": tag_checker, "val": float}],
+#        "vals": [{"nm": name_checker, "val": int}],
+#    }
+#]
 
 point_schema = Schema(point_struct)
 nested_point_schema = Schema(nested_point_struct)
@@ -349,7 +349,7 @@ def is_valid(t: Any) -> bool:
 
 cv_delta_schema = Schema(cv_delta_struct)
 cvt_schema = Schema(cvt_entry_struct)
-cvar_schema = Schema(cvar_entry_struct)
+#cvar_schema = Schema(cvar_entry_struct)
 prep_schema = Schema({"code": str})
 function_schema = Schema(function_entry_struct)
 macro_schema = Schema(macro_entry_struct)
@@ -377,13 +377,14 @@ def is_cvt_valid(t: dict) -> bool:
     return False
 
 
-def is_cvar_valid(t: dict) -> bool:
-    try:
-        cvar_schema.validate(t)
-        return True
-    except SchemaError as s:
-        set_error_message("Error in cvar: " + str(s))
-    return False
+# Not needed, since we no longer used this structure.
+#def is_cvar_valid(t: dict) -> bool:
+#    try:
+#        cvar_schema.validate(t)
+#        return True
+#    except SchemaError as s:
+#        set_error_message("Error in cvar: " + str(s))
+#    return False
 
 
 def is_prep_valid(t: dict) -> bool:
@@ -441,6 +442,6 @@ def are_properties_valid(t: dict) -> bool:
         set_error_message("Error in glyph properties: " + str(s))
     return False
 
-
-def always_valid(t) -> bool:
-    return True
+#Not currently used.
+#def always_valid(t) -> bool:
+#    return True
