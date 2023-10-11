@@ -755,20 +755,24 @@ class ygFont(QObject):
         return self.ft_font['glyf'][gname].isComposite()
 
     def has_hints(self, gname: str) -> bool:
+        """
+          Returns True if program for glyph exists and there is
+          (1) code on either the x or the y axis or
+          (2) a "names" section or (3) a "props" section.
+        """
         if not self.glyphs.has_glyph(gname):
             return False
         glyph_program = self.glyphs.get_glyph(gname)
-        if not ("y" in glyph_program or "x" in glyph_program):
-            return False
+        #if not ("y" in glyph_program or "x" in glyph_program):
+        #    return False
         y_len = 0
         x_len = 0
         if "y" in glyph_program and "points" in glyph_program["y"]:
             y_len = len(glyph_program["y"]["points"])
         if y_len == 0 and "x" in glyph_program and "points" in glyph_program["y"]:
             x_len = len(glyph_program["x"]["points"])
-        if y_len == 0 and x_len == 0:
-            return False
-        return True
+        has_code = (y_len > 0 or x_len > 0)
+        return any([has_code, "names" in glyph_program, "props" in glyph_program])
 
     def del_glyph(self, gname: str) -> None:
         try:
@@ -2814,7 +2818,8 @@ class ygGlyph(QObject):
                 del s["x"]
         except Exception:
             print("x or y not in glyph source (2). This should not happen!")
-        if not any([have_y, have_x, "names" in s, "props" in s]):
+        # if not any([have_y, have_x, "names" in s, "props" in s]):
+        if not self.yg_font.has_hints(self.gname):
             self.yg_font.del_glyph(self.gname)
 
     #
@@ -3086,7 +3091,6 @@ class ygGlyphs:
 
     def get_glyph(self, gname: str) -> dict:
         if not gname in self._data:
-            print("Calling init_glyph from ygGlyphs.get_glyph()")
             self.init_glyph(gname)
         return self._data[gname]
 
@@ -3094,8 +3098,6 @@ class ygGlyphs:
     #    return list(self._data.keys())
 
     def install_glyph_source(self, gname: str, gsource: dict) -> None:
-        if gname in self._data:
-            print(gname, " already in glyph list; replacing it")
         self._data[gname] = gsource
 
     def init_glyph(self, gname) -> None:
@@ -3110,7 +3112,6 @@ class ygGlyphs:
     
     def save(self, gname: str, axis: str, source) -> None:
         if not gname in self._data:
-            # print("Adding a dict in ygGlyphs.save()")
             self._data[gname] = {}
         self._data[gname][axis] = source
 

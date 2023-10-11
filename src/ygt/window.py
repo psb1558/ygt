@@ -1172,9 +1172,17 @@ class MainWindow(QMainWindow):
         self._save_yaml_file()
 
     def _save_yaml_file(self) -> None:
+        """
+            Before saving, make a backup of the current glyph program,
+            clean up the original (as we do when moving from one glyph to
+            another), save the file, and put the original glyph program
+            back.
+        """
         if self.yg_font and (not self.is_file_clean()):
             glyph = self.glyph_pane.yg_glyph_scene.yg_glyph
             glyph_backup = copy.deepcopy(glyph.gsource)
+            # Note that this cleanup will delete glyph program from the master
+            # collection if it contains no code.
             glyph.cleanup_glyph()
             self.yg_font.cleanup_font(glyph.gname)
             self.yg_font.source_file.save_source()
@@ -1183,6 +1191,10 @@ class MainWindow(QMainWindow):
                 glyph.gsource[k] = glyph_backup[k]
             self.set_all_clean()
             self.set_window_title()
+            # if an empty glyph program has been deleted from the font's collection
+            # of glyph programs, put it back.
+            if not self.yg_font.glyphs.has_glyph(glyph.gname):
+                self.yg_font.glyphs.install_glyph_source(glyph.gname, glyph.gsource)
 
     @pyqtSlot()
     def save_as(self) -> None:
