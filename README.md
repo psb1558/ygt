@@ -18,7 +18,7 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
-### Version 0.2.5 (coming soon)
+### Version 0.2.5
 
 Added monochrome (non-antialiased) render mode for preview panels.
 
