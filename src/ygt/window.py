@@ -61,7 +61,7 @@ from .glyphPicker import ygGlyphPicker
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
-ygt_version = "0.2.4"
+ygt_version = "0.2.5"
 
 
 class ygPreviewFontMaker(QThread):
@@ -422,14 +422,17 @@ class MainWindow(QMainWindow):
         self.pv_mode_1_action = self.pv_render_mode_menu.addAction("Grayscale")
         self.pv_mode_2_action = self.pv_render_mode_menu.addAction("Subpixel (1)")
         self.pv_mode_3_action = self.pv_render_mode_menu.addAction("Subpixel (2)")
+        self.pv_mode_4_action = self.pv_render_mode_menu.addAction("Monochrome")
         self.render_action_group = QActionGroup(self.pv_render_mode_menu)
         self.render_action_group.addAction(self.pv_mode_1_action)
         self.render_action_group.addAction(self.pv_mode_2_action)
         self.render_action_group.addAction(self.pv_mode_3_action)
+        self.render_action_group.addAction(self.pv_mode_4_action)
         self.pv_mode_1_action.setCheckable(True)
         self.pv_mode_2_action.setCheckable(True)
         self.pv_mode_2_action.setChecked(True)
         self.pv_mode_3_action.setCheckable(True)
+        self.pv_mode_4_action.setCheckable(True)
         self.pv_render_mode_menu.setEnabled(False)
 
         self.preview_menu.addSeparator()
@@ -1016,6 +1019,7 @@ class MainWindow(QMainWindow):
         self.pv_mode_1_action.triggered.connect(self.yg_preview.render1)
         self.pv_mode_2_action.triggered.connect(self.yg_preview.render2)
         self.pv_mode_3_action.triggered.connect(self.yg_preview.render3)
+        self.pv_mode_4_action.triggered.connect(self.yg_preview.render4)
         self.pv_theme_auto_action.triggered.connect(self.yg_preview.set_theme_auto)
         self.pv_theme_light_action.triggered.connect(self.yg_preview.set_theme_light)
         self.pv_theme_dark_action.triggered.connect(self.yg_preview.set_theme_dark)

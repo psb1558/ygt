@@ -18,6 +18,14 @@ For more information, see the [documentation](https://github.com/psb1558/ygt/tre
 
 ## Changes
 
+### Version 0.2.5 (coming soon)
+
+Added monochrome (non-antialiased) render mode for preview panels.
+
+Fixed a bug in entry of OT feature indices.
+
+Fixed two bugs when switching between axes
+
 ### Version 0.2.4 (2023-5-30)
 
 Qt was adding extra antialiasing in string/array preview. We now display only FreeType antialiasing.

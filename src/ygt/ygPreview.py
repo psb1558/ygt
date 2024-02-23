@@ -6,6 +6,7 @@ from .freetypeFont import (
     RENDER_GRAYSCALE,
     RENDER_LCD_1,
     RENDER_LCD_2,
+    RENDER_MONO,
     #adjust_gamma,
 )
 from PyQt6.QtWidgets import (
@@ -196,7 +197,7 @@ class ygPreview(QLabel):
 
         self.pixel_size = self.max_pixel_size
         char_width = ft_width
-        if self.render_mode != RENDER_GRAYSCALE:
+        if not self.render_mode in [RENDER_GRAYSCALE, RENDER_MONO]:
             char_width = ft_width / 3
         preview_display_width = self.width() - (PREVIEW_HORI_MARGIN * 2)
         if char_width * self.pixel_size > preview_display_width:
@@ -258,10 +259,16 @@ class ygPreview(QLabel):
     def render3(self) -> None:
         self.set_render_mode(RENDER_LCD_2)
 
+    @pyqtSlot()
+    def render4(self) -> None:
+        self.set_render_mode(RENDER_MONO)
+
     def set_render_mode(self, m: int) -> None:
         self.render_mode = m
         if self.render_mode == RENDER_GRAYSCALE:
             self.make_pixmap = self.make_pixmap_grayscale
+        elif self.render_mode == RENDER_MONO:
+            self.make_pixmap = self.make_pixmap_mono
         elif self.render_mode == RENDER_LCD_1:
             self.make_pixmap = self.make_pixmap_lcd1
         else:
@@ -379,7 +386,7 @@ class ygPreview(QLabel):
         pen = painter.pen()
         pen.setWidth(1)
         line_length = self.face.glyph_slot.bitmap.width * self.pixel_size
-        if self.render_mode != RENDER_GRAYSCALE:
+        if not self.render_mode in [RENDER_GRAYSCALE, RENDER_MONO]:
             line_length = int(line_length / 3)
 
         dark_theme = (self.theme_choice == "dark")
@@ -398,7 +405,7 @@ class ygPreview(QLabel):
             painter.drawLine(QLine(left, top, left + line_length, top))
             top += self.pixel_size
 
-        if self.render_mode in [RENDER_GRAYSCALE, RENDER_LCD_1]:
+        if self.render_mode in [RENDER_GRAYSCALE, RENDER_LCD_1, RENDER_MONO]:
             grid_width = self.face.glyph_slot.bitmap.width + 1
             if self.render_mode == RENDER_LCD_1:
                 grid_width = round(grid_width / 3) + 1
@@ -413,6 +420,48 @@ class ygPreview(QLabel):
             for i, r in enumerate(range(grid_width)):
                 painter.drawLine(QLine(left, y_top, left, y_bot))
                 left += self.pixel_size
+
+    def make_pixmap_mono(self) -> None:
+        """Paint monochrome glyph."""
+        dark_theme = (self.theme_choice == "dark")
+        if self.theme_choice == "auto":
+            dark_theme = self.dark_theme
+
+        if self.pixmap == None:
+            self.pixmap = QPixmap(self.width(), self.height())
+        self.pixmap.fill(self.background_color)
+        painter = QPainter(self.pixmap)
+
+        if not self._build_glyph():
+            painter.end()
+            return
+        if len(self.Z) == 0:
+            painter.end()
+            return
+
+        xposition = self.horizontal_margin
+        yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
+
+        ft_width = self.face.glyph_slot.bitmap.width
+        ft_rows = self.face.glyph_slot.bitmap.rows
+
+        pixcolor = QColor("white") if dark_theme else QColor("black")
+        bytestepper = 0
+        for r in range(ft_rows):
+            for w in range(ft_width):
+                if self.Z[bytestepper]:
+                    qr = QRect(xposition, yposition, self.pixel_size, self.pixel_size)
+                    painter.fillRect(qr, pixcolor)
+                xposition += self.pixel_size
+                bytestepper += 1
+            yposition += self.pixel_size
+            xposition = self.horizontal_margin
+        if self.show_grid:
+            self.draw_grid(painter)
+        painter.end()
+        self.setPixmap(self.pixmap)
+
+        self.sig_preview_paint_done.emit(None)
 
 
     def make_pixmap_grayscale(self) -> None:

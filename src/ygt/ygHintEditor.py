@@ -3161,12 +3161,16 @@ class ygGlyphView(QGraphicsView):
         if gname in self.visited_glyphs:
             self.yg_glyph_scene = self.visited_glyphs[gname]
             new_glyph = self.yg_glyph_scene.yg_glyph
+            #new line:
+            new_glyph.axis = self.preferences.top_window().current_axis
             # If we're returning to a glyph, we have to undo the cleanup
             # we did when we left it.
             new_glyph.undo_stack.setActive()
             new_glyph.restore_gsource()
         else:
             new_glyph = ygGlyph(self.preferences, self.yg_font, gname)
+            #new line:
+            new_glyph.axis = self.preferences.top_window().current_axis
             self.yg_glyph_scene = ygGlyphScene(self.preferences, new_glyph, owner = self)
         self.preferences.set_current_glyph(self.yg_font.full_name, gname)
         self.setScene(self.yg_glyph_scene)
@@ -3191,18 +3195,19 @@ class ygGlyphView(QGraphicsView):
     def switch_to_x(self, checked: bool) -> None:
         if self.yg_glyph_scene:
             if checked and self.yg_glyph_scene.yg_glyph.axis != "x":
-                # self.yg_glyph_scene.axis = "x"
                 self.yg_glyph_scene.yg_glyph.switch_to_axis("x")
-                win = self.parent().parent()
-                win.set_window_title()  # type: ignore
+                #win = self.parent().parent()
+                self.parent().parent().set_window_title()  # type: ignore
+
 
     @pyqtSlot(bool)
     def switch_to_y(self, checked: bool) -> None:
         if self.yg_glyph_scene:
             if checked and self.yg_glyph_scene.yg_glyph.axis != "y":
                 self.yg_glyph_scene.yg_glyph.switch_to_axis("y")
-                win = self.parent().parent()
-                win.set_window_title()  # type: ignore
+                #win = self.parent().parent()
+                #win.set_window_title()  # type: ignore
+                self.parent().parent().set_window_title()  # type: ignore
 
     @pyqtSlot()
     def cleanup_yaml_code(self) -> None:

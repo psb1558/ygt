@@ -2038,13 +2038,18 @@ class switchAxisCommand(QUndoCommand):
         if self.yg_glyph.axis == self.new_axis:
             return
         self.top_window.current_axis = self.yg_glyph.axis = self.new_axis
-        self.yg_glyph._hints_changed(self.yg_glyph.hints, dirty=False)
+        self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
+        self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
+        #self.yg_glyph._hints_changed(self.yg_glyph.hints, dirty=False)
+        self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
         self.yg_glyph.send_yaml_to_editor()
         self.top_window.set_window_title()
         self.top_window.check_axis_button()
 
     def undo(self) -> None:
         self.top_window.current_axis = self.yg_glyph.axis = self.original_axis
+        self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
+        self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
         self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
         self.yg_glyph.send_yaml_to_editor()
         self.top_window.set_window_title()
@@ -2770,10 +2775,11 @@ class ygGlyph(QObject):
     #
 
     def switch_to_axis(self, new_axis: str) -> None:
-        if self.axis == "y":
-            new_axis = "x"
-        else:
-            new_axis = "y"
+        new_axis = "x" if self.axis == "y" else "y"
+        #if self.axis == "y":
+        #    new_axis = "x"
+        #else:
+        #    new_axis = "y"
         self.undo_stack.push(switchAxisCommand(self, self.preferences, new_axis))
 
     #

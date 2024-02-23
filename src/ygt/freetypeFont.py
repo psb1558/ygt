@@ -7,8 +7,9 @@ from PyQt6.QtGui import QColor, QPen, QImage, QPainter
 from PyQt6.QtCore import QLine
 
 RENDER_GRAYSCALE = 1
-RENDER_LCD_1 = 2
-RENDER_LCD_2 = 3
+RENDER_LCD_1     = 2
+RENDER_LCD_2     = 3
+RENDER_MONO      = 4
 
 
 class ygLetterBox:
@@ -123,6 +124,8 @@ class freetypeFont:
             self.draw_char = self._draw_char_lcd
         elif self.render_mode == RENDER_LCD_2:
             self.draw_char = self._draw_char_lcd
+        elif self.render_mode == RENDER_MONO:
+            self.draw_char = self._draw_char_mono
         else:
             self.draw_char = self._draw_char_grayscale
 
@@ -160,7 +163,9 @@ class freetypeFont:
         """
         self.glyph_index = glyph_index
         flags = 4  # i.e. grayscale
-        if self.render_mode in [RENDER_LCD_1, RENDER_LCD_2]:
+        if self.render_mode == RENDER_MONO:
+            flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_MONO
+        elif self.render_mode in [RENDER_LCD_1, RENDER_LCD_2]:
             flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_TARGET_LCD
         if not self.hinting_on:
             flags = flags | ft.FT_LOAD_NO_HINTING | ft.FT_LOAD_NO_AUTOHINT
@@ -180,16 +185,44 @@ class freetypeFont:
         r["bitmap_left"] = self.glyph_slot.bitmap_left
         r["advance"] = round(self.glyph_slot.advance.x / 64)
         return r
+    
+    #def glyph_bit(self, x, y):
+    #    pitch = abs(self.glyph_slot.bitmap.pitch)
+    #    row = self.glyph_slot.bitmap.buffer[pitch * y::]
+    #    cValue = row[x >> 3]
+    #    return cValue & (128 >> (x & 7)) != 0
+    
+    def monomap_to_array(self, bitmap):
+        data = [0] * (bitmap.rows * bitmap.width)
+        for y in range(bitmap.rows):
+            for byte_index in range(bitmap.pitch):
+                byte_value = bitmap.buffer[y * bitmap.pitch + byte_index]
+                rowstart = y * bitmap.width + byte_index * 8
+                num_bits_done = byte_index * 8
+                bits = 8
+                if ((bitmap.width - num_bits_done) < 8):
+                    bits = bitmap.width - num_bits_done
+                for bit_index in range(bits):
+                    bit = byte_value & (1 << (7 - bit_index))
+                    if bit:
+                        data[rowstart + bit_index] = 1
+        return list(data)
 
     def mk_array(self, metrics, render_mode):
         data = []
         rows = metrics["rows"]
         width = metrics["width"]
         pitch = metrics["pitch"]
+        if render_mode == RENDER_MONO:
+            newmap = self.monomap_to_array(self.glyph_slot.bitmap)
+        else:
+            newmap = self.glyph_slot.bitmap.buffer
         for i in range(rows):
-            data.extend(self.glyph_slot.bitmap.buffer[i * pitch : i * pitch + width])
+            data.extend(newmap[i * pitch : i * pitch + width])
         if render_mode == RENDER_GRAYSCALE:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, width)
+        elif render_mode == RENDER_MONO:
+            return newmap
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
 
@@ -285,6 +318,67 @@ class freetypeFont:
             )
         )
         return gdata["advance"]
+    
+
+    def _draw_char_mono(
+            self,
+            painter,
+            x,
+            y,
+            spacing_mark=False,
+            dark_theme = False,
+            is_target = False,
+            x_offset = 0,
+            y_offset = 0,
+    ):
+        gdata = self._get_bitmap_metrics()
+        bm = self.mk_array(gdata, self.render_mode)
+        ypos = (y - gdata["bitmap_top"]) - y_offset
+        starting_ypos = ypos
+        is_mark = spacing_mark and (gdata["advance"] == 0)
+        if is_mark:
+            starting_xpos = xpos = x
+            xpos += 2
+            gdata["advance"] = self.advance = gdata["width"] + 4
+        else:
+            starting_xpos = xpos = (x + gdata["bitmap_left"]) + x_offset
+        qp = QPen(QColor("black"))
+        qp.setWidth(1)
+        on_pixel = QColor("white") if dark_theme else QColor("black")
+        qp.setColor(QColor(on_pixel))
+        painter.setPen(qp)
+        bytestepper = 0
+        for r in range(gdata["rows"]):
+            xpos = starting_xpos
+            for w in range(gdata["width"]):
+                if bm[bytestepper]:
+                    painter.drawPoint(xpos, ypos)
+                bytestepper += 1
+                xpos += 1
+            ypos += 1
+        ending_xpos = starting_xpos + round(gdata["advance"])
+        ending_ypos = starting_ypos + gdata["rows"]
+        if is_target:
+            ul_y = ending_ypos + 4
+            qc = QPen(QColor("red"))
+            qc.setWidth(2)
+            painter.setPen(qc)
+            painter.drawLine(QLine(starting_xpos, ul_y, ending_xpos, ul_y))
+        if abs(ending_ypos - starting_ypos) <= 5:
+            starting_ypos -= 3
+            ending_ypos += 3
+        self.rect_list.append(
+            ygLetterBox(
+                starting_xpos,
+                starting_ypos,
+                ending_xpos,
+                ending_ypos,
+                glyph_index=self.glyph_index,
+                size=self.size,
+                gname=self.index_to_name(self.glyph_index),
+            )
+        )
+        return gdata["advance"]
 
 
     def _draw_char_grayscale(
@@ -310,7 +404,7 @@ class freetypeFont:
 
         """
         gdata = self._get_bitmap_metrics()
-        Z = self.mk_array(gdata, RENDER_GRAYSCALE)
+        Z = self.mk_array(gdata, self.render_mode)
         ypos = (y - gdata["bitmap_top"]) - y_offset
         starting_ypos = ypos
         is_mark = spacing_mark and (gdata["advance"] == 0)
