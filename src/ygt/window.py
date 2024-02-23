@@ -1618,7 +1618,7 @@ class MainWindow(QMainWindow):
         msg.setWindowTitle("About YGT")
         msg.setText("YGT " + ygt_version)
         detailed_text = "TrueType Hint Editor.\n"
-        detailed_text += "Copyright © 2023 by Peter S. Baker.\n"
+        detailed_text += "Copyright © 2024 by Peter S. Baker.\n"
         detailed_text += "Apache License, version 2.0. \n\n"
         detailed_text += "For further information, visit https://github.com/psb1558/ygt."
         msg.setDetailedText(detailed_text)
