@@ -769,7 +769,7 @@ class ygFont(QObject):
         x_len = 0
         if "y" in glyph_program and "points" in glyph_program["y"]:
             y_len = len(glyph_program["y"]["points"])
-        if y_len == 0 and "x" in glyph_program and "points" in glyph_program["y"]:
+        if y_len == 0 and "x" in glyph_program and "points" in glyph_program["x"]:
             x_len = len(glyph_program["x"]["points"])
         has_code = (y_len > 0 or x_len > 0)
         return any([has_code, "names" in glyph_program, "props" in glyph_program])
