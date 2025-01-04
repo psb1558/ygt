@@ -1229,8 +1229,6 @@ class hbFeatureDialog(QDialog):
         self.feature_list = []
         for s in self.hb_font._sub_features:
             self.feature_list.append(harfbuzzFont.expanded_feature_name(s))
-        #for s in self.hb_font._pos_features:
-        #    self.feature_list.append(harfbuzzFont.expanded_feature_name(s))
         self.feature_list = sorted(self.feature_list)
         if len(self.feature_list):
             self.feature_box = QComboBox()

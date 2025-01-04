@@ -152,3 +152,9 @@ class stemFinder:
                 result = "whitedist"
         return result
 
+
+# class horizontalSegmentList:
+#     def __init__(self, c: List[ygPoint]):
+#         self.pt_list = []
+#         found_points = []
+#         for p in c:

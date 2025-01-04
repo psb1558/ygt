@@ -1315,20 +1315,31 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def open_file(self) -> None:
         f: FileNameVar = QFileDialog.getOpenFileName(
-            self, "Open TrueType font or YAML file", "", "Files (*.ttf *.ufo *.yaml)"
+            self, "Open TrueType font, UFO, or YAML file", "", "Files (*.ttf *.ufo *.yaml)"
         )
         result = 1
         try:
-            os.chdir(os.path.split(f[0])[0])
-            result = self._open(f)
-        except FileNotFoundError:
-            emsg = "Can't find file '" + str(f) + "'."
-            if type(f) is tuple:
-                emsg += f[0]
-            elif type(f) is str:
-                emsg += f
+            # We get an empty string if user clicked "Cancel." In that case, do nothing.
+            # If file does not exist, display error message and then do nothing.
+            if len(f[0]) > 0:
+                if os.path.exists(f[0]):
+                    os.chdir(os.path.split(f[0])[0])
+                    result = self._open(f)
+                else:
+                    emsg = "file " + f[0] + " does not exist."
+                    result = 0
+                    self.error_manager.new_message({"msg": emsg, "mode": "dialog"})
             else:
-                emsg += str(f)
+                result = 0
+        except FileNotFoundError:
+            # emsg = "Can't find file '" + str(f[0]) + "'."
+            if type(f) is tuple:
+                fn = f[0]
+            elif type(f) is str:
+                fn = f
+            else:
+                fn = str(f)
+            emsg = "Can't find file '" + fn + "'."
             self.error_manager.new_message({"msg": emsg, "mode": "console"})
         if result == 1:
             self.set_preferences()
@@ -1615,15 +1626,13 @@ class MainWindow(QMainWindow):
     @pyqtSlot()
     def show_about_dialog(self) -> None:
         msg = QMessageBox(self)
+        msg.setStyleSheet("QLabel{min-width: 350px;}")
         msg.setWindowTitle("About YGT")
-        msg.setText("YGT " + ygt_version)
-        detailed_text = "TrueType Hint Editor.\n"
-        detailed_text += "Copyright © 2024 by Peter S. Baker.\n"
+        msg.setText("YGT TrueType Hint Editor v. " + ygt_version)
+        detailed_text =  "Copyright © 2024 by Peter S. Baker.\n"
         detailed_text += "Apache License, version 2.0. \n\n"
         detailed_text += "For further information, visit https://github.com/psb1558/ygt."
         msg.setDetailedText(detailed_text)
-        # Will need to mess with size hints and policies to do this.
-        # msg.resize(round(msg.width() * 2), round(msg.height() * 2))
         msg.setStandardButtons(QMessageBox.StandardButton.NoButton)
         msg.exec()
 

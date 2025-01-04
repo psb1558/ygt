@@ -186,12 +186,6 @@ class freetypeFont:
         r["advance"] = round(self.glyph_slot.advance.x / 64)
         return r
     
-    #def glyph_bit(self, x, y):
-    #    pitch = abs(self.glyph_slot.bitmap.pitch)
-    #    row = self.glyph_slot.bitmap.buffer[pitch * y::]
-    #    cValue = row[x >> 3]
-    #    return cValue & (128 >> (x & 7)) != 0
-    
     def monomap_to_array(self, bitmap):
         data = [0] * (bitmap.rows * bitmap.width)
         for y in range(bitmap.rows):
@@ -342,10 +336,8 @@ class freetypeFont:
             gdata["advance"] = self.advance = gdata["width"] + 4
         else:
             starting_xpos = xpos = (x + gdata["bitmap_left"]) + x_offset
-        qp = QPen(QColor("black"))
+        qp = QPen(QColor("white") if dark_theme else QColor("black"))
         qp.setWidth(1)
-        on_pixel = QColor("white") if dark_theme else QColor("black")
-        qp.setColor(QColor(on_pixel))
         painter.setPen(qp)
         bytestepper = 0
         for r in range(gdata["rows"]):
