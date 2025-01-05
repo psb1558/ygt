@@ -61,7 +61,7 @@ from .glyphPicker import ygGlyphPicker
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
-ygt_version = "0.2.5"
+ygt_version = "0.2.6"
 
 
 class ygPreviewFontMaker(QThread):
@@ -1629,7 +1629,7 @@ class MainWindow(QMainWindow):
         msg.setStyleSheet("QLabel{min-width: 350px;}")
         msg.setWindowTitle("About YGT")
         msg.setText("YGT TrueType Hint Editor v. " + ygt_version)
-        detailed_text =  "Copyright © 2024 by Peter S. Baker.\n"
+        detailed_text =  "Copyright © 2024–2025 by Peter S. Baker.\n"
         detailed_text += "Apache License, version 2.0. \n\n"
         detailed_text += "For further information, visit https://github.com/psb1558/ygt."
         msg.setDetailedText(detailed_text)
