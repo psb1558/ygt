@@ -121,9 +121,13 @@ nested_point_struct = {
     Optional("dist"): str,
     Optional("pos"): str,
     Optional("round"): is_round_valid,
+    # Optional("min"): bool,
+    # "rel": Or(
+    #     "stem", "blackdist", "whitedist", "graydist", "shift", "align", "interpolate"
+    # ),
     Optional("min"): bool,
     "rel": Or(
-        "stem", "blackdist", "whitedist", "graydist", "shift", "align", "interpolate"
+        "stem", "shift", "align", "interpolate"
     ),
     Optional("points"): validate_points,
 }
@@ -140,11 +144,17 @@ point_struct = {
             Optional("min"): bool,
             Optional("function"): Or(str, dict),
             Optional("macro"): Or(str, dict),
+            # Optional("rel"): Or(
+            #     "stem",
+            #     "blackdist",
+            #     "whitedist",
+            #     "graydist",
+            #     "shift",
+            #     "align",
+            #     "interpolate",
+            # ),
             Optional("rel"): Or(
                 "stem",
-                "blackdist",
-                "whitedist",
-                "graydist",
                 "shift",
                 "align",
                 "interpolate",
@@ -244,9 +254,10 @@ macro_entry_struct = {
 }
 
 hint_types = [
-    "blackdist",
-    "whitedist",
-    "graydist",
+    "stem",
+    # "blackdist",
+    # "whitedist",
+    # "graydist",
     "anchor",
     "shift",
     "align",

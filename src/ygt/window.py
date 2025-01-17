@@ -61,7 +61,7 @@ from .glyphPicker import ygGlyphPicker
 # FileNameVar = TypeVar("FileNameVar", str, tuple[str, Any])
 FileNameVar = Union[str, tuple[str, Any]]
 # FileNameVar = Any
-ygt_version = "0.2.6"
+ygt_version = "0.2.7"
 
 
 class ygPreviewFontMaker(QThread):

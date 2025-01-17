@@ -11,7 +11,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtGui import QUndoCommand, QUndoStack, QAction
 from fontTools import ttLib, ufoLib # type: ignore
 import yaml
-from yaml import Dumper
+from yaml import Dumper, parse
 import os
 import pathlib
 import uuid
@@ -29,15 +29,19 @@ from .harfbuzzFont import harfbuzzFont
 import defcon # type: ignore
 from ufo2ft import compileTTF # type: ignore
 
+obsolete_hint_types = [
+    "blackdist", "whitedist", "graydist"
+]
+
 hint_type_nums = {
     "anchor": 0,
     "align": 1,
     "shift": 1,
     "interpolate": 2,
     "stem": 3,
-    "whitedist": 3,
-    "blackdist": 3,
-    "graydist": 3,
+    # "whitedist": 3,
+    # "blackdist": 3,
+    # "graydist": 3,
     "move": 3,
     "macro": 4,
     "function": 4,
@@ -2731,6 +2735,9 @@ class ygGlyph(QObject):
         if "macro" in n:
             return "macro"
         if "rel" in n:
+            #if n["rel"] == "blackdist" or n["rel"] == "whitedist" or n["rel"] == "graydist":
+            if n["rel"] in obsolete_hint_types:
+                n["rel"] = "stem"
             return n["rel"]
         return "anchor"
 

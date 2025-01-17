@@ -560,7 +560,7 @@ class cvWidget(QWidget):
 
         self.general_tab_layout = QVBoxLayout()
         self.cv_type_widget = cvTypeWidget(self.cv_source)
-        self.cv_color_widget = cvColorWidget(self.cv_source)
+        #self.cv_color_widget = cvColorWidget(self.cv_source)
         self.cv_axis_widget = cvAxisWidget(self.cv_source)
         self.cv_val_widget = cvValueWidget(self.cv_source)
         self.cv_name_widget = cvNameWidget(self.cv_source, owner=self.owner)
@@ -593,9 +593,9 @@ class cvWidget(QWidget):
         self.gen_widgets[-1].addWidget(QLabel("suffix"))
         self.gen_widgets[-1].addWidget(self.cv_suffix_widget)
 
-        self.gen_widgets.append(QHBoxLayout())
-        self.gen_widgets[-1].addWidget(QLabel("distance type"))
-        self.gen_widgets[-1].addWidget(self.cv_color_widget)
+        # self.gen_widgets.append(QHBoxLayout())
+        # self.gen_widgets[-1].addWidget(QLabel("distance type"))
+        # self.gen_widgets[-1].addWidget(self.cv_color_widget)
 
         # Set up link tab
 
@@ -699,7 +699,7 @@ class cvWidget(QWidget):
         self.cv_name_widget.refresh(self.cv_source)
         self.cv_type_widget.refresh(self.cv_source)
         self.cv_axis_widget.refresh(self.cv_source)
-        self.cv_color_widget.refresh(self.cv_source)
+        #self.cv_color_widget.refresh(self.cv_source)
         self.cv_val_widget.refresh(self.cv_source)
         self.cv_cat_widget.refresh(self.cv_source)
         self.cv_suffix_widget.refresh(self.cv_source)
@@ -715,7 +715,7 @@ class cvWidget(QWidget):
         self.cv_name_widget.fixup()
         self.cv_type_widget.fixup()
         self.cv_axis_widget.fixup()
-        self.cv_color_widget.fixup()
+        #self.cv_color_widget.fixup()
         self.cv_val_widget.fixup()
         self.cv_cat_widget.fixup()
         self.cv_suffix_widget.fixup()
@@ -780,20 +780,25 @@ class hintRoundWidget(QWidget):
         self.anchor_layout.addWidget(self.anchor_checkbox)
         self.layout_obj.addLayout(self.anchor_layout)
 
-        self.blackdist_layout = QHBoxLayout()
-        self.blackdist_checkbox = QCheckBox("Black distance")
-        self.blackdist_layout.addWidget(self.blackdist_checkbox)
-        self.layout_obj.addLayout(self.blackdist_layout)
+        self.stem_layout = QHBoxLayout()
+        self.stem_checkbox = QCheckBox("Stem")
+        self.stem_layout.addWidget(self.stem_checkbox)
+        self.layout_obj.addLayout(self.stem_layout)
 
-        self.whitedist_layout = QHBoxLayout()
-        self.whitedist_checkbox = QCheckBox("White distance")
-        self.whitedist_layout.addWidget(self.whitedist_checkbox)
-        self.layout_obj.addLayout(self.whitedist_layout)
+        # self.blackdist_layout = QHBoxLayout()
+        # self.blackdist_checkbox = QCheckBox("Black distance")
+        # self.blackdist_layout.addWidget(self.blackdist_checkbox)
+        # self.layout_obj.addLayout(self.blackdist_layout)
 
-        self.graydist_layout = QHBoxLayout()
-        self.graydist_checkbox = QCheckBox("Gray distance")
-        self.graydist_layout.addWidget(self.graydist_checkbox)
-        self.layout_obj.addLayout(self.graydist_layout)
+        # self.whitedist_layout = QHBoxLayout()
+        # self.whitedist_checkbox = QCheckBox("White distance")
+        # self.whitedist_layout.addWidget(self.whitedist_checkbox)
+        # self.layout_obj.addLayout(self.whitedist_layout)
+
+        # self.graydist_layout = QHBoxLayout()
+        # self.graydist_checkbox = QCheckBox("Gray distance")
+        # self.graydist_layout.addWidget(self.graydist_checkbox)
+        # self.layout_obj.addLayout(self.graydist_layout)
 
         self.shift_layout = QHBoxLayout()
         self.shift_checkbox = QCheckBox("Shift")
@@ -813,9 +818,10 @@ class hintRoundWidget(QWidget):
         self.refresh()
 
         self.anchor_checkbox.stateChanged.connect(self.button_state_changed)
-        self.blackdist_checkbox.stateChanged.connect(self.button_state_changed)
-        self.whitedist_checkbox.stateChanged.connect(self.button_state_changed)
-        self.graydist_checkbox.stateChanged.connect(self.button_state_changed)
+        self.stem_checkbox.stateChanged.connect(self.button_state_changed)
+        # self.blackdist_checkbox.stateChanged.connect(self.button_state_changed)
+        # self.whitedist_checkbox.stateChanged.connect(self.button_state_changed)
+        # self.graydist_checkbox.stateChanged.connect(self.button_state_changed)
         self.shift_checkbox.stateChanged.connect(self.button_state_changed)
         self.align_checkbox.stateChanged.connect(self.button_state_changed)
         self.interpolate_checkbox.stateChanged.connect(self.button_state_changed)
@@ -828,9 +834,10 @@ class hintRoundWidget(QWidget):
             return
         r = {}
         r["anchor"] = self.anchor_checkbox.isChecked()
-        r["blackdist"] = self.blackdist_checkbox.isChecked()
-        r["whitedist"] = self.whitedist_checkbox.isChecked()
-        r["graydist"] = self.graydist_checkbox.isChecked()
+        r["stem"] = self.stem_checkbox.isChecked()
+        # r["blackdist"] = self.blackdist_checkbox.isChecked()
+        # r["whitedist"] = self.whitedist_checkbox.isChecked()
+        # r["graydist"] = self.graydist_checkbox.isChecked()
         r["shift"] = self.shift_checkbox.isChecked()
         r["align"] = self.align_checkbox.isChecked()
         r["interpolate"] = self.interpolate_checkbox.isChecked()
@@ -842,9 +849,10 @@ class hintRoundWidget(QWidget):
     def refresh(self) -> None:
         self.ignore_signal = True
         self.anchor_checkbox.setChecked(self.defaults.rounding_state("anchor"))
-        self.blackdist_checkbox.setChecked(self.defaults.rounding_state("blackdist"))
-        self.whitedist_checkbox.setChecked(self.defaults.rounding_state("whitedist"))
-        self.graydist_checkbox.setChecked(self.defaults.rounding_state("graydist"))
+        self.stem_checkbox.setChecked(self.defaults.rounding_state("stem"))
+        # self.blackdist_checkbox.setChecked(self.defaults.rounding_state("blackdist"))
+        # self.whitedist_checkbox.setChecked(self.defaults.rounding_state("whitedist"))
+        # self.graydist_checkbox.setChecked(self.defaults.rounding_state("graydist"))
         self.shift_checkbox.setChecked(self.defaults.rounding_state("shift"))
         self.align_checkbox.setChecked(self.defaults.rounding_state("align"))
         self.interpolate_checkbox.setChecked(
