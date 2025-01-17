@@ -14,10 +14,10 @@
                 font-style: italic;
             }
             body {
-                width: 80%;
-                margin-left: 10%;
+                width: 70%;
+                margin-left: 15%;
             }
-            p, li, dd, dt, h1, h2 {
+            p, li, dd, dt, h1, h2, div {
                 font-family: Elstob;
                 font-size: 24px;
                 font-variant-numeric: oldstyle-nums proportional-nums;
@@ -52,32 +52,67 @@
                 font-size: 80%;
                 color: #8B0000;
             }
+            .code {
+                font-family: Arial;
+                font-size: 80%;
+            }
+            .ltr {
+                font-style: italic;
+                font-variation-settings: "slnt" 12;
+            }
+            .boxtext {
+                display: block;
+                float: right;
+                width: 20%;
+                font-size: 75%;
+                border: 2px solid black;
+                margin: 5px;
+                padding: 5px;
+            }
+            .bottombox {
+                border: 3px solid lightgray;
+                margin-top: 30px;
+                padding: 10px;
+                text-align: center;
+            }
         </style>
 
     </head>
     <body>
         <h1>Tutorial for the <span class="ygt">ygt</span> hint editor</h1>
         <p>
-            This tutorial assumes that you understand the purpose of TrueType hinting
+            This tutorial assumes that you understand what TrueType hinting is and what 
+            it is for. It also assumes that you have succeeded
+            in downloading and launching <span class="ygt">ygt</span>. If the first of these
+            things is not true, read the 
+            <a href="https://learn.microsoft.com/en-us/typography/truetype/hinting">introduction 
+            to TrueType hinting</a> at the Microsoft Typography site. If the second is not
+            true, consult the “Getting Started” section of the document
+            <a href="https://github.com/psb1558/ygt/blob/main/docs/YGT-intro.pdf">YGT-Intro.pdf</a>.
         </p>
         <h2>The <span class="ygt">ygt</span> window</h2>
         <p>
             Start a hinting project by launching <span class="ygt">ygt</span> and opening either a TrueType
             font or a UFO. For this tutorial we’ll open the variable version of
-            the Elstob font (the very font in which this document is set), which will enable us to demonstrate both basic
+            the <a href="https://github.com/psb1558/Elstob-font">Elstob font</a> 
+            (the very font in which this document is set), which will enable us to demonstrate both basic
             hinting techniques and advanced techniques relating to variable fonts.
         </p>
         <p>
             When you first load a font, the <span class="ygt">ygt</span> main window looks like this:
         </p>
-        <img src="./images/tut_01.png" style="width: 60%;">
+        <img src="./images/tut_01.png" style="width: 90%;">
         <p>
             This window is divided into five panes. On the right is the graphical
             editor, where you will do most of your work. In the middle is the code
-            pane. <span class="ygt">ygt</span> stores hints and other data in files in the yaml
-            serialization language, and the code pane displays this yaml code. You
+            pane. <span class="ygt">ygt</span> stores hints and other data in files in the YAML
+            serialization language, and the code pane displays this YAML code. You
             can edit the code directly, though most of the time it will be faster
-            and easier to use the graphical editor. On the left are two preview
+            and easier to use the graphical editor.*
+            <span class="boxtext">*You can
+                find a reference for <span class="ygt">ygt</span>’s very simple hinting language in the 
+                document <a href="https://github.com/psb1558/ygt/blob/main/docs/YGT-intro.pdf">YGT-Intro.pdf</a>.</span>
+            On the left are two preview
             panes. The one on the top shows a blown-up version of the current
             glyph as it will be rendered on screen, with the current collection of
             hints applied. You can view this glyph at various resolutions (in
@@ -90,7 +125,7 @@
             Beneath the big preview pane is one that by default shows the current 
             glyph in an array of resolutions beginning with 10ppem:
         </p>
-        <img src="./images/tut_02.png" style="width: 20%;"/>
+        <img src="./images/tut_02.png" style="width: 40%;"/>
         <p>
             The current resolution (25ppem is the default) is underlined in red;
             click on any instance to display that resolution in the large pane
@@ -99,33 +134,34 @@
             “Submit”: the text will appear in the current resolution and in the
             current instance:
         </p>
-        <img src="./images/tut_03.png" style="width: 20%;"/>
+        <img src="./images/tut_03.png" style="width: 40%;"/>
         <p>
             By choosing options on the “Preview” menu, you can choose the script 
             and language for this text, and you can apply any of your font’s OpenType 
             features—for example, small caps:
         </p>
-        <img src="./images/tut_04.png" style="width: 20%;"/>
+        <img src="./images/tut_04.png" style="width: 40%;"/>
         <p>
-            Thus you can get a preview of any glyph in context.
+            The ability to apply scripts, languages, and features enables you
+            to get a preview of any glyph in context.
         </p>
         <p>
             At the top of the <span class="ygt">ygt</span> window is a row of buttons. Some of these are
-            for adding hints, while others are for managing CVs, changing the
+            for adding hints (more on these later), while others are for managing CVs, changing the
             behavior of the pointer, and choosing the hinting direction (though
             modern fonts are usually hinted only on the y axis).
         </p>
         <p>
             There are two more important windows to mention before we go on. 
-            One is the “FontViewer,” which displays all the glyphs of the font:
+            One is the “Font Viewer,” which displays all the glyphs of the font:
         </p>
-        <img src="./images/tut_05.png" style="width: 30%;"/>
+        <img src="./images/tut_05.png" style="width: 50%;"/>
         <p>
             You can filter the display by typing any part of a glyph name. For 
             example, typing “eight” in the “Filter” box causes the Font Viewer 
             to display all variants of the number eight:
         </p>
-        <img src="./images/tut_06.png" style="width: 30%;"/>
+        <img src="./images/tut_06.png" style="width: 50%;"/>
         <p>
             Glyphs that are already hinted are highlighted in blue; composite 
             glyphs (which can’t be edited in <span class="ygt">ygt</span>) are highlighted in gold. The 
@@ -137,9 +173,14 @@
         <p>
             Next is the “Font Info” window:
         </p>
-        <img src="./images/tut_07.png" style="width: 40%;"/>
+        <img src="./images/tut_07.png" style="width: 60%;"/>
         <p>
-            This allows you to manage all of the font’s control values (CVs), which in <span class="ygt">ygt</span>
+            This allows you to manage all of the font’s control values (CVs),*
+            <span class="boxtext">*A control value is an integer stored in 
+            an array in the font. It is used by anchor and stem hints to
+            position points on the grid and regulate distances.
+            </span>
+            which in <span class="ygt">ygt</span>
             are named rather than numbered. Here you can also manage the masters
             of variable fonts, which correspond to the masters you produced when
             designing the font, and the variant CVs associated with those
@@ -147,16 +188,16 @@
             this tutorial.
         </p>
         <p>
-            You can also manage the program’s defaults for the current font on the 
+            You can also manage defaults for the current font on the 
             “Defaults” tab of the Font Info window.
         </p>
         <h2>Setting up for hinting</h2>
         <p>
-            Before we start to hint this font, we can customize the display. By
-            default, the graphical editor shows all of the font’s points: on-curve
+            Before we start to hint this font, we should customize the workspace. By
+            default, the graphical editor shows all of a glyph’s points: on-curve
             points are red circles, and off-curve points are slightly smaller blue
             circles. It is quite possible to apply hints to off-curve points, but
-            I strongly suggest that you hint only on-curve points. If you follow
+            I strongly suggest that you hint only on-curve points. If you decide to follow
             this advice, you can suppress the display of off-curve points by
             right-clicking anywhere in the graphical editor and selecting “Hide
             off-curve points” from the context menu.
@@ -166,7 +207,7 @@
             but if you want them for any reason, select “Show point labels” from 
             the context menu:
         </p>
-        <img src="./images/tut_08.png" style="width: 30%;"/>
+        <img src="./images/tut_08.png" style="width: 60%;"/>
         <p>
             In a TrueType font, glyph outlines are defined by a zero-based array
             of points. Most TrueType hint editors require that you refer to points
@@ -174,19 +215,19 @@
             unstable. If you switch font editors, the new editor will probably
             number points differently. If you make even minor edits in a glyph,
             you will very likely cause the glyph’s points to be renumbered. If
-            this happens after you’ve begun hinting, the result will be chaos.
+            you do either of these things after you’ve begun hinting, the result will be chaos.
         </p>
         <p>
             One way around this problem is to display point labels as coordinates 
             rather than indexes. Select “On-curve labels as coordinates” from the 
             context menu to switch to this mode:
         </p>
-        <img src="./images/tut_09.png" style="width: 20%;"/>
+        <img src="./images/tut_09.png" style="width: 40%;"/>
         <p>
             Now the code generated by <span class="ygt">ygt</span> will refer to points by their
             coordinates rather than their indexes, and <span class="ygt">ygt</span> will translate these
             coordinates into indexes at compile time. Since font apps will not
-            move on-curve point numbers, even if you add points, move off-curve
+            move on-curve points even if you add points, move off-curve
             points, or change editors, coordinates can be more stable than
             indexes. If you switch the display from indexes to coordinates and
             then hide point labels, coordinates will still be inserted in your
@@ -199,11 +240,13 @@
             various features of a glyph.
         </p>
         <p>
-            To name a point, select it, right click in the graphical editor, and 
+            To name a point, select* <span class="boxtext">*To select a point, click
+                or drag over it. Selected points are filled with gray.
+            </span> it, right click in the graphical editor, and 
             select “Name selected point” from the context menu. Type a name in 
-            the dialog that appears: the name will show in the graphical editor:
+            the dialog that appears. The name will show in the graphical editor:
         </p>
-        <img src="./images/tut_10.png" style="width: 20%;"/>
+        <img src="./images/tut_10.png" style="width: 40%;"/>
         <p>
             If  you name a point while point labels are displayed as indexes, 
             the name will serve as an alias for an index; otherwise it will serve 
@@ -211,21 +254,17 @@
         </p>
         <p>
             <span class="ygt">ygt</span> does a good bit of setup for you the first time you open a
-            font. It analyzes the font and builds a short list of CVs—that is,
-            numbers (in font units) that specify the position of points on the
-            grid or relative to other points.
-        </p>
-        <p>
-            Each CV is accompanied by a good bit of information, as you can see 
+            font. It analyzes the font and builds a short list of CVs,
+            each of which is accompanied by a good bit of information, as you can see 
             in the entry for “xheight”:
         </p>
-        <img src="./images/tut_11.png" style="width: 40%;"/>
+        <img src="./images/tut_11.png" style="width: 60%;"/>
         <dl>
             <dt>name</dt>
             <dd>
                 <span class="ygt">ygt</span> names CVs rather than requiring that you memorize their indexes. 
                 You supply a name when you create a CV, but the name can’t be changed 
-                afterwards.
+                afterwards—except by editing the code.
             </dd>
             <dt>val</dt>
             <dd>
@@ -240,70 +279,65 @@
             </dd>
             <dt>axis</dt>
             <dd>
-                This can be “x” or “y.” Hinting is now usually done only on the y axis.
+                This can be “x” or “y.” Hinting for most fonts is now done only on the y axis.
             </dd>
             <dt>cat</dt>
             <dd>
-                The category of character that this CV applies to. Each character in 
-                a font belongs to a Unicode category (e.g. “Letter, uppercase” or “Symbol, 
-                currency”). Selecting a category here signals that this CV applies only to 
+                The category of character that this CV applies to.<span class="boxtext">*Unencoded
+                    glyphs have no Unicode category, but <span class="ygt">ygt</span> can 
+                    usually guess at one.
+                </span> All of the encoded glyphs in 
+                a font belong to a Unicode category (e.g. “Letter, uppercase” or “Symbol, 
+                currency”).* Selecting a category here signals that this CV applies only to 
                 characters in that category.
             </dd>            
             <dt>suffix</dt>
             <dd>
                 Some classes of characters do not correspond to the Unicode categories, 
-                but can be identified by suffixes (like .sc or .smcp for small caps). If 
+                but can be identified by suffixes (like <span class="code">.sc</span> or 
+                <span class="code">.smcp</span> for small caps). If 
                 you enter a value here, this CV will apply only to characters with the 
                 specified suffix.
             </dd>
-            <dt>distance type</dt>
-            <dd>
-                If you select a value here (“black,” “white,” or “gray”), a “dist” hint 
-                with this CV must always have this distance type: black when the distance c
-                rosses a space that on a printed page would be filled with ink, white when the 
-                distance crosses a space that would not be filled with ink, or gray for all 
-                other cases. It is uncertain how significant the distance type is for the correct 
-                rendering of glyphs. <span class="ygt">ygt</span> guesses at the distance type whenever it adds a stem 
-                hint. You will have to decide whether it is worth the trouble of correcting 
-                this when it guesses wrong.
-            </dd>
         </dl>
         <p>
-            Control values can be made equal to other CVs at specified sizes. For an example, 
+            A CV can be made equal to another CV at specified sizes. For an example, 
             select “xheight-overshoot” in the list of CVs and click over to the “Same as” tab:
         </p>
-        <img src="./images/tut_12.png" style="width: 40%;"/>
+        <img src="./images/tut_12.png" style="width: 60%;"/>
         <p>
             Here the CV “xheight-overshoot” is made equal to the “xheight” CV when
             the current resolution is less than 40ppem. (The same can be done when
             the current resolution is above a certain value, but this will be
             rarer.) The normal use of this feature is to equalize approximately
             equal CVs at low resolutions, so that, for example, characters with
-            overshoot (like o) don’t appear too much higher than characters
-            without overshoot (like x). In this example (at 18ppem), the top line
+            overshoot (like <span class="ltr">o</span>) don’t appear too much higher or lower than characters
+            without overshoot (like <span class="ltr">x</span>). In this example (at 18ppem), the top line
             does not set the two CVs equal and the bottom line does:
         </p>
-        <img src="./images/tut_13.png" style="width: 20%;"/>
+        <img src="./images/tut_13.png" style="width: 40%;"/>
         <p>
             By default, the two CVs specified here are set equal below 40ppem, but 
-            you should experiment with this number to get the best result for each 
+            you should experiment with this threshold number to get the best result for each 
             pair of CVs.
         </p>
         <p>
             The first time you open a variable font, <span class="ygt">ygt</span> builds a list of masters. 
             These will usually match the masters you created when designing the font, 
-            but you can add to, subtract from, and edit this list of masters:
+            but you can add to, subtract from, and edit this list:
         </p>
-        <img src="./images/tut_14.png" style="width: 40%;"/>
+        <img src="./images/tut_14.png" style="width: 60%;"/>
         <p>
             It is beyond the scope of this tutorial to explain the numbers that
-            define each master; but you should take note of the “Generate Variant
-            Control Values” button, which we will return to later. You also need
-            to know that each master can have variant control values associated
-            with it. You can see these variants on the “Variants” pane of the
+            define each master, but you need
+            to know that each master can have variant CVs associated
+            with it. Notice also the “Generate Variant
+            Control Values” button: we will return later to the subject of variant
+            CVs and of this button.
+            You can see the variant CVs associated with a variable font’s masters on the “Variants” pane of the
             “Control Values” tab:
         </p>
-        <img src="./images/tut_15.png" style="width: 40%;"/>
+        <img src="./images/tut_15.png" style="width: 60%;"/>
         <p>
             The default value of the “xheight” CV is 435, and it is the same for
             all the masters for which the value is “None.” But the masters
@@ -312,9 +346,9 @@
             engines will interpolate whenever the Optical Size changes.
         </p>
         <p>
-            We discuss this "Deltas" pane in another tutorial.
+            We will discuss the “Deltas” pane in another tutorial.
         </p>
-        <h2>Hinting the A</h2>
+        <h2>Hinting the letter <span class="ltr">A</span></h2>
         <p>
             The operation of the graphical editor will be intuitive to anyone who 
             has used a font or vector editor. To add a hint, select one or more points and 
@@ -323,38 +357,40 @@
         <ul style="list-style: none;">
             <li>
                 <img src="./images/tut_16_stem_hint_button.jpg" class="bulletimg"/>
-                Stem hint (shortcut T). This type of hint regulates the distance
+                Stem hint (shortcut <b>T</b>). This type of hint regulates the distance
                 between a reference and a target point. By default, the distance is
                 rounded: if the reference point is aligned to the grid, the target
                 point will also be aligned to the grid. Also by default, a minimum
                 distance of one pixel is maintained between the reference and the
                 target point. This can be turned off; or a distance of less or more
-                than one pixel can be specified in the code.
+                than one pixel can be specified in the code. For precise control, 
+                a stem hint can use a CV; but this is not usually necessary in 
+                modern hinting.
             </li>
             <li>
                 <img src="./images/tut_17_shift_hint_button.jpg"  class="bulletimg"/>
-                Shift hint (H). This moves one or more target points by exactly as
+                Shift hint (<b>H</b>). This moves one or more target points by exactly as
                 much as a reference point has been moved. If rounding is on for this
-                hint, all target points will then (after the initial positioning) be
+                hint, all target points will then (after initial positioning) be
                 rounded to the grid.
             </li>
             <li>
                 <img src="./images/tut_18_align_hing_button.jpg" class="bulletimg"/>
-                Align hint (L). This moves one or more target points so that they are 
+                Align hint (<b>L</b>). This moves one or more target points so that they are 
                 aligned on the current axis with a reference point. If rounding is on 
                 for this hint, all target points will then be aligned to the grid. Align 
                 hints are generally less useful than the others.
             </li>
             <li>
                 <img src="./images/tut_19_interp_hint_button.jpg" class="bulletimg"/>
-                Interpolate hint (I). This moves one or more target points so that their 
+                Interpolate hint (<b>I</b>). This moves one or more target points so that their 
                 position relative to two reference points is proportionally the same as 
-                in the original glyph. As with the shift and align hints, rounding is 
+                in the original glyph. As with the shift and align hints, rounding (if requested) is 
                 done after the target points are moved.
             </li>
             <li>
                 <img src="./images/tut_20_anchor_hint_button.jpg" class="bulletimg"/>
-                Anchor hint (A). This moves a point to a specific position on the grid. 
+                Anchor hint (<b>A</b>). This moves a point to a specific position on the grid. 
                 The position may be specified with a CV; if not, the point’s destination 
                 is its current position. By default, the point’s position is rounded so 
                 that it will always land on a grid line. If neither a CV nor rounding is 
@@ -364,37 +400,41 @@
             </li>
         </ul>
         <p>
-            Let’s start at the bottom of the glyph. You must always begin any
+            Let’s start hinting at the bottom of the glyph.<span class="boxtext">*If a point
+                is both rounded and selected, the fill is dark pink (or a pink-tinted gray).
+            </span> You must always begin a
             sequence of hints with an anchor hint. Select the bottom-left point
             (which we named “bottom” earlier) by clicking on it or dragging over
-            it, and click the “Anchor hint” button or type “A.” The point will be
+            it, and click the “Anchor hint” button or type <b>A</b>. The point will be
             highlighted in pink and filled with a lighter pink. The pink
             highlighting tells us that an anchor hint has been applied to this
-            point, and the light pink fill tells us that the hint is rounded.
+            point, and the light pink fill tells us that the hint is rounded.*
         </p>
-        <img src="./images/tut_21.png" style="width: 20%;"/>
+        <img src="./images/tut_21.png" style="width: 40%;"/>
         <p>
             We should apply a CV to this hint: it is not strictly necessary here,
-            but it’s a good idea to use CVs for hints that position points in
+            but it’s a good idea to use CVs for hints that position points at
             specific places on the grid, if only for the sake of your code’s
             legibility. Right click on the “bottom” point, select “Set control
             value” from the context menu, and choose “baseline” from the list of
-            CVs (only CVs that can be applied to this point in this glyph appear
+            CVs (only CVs that can be applied to this hint in this glyph appear
             on the menu):
         </p>
-        <img src="./images/tut_22.png" style="width: 30%;"/>
+        <img src="./images/tut_22.png" style="width: 50%;"/>
         <p>
             In the code pane, these lines have appeared. Together they make up a 
             hint instruction:
         </p>
-        <img src="./images/tut_23.png" style="width: 20%;"/>
+        <img src="./images/tut_23.png" style="width: 40%;"/>
         <p>
-            Those who know the yaml language will recognize the hyphen as marking
-            this instruction as a list item: it consists of two key-value
+            Those who know the YAML language will recognize the hyphen as marking
+            this instruction as a list item (a glyph program is a list of top-level
+            hints with their dependent hints): it consists of two key-value
             pairs. “ptid” stands for “point identifier”: it can be a single point
             or a list of points. “pos” stands for “position”: it identifies its
             value as a position-type CV. If the point were not already positioned
-            on the baseline, the “baseline” CV could cause it to be moved there.
+            on the baseline (if, for example, another instruction caused it to be
+            nudged away), the “baseline” CV would cause it to be moved there.
         </p>
         <p>
             Most hint instructions in the code pane will also contain a “rel” key, 
@@ -403,16 +443,20 @@
             positioned relative to any other point, the “rel” key is omitted here.
         </p>
         <p>
-            Next we should regulate the thickness of the serif. At one time, we
-            would have used a rounded stem hint with CV for this, but when working
-            on a font for a modern high-resolution display, it is better to use an
+            Next we should regulate the thickness of the serif.<span class="boxtext">*A 
+                highlighted point like this one can’t 
+                be selected by clicking on it: that selects the hint that has been 
+                applied to it. Instead, drag over the point to select it.
+            </span> In the days of
+            CRT displays, we
+            used a rounded stem hint with CV for this, but when working
+            on a font for a modern display, it is better to use an
             unrounded stem hint without a CV. To do this, select the “bottom”
-            point (when a point has an anchor hint, as this one does, you can
-            select the hint by clicking and the point by dragging) and the point
-            immediately above it, and click the “Stem hint” button or type the
-            shortcut T:
+            point* and point 19,25,
+            and click the “Stem hint” button or type the
+            shortcut <b>T</b>:
         </p>
-        <img src="./images/tut_24.png" style="width: 20%;"/>
+        <img src="./images/tut_24.png" style="width: 40%;"/>
         <p>
             The stem hint is marked with a red arrow running from the reference
             point “bottom” to the point at coordinates 19,25. You can see from the
@@ -424,18 +468,19 @@
         </p>
         <p>
             The hints we have applied so far make little visible difference to the 
-            rendered glyph—at least not at 25ppem:
+            rendered glyph—at least not at 25ppem. If you look closely, you can see
+            that the left serif has become a little darker:
         </p>
-        <img src="./images/tut_25.png" style="width: 15%;"/>
+        <img src="./images/tut_25.png" style="width: 60%;"/>
         <p>
-            However, the hinting will make a difference at other resolutions. We need 
+            The hinting will make a bigger difference at other resolutions. We need 
             to hint the right-hand serif to match the one on the left. We could apply 
             the same hints we used for the left-hand serif to the one on the right, 
-            but it is easier to use shift hints here. To do this, select a hinted point 
+            but it is better to use shift hints here. Select a hinted point 
             on the left and an equivalent point on the right and click the shift-hint 
-            button or type the shortcut H. Do this for each of the hinted points:
+            button or type the shortcut <b>H</b>. Do this for each of the hinted points:
         </p>
-        <img src="./images/tut_26.png" style="width: 40%;"/>
+        <img src="./images/tut_26.png" style="width: 60%;"/>
         <p>
             Now let’s hint the top of the letter. For the “top” point we’ll need
             an anchor hint with CV. It is not necessary to add the hint and the CV
@@ -448,27 +493,27 @@
             “Guess” from the list of CVs on the context menu.)
         </p>
         <p>
-            With one action, we have anchored the point “top” and applied the 
+            With a single action, we have anchored the point “top” and applied the 
             “cap-height-overshoot” CV (since the A is a little higher than most other 
             capitals). We should also regulate the position of the left-hand diagonal 
             relative to the “top” point. To do this, connect “top” with one of the  
             points at the top of the diagonal with a shift-hint:
         </p>
-        <img src="./images/tut_27.png" style="width: 20%;"/>
+        <img src="./images/tut_27.png" style="width: 40%;"/>
         <p>
             But our hinting of the top of the A has caused a problem at the bottom, 
-            where (at certain resolutions) the ends of the diagonals stick out beyond 
-            the bottom of the letter:
+            where (at certain resolutions) the ends of the diagonals have been pushed
+            out beyond the bottom of the letter:
         </p>
-        <img src="./images/tut_28.png" style="width: 15%;"/>
+        <img src="./images/tut_28.png" style="width: 25%;"/>
         <p>
             To fix this, we need to regulate the bottoms of the diagonals. There is 
             more than one way to do this; I suggest using an interpolate-hint to force 
             the relevant points back to their original mid-serif positions. Select the 
             two points we hinted in the bottom-left serifs, then one point at the bottom 
-            of each diagonal; then click the “Interpolate-hint” button or type I:
+            of each diagonal; then click the “Interpolate-hint” button or type <b>I</b>:
         </p>
-        <img src="./images/tut_29.png" style="width: 40%;"/>
+        <img src="./images/tut_29.png" style="width: 50%;"/>
         <p>
             It’s getting a little crowded at the bottom of the glyph, but you can
             see that yellow arrows now run from the two points we hinted at the
@@ -477,71 +522,67 @@
             interpolate-hint operates on all the members of this set. Now the
             problem with the diagonals is fixed:
         </p>
-        <img src="./images/tut_30.png" style="width: 15%;"/>
+        <img src="./images/tut_30.png" style="width: 25%;"/>
         <p>
             We still need to hint the bar of the A. Select the “top” and “bottom” 
             points, then the “bar” point, and hold down the shift key while clicking 
-            the “interpolate-hint” button or typing I: the “bar” point (the bottom-left 
+            the “interpolate-hint” button or typing <b>I</b>: the “bar” point (the bottom-left 
             point in the bar) will be interpolated and rounded to the grid:
         </p>
         <img src="./images/tut_31.png" style="width: 40%;"/>
         <p>
             The last thing we need to do is regulate the top of the bar. We’ll need an 
-            unrounded stem hint with no CV. In fact, almost all the stems in this font 
-            will be hinted in the same way: with unrounded stems; so rather than 
-            unrounding every stem hint after we added, lets change the default behavior 
+            unrounded stem hint with no CV—the kind we used for the serif. In fact, almost all the stems in this font 
+            will be regulated in the same way, with unrounded hints. So rather than 
+            unrounding every stem hint after we add it, lets change the default behavior 
             of these stems. To do this, bring up the “Font Info” box and click over to 
             the “Rounding” pane of the “Defaults” tab:
         </p>
-        <img src="./images/tut_32.png" style="width: 20%;"/>
+        <img src="./images/tut_31a.png" style="width: 60%;"/>
         <p>
-            But something has gone wrong here. The pink fill in the top point
-            tells us it is rounded when it shouldn’t be, and the reason is that
-            this is not a “Black distance” hint. Black distance hints are marked
-            by arrows with solid lines, White distance hints by lines with short
-            dashes, and Gray distance hints by lines with long dashes. <span class="ygt">ygt</span> guesses
-            at the distance type whenever it adds a stem hint. It rarely makes
-            mistakes, but it has made one here, adding a Gray hint instead of a
-            Black one. It is uncertain how important the distance type is to the
-            correct rendering of glyphs, but we may as well correct this. Right
-            click on the hint, select “Set distance type” from the context menu,
-            and chose “Black.” Then use the same context menu to unround the
-            point:
+            Uncheck the “Stem” box to make sure that every stem hint is unrounded when
+            first added (you can always change a hint’s rounding later). Now return
+            to the graphical editor and add a stem hint from “bar” to point 
+            183,251:
         </p>
-        <img src="./images/tut_33.png" style="width: 20%;"/>
+        <img src="./images/tut_33.png" style="width: 40%;"/>
         <p>
-            Now the bottom of the bar will appear sharp, being rounded to the grid, 
+            The bottom of the bar will appear sharp, being rounded to the grid, 
             and the top will be anti-aliased—an effect that you can see more clearly 
             (for both the bar and the serifs) at higher resolutions:
         </p>
-        <img src="./images/tut_34.png" style="width: 15%;"/>
+        <img src="./images/tut_34.png" style="width: 25%;"/>
+        <h2>Saving your work</h2>
         <p>
-            I’d like to hint one more glyph, but before we do that, let’s save our
-            work. To do so, simply type Ctrl-S or Cmd-S, as in other
+            I’m going to hint one more glyph, but before we do that, let’s save our
+            work. To do so, simply type <b>Ctrl-S</b> or <b>Cmd-S</b>, as in other
             applications. If you started your project by opening a TrueType font,
             <span class="ygt">ygt</span> will save your work in a separate file with the same name as the
-            font you opened, but with the suffix .yaml instead of .ttf. If you
+            font you opened, but with the suffix <span class="code">.yaml</span> 
+            instead of <span class="code">.ttf</span>. If you
             started by opening a UFO, your work will be saved in the UFO as
-            /data/org.ygthinter/source.yaml (if you want to change from UFO to
-            .ttf mode, simply copy this file out of the UFO, rename it, and edit
-            the first line to point at a TrueType font). When you return to the
-            project, open up the .yaml file, not the .ttf; or simply open the UFO
+            <span class="code">/data/org.ygthinter/source.yaml</span> (if you want to change from UFO to
+            <span class="code">.ttf</span> mode, simply copy this file out of the UFO, rename it, and edit
+            the first line to point to a TrueType font). When you return to the
+            project, open up the <span class="code">.yaml</span> file, not the 
+            <span class="code">.ttf</span>; or simply open the UFO
             again.
         </p>
+        <h2>The letter <span class="ltr">i</span></h2>
         <p>
-            I’ll conclude the tutorial by walking you through hinting the letter i. 
-            The  main part of the character (the “base”) is easy: once you’ve 
-            thoroughly learned the basics of <span class="ygt">ygt</span>, you should be able to hint it in 
-            a few seconds:
+            I’ll conclude the tutorial by walking you through hinting the letter <span class="ltr">i</span>. 
+            The  main part of the character (the “base”) is easy, given what you’ve learned so far:
         </p>
         <ul>
-            <li>Anchor point 0 to the baseline by selecting and typing Ctrl-A.</li>
-            <li>Add point 1 to the selection and type T.</li>
-            <li>Select points 1 and 18 and type H.</li>
-            <li>Select point 11 and type Ctrl-A.</li>
-            <li>Add point 10 to the selection and type T; then right-click on the 
-                hint and select “Minimum distance” from the context menu.</li>
-            <li>Select points 9 and 10 and type T.</li>
+            <li>Anchor point 0 to the baseline by selecting and typing <b>Ctrl-A</b>.</li>
+            <li>Add point 1 to the selection and type <b>T</b> to regulate the thickness of the serif.</li>
+            <li>Select points 1 and 18 and type <b>H</b> to regulate the right side of the serif.</li>
+            <li>Select point 11 and type <b>Ctrl-A</b> to hint the top of the minim.</li>
+            <li>Add point 10 to the selection and type <b>T</b>; then right-click on the 
+                hint and select “Minimum distance” from the context menu, unchecking it.
+                This will position the left side of the beak.</li>
+            <li>Select points 9 and 10 and type <b>T</b> to keep the beak from disappearing
+                at low resolutions.</li>
         </ul>
         <p>
             Here is the result:
@@ -551,41 +592,56 @@
             All that’s left now is the dot. The complication is that on the
             Optical Size axis of this variable font, the xheight varies—high at
             the minimum value and low at the maximum—and the height of diacritics
-            (like the dot of the i) varies with it. Yet it is important to assign
-            a CV for the height of diacritics, since they vary in height (for
+            (like the dot of the <span class="ltr">i</span>) varies with it. Yet it is important to assign
+            a CV for diacritics, since they vary in height (for
             example, an acute sits significantly lower than a macron) in a way
             that might look bad at low resolutions. For the base value of this CV,
             we should choose a position about halfway between the highest
-            diacritic (the macron, at 556) and the lowest (the acute at 521).
+            diacritic in the font (the macron, at 556) and the lowest (the acute at 521).
         </p>
         <p>
-            The best procedure is to base a CV on the bottommost point of a
-            diacritic that sits about halfway between the acute and the macron:
-            the breve (at 541) would be a good choice. So navigate to uni0306 (the
-            combining breve), select the bottommost on-curve point (0), type C,
-            and enter the name “diacritic-height” for the new CV.
+            When creating a CV, it is best, whenever possible, to base it on an existing
+            point rather than type a number in the “val” box.*<span class="boxtext">*Basing
+                a CV on an existing point allows <span class="ygt">ygt</span> to determine
+                the values of variant CVs.
+            </span> When we search through the font’s collection of diacritics for
+            a suitable point, we find the combining breve (<span class="code">uni0306</span>), whose
+            lowest point, at 541, is almost exactly what we want.
+            Navigate to this glyph in <span class="ygt">ygt</span>,
+            select the lowest on-curve point, type <b>C</b>,
+            and enter the name “diacritic-height” for the new CV:
         </p>
+        <img src="./images/tut_35a.png" style="width: 50%;"/>
         <p>
             Now bring up the “Font Info” window, click over to the “Masters” tab,
             and click the “Generate Variant Control Values” button. A busy icon
-            will appear for a few seconds. When it disappearas, click over to the
+            will appear for a few seconds. When it disappears, click over to the
             “Control Values” tab, double-click “diacritic-height” in the list of
             CVs, and then click over to the “Variants” pane:
         </p>
-        <img src="./images/tut_36.png" style="width: 40%;"/>
+        <img src="./images/tut_36.png" style="width: 60%;"/>
         <p>
             As you can see, values have been added for the “opsz-min” and “opsz-max” 
-            masters: these reflect the position on the y axis of point 0 in the 
-            minimum and maximum Optical Size masters (you can check these value in 
-            a font editor, but I promise that <span class="ygt">ygt</span> has gotten these right).
+            masters (you can check these values in 
+            a font editor, but I promise that <span class="ygt">ygt</span> has gotten them right).
+            Masters with the value "None" will use the default value of 541.
         </p>
         <p>
-            Now return to the letter i, select the bottommost point in the dot, and 
-            type Ctrl-A. As you can see in the code pane, an anchor hint with CV 
+            Now return to the letter <span class="ltr">i</span>, select the bottommost point in the dot, and 
+            type <b>Ctrl-A</b>. As you can see in the code pane, an anchor hint with CV 
             “diacritic-height” has been added. Add the topmost point of the dot to 
-            the selection, type T, and we’re done with the letter i!
+            the selection, type <b>T</b>, and we’re done with the letter <span class="ltr">i</span>!
         </p>
-        <img src="./images/tut_37.png" style="width: 25%;"/>
+        <img src="./images/tut_37.png" style="width: 60%;"/>
+        <p>
+            For further information, consult the document
+            <a href="https://github.com/psb1558/ygt/tree/main/docs">YGT-Intro.pdf</a> in the 
+            <span class="ygt">ygt</span> <a href="https://github.com/psb1558/ygt">repository</a>.
+        </p>
     </body>
+
+    <div class="bottombox">
+        <span class="ygt">ygt</span> and this tutorial copyright © 2024–2025 by Peter S. Baker.
+    </div>
 
 </html>
