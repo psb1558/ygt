@@ -14,7 +14,7 @@ Ygt is in an alpha state, with features yet to be added (especially auto-hinting
 
 Several executable files are available in the “Releases” section of the Ygt GitHub site. If none of these are suitable for your system, Ygt must be launched from a command line. In this case, install from an environment where the version of Python is 3.10.4 or later by typing `pip install ygt` on the command line. Alternatively, download the files from GitHub, navigate to the directory with the file pyproject.toml, and type `pip install .` (don't forget the period!). Then type `ygt <Return>` to start the program.
 
-For more information, see the [documentation](https://github.com/psb1558/ygt/tree/main/docs) or go through a brief [tutorial](https://psb1558.github.io/ygt/tutorial.html).
+For more information, see the [documentation](https://github.com/psb1558/ygt/tree/main/docs) or go through a brief [tutorial](https://psb1558.github.io/ygt/index.html).
 
 ## Changes
 
