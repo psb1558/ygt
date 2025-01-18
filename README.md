@@ -14,9 +14,16 @@ Ygt is in an alpha state, with features yet to be added (especially auto-hinting
 
 Several executable files are available in the “Releases” section of the Ygt GitHub site. If none of these are suitable for your system, Ygt must be launched from a command line. In this case, install from an environment where the version of Python is 3.10.4 or later by typing `pip install ygt` on the command line. Alternatively, download the files from GitHub, navigate to the directory with the file pyproject.toml, and type `pip install .` (don't forget the period!). Then type `ygt <Return>` to start the program.
 
-For more information, see the [documentation](https://github.com/psb1558/ygt/tree/main/docs) or watch a brief [introductory video](https://psb1558.github.io/ygt/index.html).
+For more information, see the [documentation](https://github.com/psb1558/ygt/tree/main/docs) or go through a brief [tutorial](https://psb1558.github.io/ygt/tutorial.html).
 
 ## Changes
+
+### Version 0.2.7
+
+Fixed a bug that caused ygt to crash sometimes when user canceled file-open operation.
+
+Eliminated distinction of distance type (black, white, gray) for stem hints. No more "blackdist," "whitedist," "graydist";
+instead only "stem."
 
 ### Version 0.2.5
 
