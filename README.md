@@ -37,7 +37,7 @@ This window is divided into five panes. On the right is the graphical editor, wh
 
 Beneath the big preview pane is one that by default shows the current glyph in an array of resolutions beginning with 10ppem:
 
-![](./images/tut_02.png)
+<img src="./images/tut_02.png" width="50%" height="50%"/>
 
 The current resolution (25ppem is the default) is underlined in red; click on any instance to display that resolution in the large pane above. If you want to see a glyph in context, type something (perhaps a favorite pangram) into the “Text” box and hit the Enter key or click “Submit”: the text will appear in the current resolution and in the current instance:
 
