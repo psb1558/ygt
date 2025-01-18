@@ -27,7 +27,9 @@ When you first load a font, the ygt main window looks like this:
 
 <p align="center"><img src="./images/tut_01.png" style="width: 90%;"/></p>
 
-This window is divided into five panes. On the right is the graphical editor, where you will do most of your work. In the middle is the code pane. ygt stores hints and other data in files in the YAML serialization language, and the code pane displays this YAML code. You can edit the code directly, though most of the time it will be faster and easier to use the graphical editor.\* \*You can find a reference for ygt’s very simple hinting language in the document [YGT-Intro.pdf](https://github.com/psb1558/ygt/blob/main/docs/YGT-intro.pdf). On the left are two preview panes. The one on the top shows a blown-up version of the current glyph as it will be rendered on screen, with the current collection of hints applied. You can view this glyph at various resolutions (in pixels per inch) and in various rendering modes, and you can view it in black-on-white or white-on-black. If you are hinting a variable font, you can preview any instance. All of these choices can be made from the “Preview” menu.
+This window is divided into five panes. On the right is the graphical editor, where you will do most of your work. In the middle is the code pane. ygt stores hints and other data in files in the YAML serialization language, and the code pane displays this YAML code. You can edit the code directly, though most of the time it will be faster and easier to use the graphical editor.\* On the left are two preview panes. The one on the top shows a blown-up version of the current glyph as it will be rendered on screen, with the current collection of hints applied. You can view this glyph at various resolutions (in pixels per inch) and in various rendering modes, and you can view it in black-on-white or white-on-black. If you are hinting a variable font, you can preview any instance. All of these choices can be made from the “Preview” menu.
+
+[\**You can find a reference for ygt’s very simple hinting language in the document [YGT-Intro.pdf](https://github.com/psb1558/ygt/blob/main/docs/YGT-intro.pdf).*]
 
 Beneath the big preview pane is one that by default shows the current glyph in an array of resolutions beginning with 10ppem:
 
@@ -63,7 +65,7 @@ Next is the “Font Info” window:
 
 This allows you to manage all of the font’s control values (CVs).\* Here you can also manage the masters of variable fonts, which correspond to the masters you produced when designing the font, and the variant CVs associated with those masters. We’ll have much more to say about managing CVs later on in this tutorial.
 
-[\* *A control value is an integer stored in an array in the font. It is used by anchor and stem hints to position points on the grid and regulate distances. which in ygt are named rather than numbered.*]
+[\* *A control value is an integer stored in an array in the font. It is used by anchor and stem hints to position points on the grid and regulate distances. In ygt CVs are named rather than numbered.*]
 
 You can also manage defaults for the current font on the “Defaults” tab of the Font Info window.
 
@@ -119,7 +121,7 @@ The first time you open a variable font, ygt builds a list of masters. These wil
 
 <p align="center"><img src="./images/tut_14.png" style="width: 70%;"/></p>
 
-It is beyond the scope of this tutorial to explain the numbers that define each master, but you need to know that each master can have variant CVs associated with it. Notice also the “Generate Variant Control Values” button: we will return later to the subject of variant CVs and of this button. You can see the variant CVs associated with a variable font’s masters on the “Variants” pane of the “Control Values” tab:
+It is beyond the scope of this tutorial to explain the numbers that define the masters, but you need to know that each master can have variant CVs associated with it. Notice also the “Generate Variant Control Values” button: we will return later to the subject of variant CVs and to this button. You can see the variant CVs associated with a variable font’s masters on the “Variants” pane of the “Control Values” tab:
 
 <p align="center"><img src="./images/tut_15.png" style="width: 70%;"/></p>
 
@@ -161,7 +163,7 @@ Next we should regulate the thickness of the serif. In the days of CRT displays,
 
 <p align="center"><img src="./images/tut_24.png" style="width: 40%;"/></p>
 
-The stem hint is marked with a red arrow running from the reference point “bottom” to the point at coordinates 19,25. You can see from the pink fill for point 19,25 that this hint is rounded: to unround it, right-click on the hint (the button in the middle of the arrow’s stem provides a convenient thing to click on). On the context menu, you will see that the item “Round target point” is checked: select this to unround it.
+The stem hint is marked with a red arrow running from the reference point “bottom” to the point at coordinates 19,25. You can see from the pink fill for point 19,25 that this hint is rounded: right-click on the hint (the button in the middle of the arrow’s stem provides a convenient thing to click on). On the context menu, you will see that the item “Round target point” is checked: select this to unround it.
 
 The hints we have applied so far make little visible difference to the rendered glyph—at least not at 25ppem. If you look closely, you can see that the left serif has become a little darker:
 
@@ -181,7 +183,7 @@ But our hinting of the top of the A has caused a problem at the bottom, where (a
 
 <p align="center"><img src="./images/tut_28.png" style="width: 30%;"/></p>
 
-To fix this, we need to regulate the bottoms of the diagonals. There is more than one way to do this; I suggest using an interpolate-hint to force the relevant points back to their original mid-serif positions. Select the two points we hinted in the bottom-left serifs, then one point at the bottom of each diagonal; then click the “Interpolate-hint” button or type **I**:
+To fix this, we need to regulate the bottoms of the diagonals. There is more than one way to do this; I suggest using an interpolate-hint to force the relevant points back to their original mid-serif positions. Select the two points we hinted in the bottom-left serif, then one point at the bottom of each diagonal; then click the “Interpolate-hint” button or type **I**:
 
 <p align="center"><img src="./images/tut_29.png" style="width: 65%;"/></p>
 
