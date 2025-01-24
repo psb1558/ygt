@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
 )
-from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap
+from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap, QGuiApplication
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
 #import cv2
 from .ygLabel import ygLabel
@@ -93,11 +93,9 @@ class ygPreview(QLabel):
         self.instance: Optional[str] = None
         self.hb_instance_changed = False
 
-        # Figure out if we have a dark or a light theme.
-        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
         self.background_color = self.default_background = self.palette().color(QPalette.ColorRole.Base)
-        bg_hsv_value = self.background_color.value()
-        self.dark_theme = text_hsv_value > bg_hsv_value
+        # Figure out if we have a dark or a light theme.
+        self.dark_theme = (QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark)
         self.theme_choice = "auto"
         self.colors = None
         self.change_theme(self.theme_choice)
@@ -146,7 +144,6 @@ class ygPreview(QLabel):
             if dark_theme:
                 l[count] = QColor(255, 255, 255, count) # type: ignore
             else:
-                # l[count] = QColor(101, 53, 15, count) # type: ignore
                 l[count] = QColor(0, 0, 0, count) # type: ignore
         return l # type: ignore
 

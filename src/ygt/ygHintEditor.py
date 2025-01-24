@@ -40,6 +40,8 @@ from PyQt6.QtGui import (
     QAction,
     QPainter,
     QPalette,
+    QStyleHints,
+    QGuiApplication,
 )
 from PyQt6.QtWidgets import (
     QWidget,
@@ -1472,9 +1474,7 @@ class ygGlyphScene(QGraphicsScene):
 
         # Auto-detect if we have dark mode. We need to know so we can set
         # hint colors (not controlled by the system) to appropriate values.
-        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
-        self.dark_theme = text_hsv_value > bg_hsv_value
+        self.dark_theme = (QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark)
         if self.dark_theme:
             # These two are dicts
             HINT_COLOR = _HINT_DARK
@@ -1584,6 +1584,9 @@ class ygGlyphScene(QGraphicsScene):
     #
     # Sizing and zooming
     #
+
+    #def is_dark_theme(self):
+    #    return QStyleHints.colorScheme == Qt.ColorScheme.Dark
 
     def size_report(self) -> None:
         """For diagnostics."""
@@ -2344,7 +2347,7 @@ class ygGlyphScene(QGraphicsScene):
             yg_hint_view._prepare_graphics()
             self.addItem(yg_hint_view)
         elif hint_type_num in [1, 3]:
-            # With type 1, the target can be a set.
+            # With type 1 (Shift or Align), the target can be a set.
             target = self.resolve_point_identifier(hint.target)
             if type(target) is ygSet:
                 gtarget = ygSetView(self, target, hint_type)

@@ -53,6 +53,8 @@ from PyQt6.QtGui import (
     QCloseEvent,
     QAction,
     QFontDatabase,
+    QStyleHints,
+    QGuiApplication,
 )
 from fontTools import ttLib, ufoLib # type: ignore
 from .harfbuzzFont import harfbuzzFont, hbFeatureDialog
@@ -1972,12 +1974,13 @@ class mainWinEventFilter(QObject):
 def main():
     #import uharfbuzz
     #from inspect import getfullargspec, signature
-    # print(dir(Qt.ScrollBarPolicy))
+    #print(dir(QApplication.instance))
     # print(dir(QPainter))
     # print(dir(hb._harfbuzz.hb_font_set_var_named_instance))
     # print(dir(hb._harfbuzz.Buffer))
 
     app = QApplication([])
+    print(QGuiApplication.styleHints().colorScheme())
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         font_path = os.path.join(
