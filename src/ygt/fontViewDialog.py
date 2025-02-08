@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import ( QWidget,
                               QLineEdit,
                               QPushButton )
 
-from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap, QPen
+from PyQt6.QtGui import QPainter, QColor, QPalette, QPixmap, QPen, QGuiApplication
 
 
 FONT_VIEW_DARK_COMPOSITE = QColor(64, 42, 9)
@@ -81,9 +81,8 @@ class fontViewWindow(QWidget):
         self.glyph_list = self.current_glyph_list = glyph_list
         self.fvc_index = {}
 
-        text_hsv_value = self.palette().color(QPalette.ColorRole.WindowText).value()
-        bg_hsv_value = self.palette().color(QPalette.ColorRole.Base).value()
-        self.dark_theme = text_hsv_value > bg_hsv_value
+        # This requires Qt 6.5 or higher.
+        self.dark_theme = (QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark)
 
         self._layout = QVBoxLayout()
         self.setLayout(self._layout)
