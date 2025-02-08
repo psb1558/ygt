@@ -45,6 +45,7 @@ hint_type_nums = {
     "move": 3,
     "macro": 4,
     "function": 4,
+    "nohint": 5,
 }
 
 unicode_categories = [
@@ -226,7 +227,7 @@ def random_id(s):
 # ygcvar(ygSourceable): Keeps the cvar table (deprecated).
 # ygMacros(ygSourceable): Holds the macros for this font.
 # ygGlyphProperties: Keeps miscellaneous properties for a glyph.
-# ygGlyphNames: Keeps named points and sets.
+# ygPointNames: Keeps named points and sets.
 # ygHintSorter: Sorts hints into their proper order.
 # ygPointSorter: Utility for sorting points on the x or y axis.
 
@@ -795,8 +796,8 @@ class ygFont(QObject):
                     print(e)
                     print("Exception '", g, "'", sep="")
                     pass
-                if self.glyphs.has_glyph(g):
-                    print("glyph ", g, " is still hanging around!", sep="")
+                # if self.glyphs.has_glyph(g):
+                #     print("glyph ", g, " is still hanging around!", sep="")
 
     def get_glyph(self, gname: str) -> "dict":
         """Get the source for a glyph's hints. If the glyph has no hints yet,
@@ -1148,7 +1149,10 @@ class ygSet:
         for count, p in enumerate(self._point_list):
             if count > 0:
                 result += ", "
-            result += str(p.index)
+            if type(p) is ygPoint:
+                result += str(p.index)
+            else:
+                result += str(p)
         result += "]"
         return result
 
@@ -1753,6 +1757,7 @@ class addPointSetNameCommand(glyphEditCommand):
             if not "names" in self.yg_glyph.gsource:
                 self.yg_glyph.gsource["names"] = {}
             if type(self.pt) is not list:
+                # A single point.
                 self.yg_glyph.gsource["names"][
                     self.name
                 ] = self.yg_glyph.resolve_point_identifier(self.pt).preferred_label(
@@ -1761,6 +1766,7 @@ class addPointSetNameCommand(glyphEditCommand):
                 self.yg_glyph.names.update_point_names()
             else:
                 if len(self.pt) == 1:
+                    # A list of one point
                     self.yg_glyph.gsource["names"][self.name] = self.pt[
                         0
                     ].preferred_label(name_allowed=False)
@@ -2233,7 +2239,7 @@ class ygGlyph(QObject):
         self.point_list = self._make_point_list()
 
         # Get the named glyphs (we need self.point_list to do this)
-        self.names = ygGlyphNames(self)
+        self.names = ygPointNames(self)
 
         # Dict for looking up points with uuid-generated id.
         self.point_id_dict = {}
@@ -2539,6 +2545,15 @@ class ygGlyph(QObject):
 
         """
         return self._yaml_mk_hint_list(self.current_block, validate=True)
+    
+    def hints_using_set(self, nm) -> list:
+        hint_list = self.hints
+        hints_containing = []
+        if "names" in self.gsource and nm in self.gsource["names"]:
+            for h in hint_list:
+                if h.contains_points(self.gsource["names"][nm]):
+                    hints_containing.append(h)
+        return hints_containing
 
     @property
     def points(self) -> list:
@@ -3063,6 +3078,8 @@ class ygGlyph(QObject):
 
     @pyqtSlot(object)
     def hints_changed(self, hint_list: list) -> None:
+        # for h in hint_list:
+        #     print("From hints_changed: ", h.hint_type, h.target)
         self._hints_changed(hint_list)
 
     def _hints_changed(
@@ -3261,16 +3278,23 @@ class ygHint(QObject):
 
     point: The point, list or dict that is the target of this hint.
 
+    nohint (default is False): If this is True, this hint should not be
+    stored with the others.
+
     """
 
     hint_changed_signal = pyqtSignal(object)
 
-    def __init__(self, glyph: ygGlyph, point: dict) -> None:
+    def __init__(self, glyph: ygGlyph, point: dict, nohint: bool = False) -> None:
         super().__init__()
         self._id = uuid.uuid1()
         self._source = point
         self.yg_glyph = glyph
         self.placed = False
+        self.nohint = nohint
+        self.setname = None
+        self.uses_set = None
+        self.used_by_hint = None
 
         if self.yg_glyph != None:
             self.hint_changed_signal.connect(self.yg_glyph.hint_changed)
@@ -3330,7 +3354,19 @@ class ygHint(QObject):
                     result[i] = self.yg_glyph.resolve_point_identifier(r).index
             return result
         else:
-            return [self.yg_glyph.resolve_point_identifier(t).index]
+            i = self.yg_glyph.resolve_point_identifier(t)
+            if type(i) is ygSet:
+                rlist = []
+                pl = i.point_list
+                for pp in pl:
+                    if type(pp) is ygPoint:
+                        rlist.append(pp.index)
+                    else:
+                        rlist.append(pp)
+                    #rlist.append(lambda: pp.index if type(pp) is ygPoint else pp)
+                return rlist
+            else:
+                return [i.index]
         
     def _ptid_to_objects(self):
         _target_list = self.target_list()
@@ -3341,17 +3377,19 @@ class ygHint(QObject):
         
     def contains_points(self, p: Any) -> bool:
         """Returns True if point p or all points in list p are targets of this hint."""
-        if len(p) == 0:
+        l = []
+        if type(p) is ygSet:
+            l = p.point_list
+        elif type(p) is list:
+            l = p
+        if len(l) == 0:
             return False
         pt_list = self._ptid_to_objects()
         sought_list = []
-        if type(p) is list:
-            for pp in p:
-                sought_list.append(self.yg_glyph.resolve_point_identifier(pp))
-        else:
-            sought_list = [self.yg_glyph.resolve_point_identifier(p)]
-        for p in sought_list:
-            if not p in pt_list:
+        for pp in l:
+            sought_list.append(self.yg_glyph.resolve_point_identifier(pp))
+        for ppp in sought_list:
+            if not ppp in pt_list:
                 return False
         return True
     
@@ -3411,6 +3449,8 @@ class ygHint(QObject):
 
     @property
     def hint_type(self) -> str:
+        if self.nohint:
+            return "nohint"
         if "macro" in self.source:
             return "macro"
         if "function" in self.source:
@@ -4241,7 +4281,7 @@ class ygGlyphProperties(ygSourceable):
         self.set_clean(False)
 
 
-class ygGlyphNames(ygSourceable):
+class ygPointNames(ygSourceable):
     """The collection of glyph and set names."""
 
     def __init__(self, glyph: ygGlyph) -> None:
@@ -4296,6 +4336,17 @@ class ygGlyphNames(ygSourceable):
     def get(self, n: str) -> Any:
         if self.has_name(n):
             return self.yg_glyph.gsource["names"][n]
+        
+    def get_named_sets(self) -> List:
+        """Returns a list of tuples (name,ygSet). Empty list if none found."""
+        result = []
+        if "names" in self.yg_glyph.gsource:
+            namedict = self.yg_glyph.gsource["names"]
+            k = namedict.keys()
+            for kk in k:
+                if type(namedict[kk]) is list: # ***
+                    result.append((kk, ygSet(namedict[kk])))
+        return result
 
     def save(self, c: Any) -> None:
         self.yg_glyph.undo_stack.push(replacePointNamesCommand(self.yg_glyph, c))
@@ -4323,20 +4374,25 @@ class ygHintSorter:
         return result
 
 
-class ygPointSorter:
-    """Will sort a list of points into left-to-right or up-to-down order,
-    depending on the current axis.
+# class ygPointSorter:
+#     """Will sort a list of points into left-to-right or up-to-down order,
+#     depending on the current axis.
+#     """
 
-    """
+#     def __init__(self, axis: str) -> None:
+#         self.axis = axis
 
-    def __init__(self, axis: str) -> None:
-        self.axis = axis
+#     def _ptcoords(self, p: ygPoint) -> int:
+#         if type(p) is ygPoint:
+#             rx = p.font_x
+#             ry = p.font_y
+#         else:
+#             rx = p.boundingRect().x()
+#             ry = p.boundingRect().y()
+#         if self.axis == "y":
+#             return ry
+#         else:
+#             return rx
 
-    def _ptcoords(self, p: ygPoint) -> int:
-        if self.axis == "y":
-            return p.font_x
-        else:
-            return p.font_y
-
-    def sort(self, pt_list: list) -> None:
-        pt_list.sort(key=self._ptcoords)
+#    def sort(self, pt_list: list) -> None:
+#        pt_list.sort(key=self._ptcoords)

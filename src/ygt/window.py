@@ -8,7 +8,16 @@ from .ygModel import ygFont, ygGlyph, unicode_cat_names
 from .fontViewDialog import fontViewWindow
 from .ygPreview import ygPreview, ygStringPreview, ygPreviewContainer
 from .ygYAMLEditor import ygYAMLEditor, editorDialog, ygDeleteGlyphProgramsDialog
-from .ygHintEditor import ygGlyphScene, ygGlyphView
+from .ygHintEditor import (ygGlyphScene,
+                           ygGlyphView, 
+                           SELPROFILE_TOUCHED_POINTS,
+                           SELPROFILE_SELECTED_SETS,
+                           SELPROFILE_UNTOUCHED_POINTS,
+                           SELPROFILE_UNUSED,
+                           SELPROFILE_OWNER_TYPES,
+                           SELPROFILE_HINT_TYPES,
+                           SELPROFILE_SELECTED_HINTS,
+                           )
 from .ygPreferences import ygPreferences, open_config
 from .ygSchema import (
     is_cvt_valid,
@@ -1542,53 +1551,88 @@ class MainWindow(QMainWindow):
     #    pass
 
     @pyqtSlot(object)
-    def selection_changed(self, selection_profile: list):
-        total_selected = selection_profile[0] + selection_profile[1]
+    def selection_changed(self, selprof: list):
+
+        def selected_points():
+            return selprof[SELPROFILE_TOUCHED_POINTS] + selprof[SELPROFILE_UNTOUCHED_POINTS]
+        
+        def untouched_points():
+            return selprof[SELPROFILE_UNTOUCHED_POINTS]
+        
+        def touched_points():
+            return selprof[SELPROFILE_TOUCHED_POINTS]
+
+        def selected_sets():
+            return selprof[SELPROFILE_SELECTED_SETS]
+        
+        #def untouched_sets():
+        #    return selprof[SELPROFILE_UNTOUCHED_SETS]
+        
+        #def touched_sets():
+        #    return selprof[SELPROFILE_TOUCHED_SETS]
+        
+        def in_hint_types(h):
+            return h in selprof[SELPROFILE_HINT_TYPES]
+        
+        def selected_hints():
+            return selprof[SELPROFILE_SELECTED_HINTS]
+
+        # First turn off all buttons.
+        self.make_cv_action.setEnabled(False)
+        self.make_cv_guess_action.setEnabled(False)
+        self.anchor_action.setEnabled(False)
+        self.stem_action.setEnabled(False)
+        self.shift_action.setEnabled(False)
+        self.align_action.setEnabled(False)
+        self.interpolate_action.setEnabled(False)
+
         # fix up make cv button
-        if total_selected >= 1 and total_selected <= 2:
+        if (selected_points() in [1,2] and selected_sets == 0):
             self.make_cv_action.setEnabled(True)
-        else:
-            self.make_cv_action.setEnabled(False)
-        if 0 in selection_profile[3] or 3 in selection_profile[3]:
-            self.make_cv_guess_action.setEnabled(True)
-        else:
-            self.make_cv_guess_action.setEnabled(False)
-        if selection_profile[0] == 0 and selection_profile[1] == 1:
-            # enable anchor button
+
+        # if one hint of the appropriate type is selected.
+        if (selected_hints == 1 and in_hint_types(0) or in_hint_types(3) and selected_points == 0):
+            self.make_cv_guess_action.setEnabled(True)    
+
+        # exactly one point selected: only available hint is anchor.
+        if (selected_points() == 1 and 
+            untouched_points() == 1 and 
+            selected_sets() == 0 and 
+            selected_hints() == 0):
             self.anchor_action.setEnabled(True)
-            self.stem_action.setEnabled(False)
-            self.shift_action.setEnabled(False)
-            self.align_action.setEnabled(False)
-            self.interpolate_action.setEnabled(False)
-        elif selection_profile[0] == 1 and selection_profile[1] >= 1:
-            if selection_profile[1] == 1:
-                self.stem_action.setEnabled(True)
-            else:
-                self.stem_action.setEnabled(False)
-            # shift_action and align_action if 1 pt touched and 1 or more untouched.
-            if selection_profile[1] >= 1:
-                self.shift_action.setEnabled(True)
-                self.align_action.setEnabled(True)
-            else:
-                self.shift_action.setEnabled(False)
-                self.align_action.setEnabled(False)
-            self.interpolate_action.setEnabled(False)
-            self.anchor_action.setEnabled(False)
-        elif selection_profile[0] == 2 and selection_profile[1] >= 1:
-            # Enable interpolation button
+
+        #exactly one touched point and one untouched point.
+        if (touched_points() == 1 and 
+            untouched_points() == 1 and 
+            selected_sets() == 0 and 
+            selected_hints() == 0):
+            self.stem_action.setEnabled(True)
+
+        # exactly one touched point and (a) one or more untouched points or
+        # (b) one untouched set.
+        if ((touched_points() == 1 and 
+            untouched_points() >= 1 and 
+            selected_sets() == 0 and
+            selected_hints() == 0) or
+            (touched_points() == 1 and 
+            untouched_points() == 0 and 
+            selected_sets() == 1 and
+            selected_hints() == 0)):
+            self.shift_action.setEnabled(True)
+            self.align_action.setEnabled(True)
+
+        # Two touched points and (a) one or more untouched points or
+        # (b) one untouched set.
+        if ((touched_points() == 2 and
+             untouched_points() >= 1 and
+             selected_sets() == 0 and
+             selected_hints() == 0) or
+            (touched_points() == 2 and
+             untouched_points() == 0 and
+             selected_sets() == 1 and
+             selected_hints() == 0)):
             self.interpolate_action.setEnabled(True)
-            self.stem_action.setEnabled(False)
-            self.shift_action.setEnabled(False)
-            self.align_action.setEnabled(False)
-            self.anchor_action.setEnabled(False)
-            #self.make_set_action.setEnabled(False)
-        else:
-            # "Disable all hint editing buttons
-            self.stem_action.setEnabled(False)
-            self.shift_action.setEnabled(False)
-            self.align_action.setEnabled(False)
-            self.interpolate_action.setEnabled(False)
-            self.anchor_action.setEnabled(False)
+
 
     @pyqtSlot()
     def clean_changed(self):
@@ -1980,7 +2024,7 @@ def main():
     # print(dir(hb._harfbuzz.Buffer))
 
     app = QApplication([])
-    print(QGuiApplication.styleHints().colorScheme())
+    #print(QGuiApplication.styleHints().colorScheme())
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         font_path = os.path.join(
