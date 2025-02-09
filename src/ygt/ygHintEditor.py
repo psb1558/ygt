@@ -211,13 +211,13 @@ _SELECTED_HINT_DARK = {
     "nohint": NOHINT_SELECT_DARK,
 }
 
-SELPROFILE_TOUCHED_POINTS = 0
+SELPROFILE_TOUCHED_POINTS = 0   # old 0
 SELPROFILE_SELECTED_SETS = 1
-SELPROFILE_UNTOUCHED_POINTS = 2
+SELPROFILE_UNTOUCHED_POINTS = 2 # old 1
 SELPROFILE_UNUSED = 3
-SELPROFILE_OWNER_TYPES = 4
-SELPROFILE_HINT_TYPES = 5
-SELPROFILE_SELECTED_HINTS = 6
+SELPROFILE_OWNER_TYPES = 4      # old 3
+SELPROFILE_HINT_TYPES = 5       # old 4
+SELPROFILE_SELECTED_HINTS = 6   # old 5
 
 # Classes in this file:
 
@@ -1260,7 +1260,6 @@ class ygSelection(QObject):
         self.yg_glyph_scene.update()
         if emit_signal:
             self.send_signal()
-            #self.sig_selection_changed.emit(self.yg_glyph_scene.selection_profile())
 
     def _add_object(self, obj: ygSelectable, add_to_selection: bool) -> None:
         if not add_to_selection:
@@ -1274,7 +1273,6 @@ class ygSelection(QObject):
             obj._prepare_graphics()
             obj.update()
         self.send_signal()
-        # self.sig_selection_changed.emit(self.yg_glyph_scene.selection_profile())
 
     def _toggle_object(self, obj: ygSelectable) -> None:
         # Problem as in _add_object above.
@@ -1289,7 +1287,6 @@ class ygSelection(QObject):
         obj._prepare_graphics()
         obj.update()
         self.send_signal()
-        # self.sig_selection_changed.emit(self.yg_glyph_scene.selection_profile())
 
     def _add_rect(self, rect: QRectF, add_to_selection: bool) -> None:
         """This method of selecting doesn't work on hints."""
@@ -1302,7 +1299,6 @@ class ygSelection(QObject):
                 ptv._prepare_graphics()
                 ptv.update()
         self.send_signal()
-        #self.sig_selection_changed.emit(self.yg_glyph_scene.selection_profile())
 
     def _toggle_rect(self, rect: QRectF) -> None:
         """This method of selecting doesn't work on hints."""
@@ -1319,7 +1315,6 @@ class ygSelection(QObject):
                 ptv._prepare_graphics()
                 ptv.update()
         self.send_signal()
-        # self.sig_selection_changed.emit(self.yg_glyph_scene.selection_profile())
 
 
 class ygPointView(QGraphicsEllipseItem, ygSelectable, ygPointable):
@@ -1653,7 +1648,6 @@ class ygGlyphScene(QGraphicsScene):
         )[0]
         print("First point: " + str(oc[0]))
         qr = self.sceneRect()
-        #print("Canvas rect: " + str(self.sceneRect()))
         print("Canvas rect: " + str(qr.x()) + " " + str(qr.y()) + " " + str(qr.width()) + " " + str(qr.height()))
         print("")
 
@@ -1719,35 +1713,12 @@ class ygGlyphScene(QGraphicsScene):
                 # fontTools coordinate list has phantom points at the end, which we ignore.
                 pass
 
-        # glyph_set = {self.yg_glyph.gname: self.yg_glyph.ft_glyph}
         glyph_set = self.yg_glyph.yg_font.ft_font.getGlyphSet()
         glyph_table = self.yg_glyph.yg_font.ft_font["glyf"]
         if self.yg_glyph.is_composite:
             # It would be nice to have a non-editable outline when
             # a composite is displayed, but haven't managed that yet.
             pass
-            #freetype_pen = FreeTypePen(glyph_set)
-            #print(type(freetype_pen))
-            #print(type(glyph_table))
-            #self.yg_glyph.ft_glyph.draw(freetype_pen, glyph_table)
-            #width, height = self.yg_glyph.dimensions()
-            # arr = freetype_pen.array(width = int((width * 64) * self.zoom_factor), height = int((height * 64) * self.zoom_factor))
-            #arr = freetype_pen.array(width * self.zoom_factor, height * self.zoom_factor)
-            #print("arr.shape: " + str(arr.shape))
-            #width, height = arr.shape
-            #self.glyph_img = QImage(arr, int(width * self.zoom_factor), int(height * self.zoom_factor), QImage.Format.Format_Mono)
-            #
-            #from matplotlib import pyplot as plt
-            #plt.imshow(arr)
-            #plt.show()
-            #
-            #qd = QDialog(self.preferences.top_window())
-            #layout = QHBoxLayout()
-            #l = QLabel()
-            #layout.addWidget(l)
-            #pm = QPixmap.fromImage(self.glyph_img)
-            #l.setPixmap(pm)
-            #qd.exec()
         else:
             self.path = QPainterPath()
             self.qt_pen = QtPen(glyph_set, path=self.path)
@@ -1817,7 +1788,6 @@ class ygGlyphScene(QGraphicsScene):
             visible_y = rect.height()
             optimal_x = round(visible_x * 0.8)
             optimal_y = round(visible_y * 0.8)
-            #self.optimal_size = (optimal_x, optimal_y)
             width, height = self.yg_glyph.dimensions()
             if width != 0:
                 x_ratio = optimal_x / width
@@ -1834,7 +1804,6 @@ class ygGlyphScene(QGraphicsScene):
             if self.owner:
                 self.owner.centerOn(self.center_x, self.mid_point_y())
 
-        # this_ft_glyph = self.yg_glyph.ft_glyph
         if self.yg_glyph.is_composite:
             pass
         else:
@@ -1975,10 +1944,9 @@ class ygGlyphScene(QGraphicsScene):
 
     @pyqtSlot(object)
     def name_points(self, pts: List[ygPointView]) -> None:
-        msg = "Name the point"
+        msg = "Name the point:"
         if len(pts) > 1:
-            msg += "s"
-        msg += ":"
+            msg = "Create named set:"
         text, ok = QInputDialog().getText(
             self.preferences.top_window(), "Name points", msg, QLineEdit.EchoMode.Normal
         )
@@ -1992,6 +1960,7 @@ class ygGlyphScene(QGraphicsScene):
             tmp_set_view = self._make_visible_hint(tmp_yg_hint)
             tmp_set_view._set_name(text)
             self.yg_set_view_dict[text] = tmp_set_view
+            # What is this doing here? Do we need it?
             self.set_point_display(
                 (
                     lambda: "coord"
@@ -2099,6 +2068,49 @@ class ygGlyphScene(QGraphicsScene):
         elif type(h) is ygHintView:
             h.add_hint(h.yg_hint)
 
+
+    def used_sets(self) -> list:
+        """
+            Survey all named sets and build a list of those that should
+            *not* be displayed. If the "show_named_sets" is false, then
+            *all* named sets must be in the list. Otherwise, those sets
+            whose point list matches those of a hint should not be
+            displayed.
+        """
+        result = []
+        show_sets = self.preferences.set_view()
+        hints = self.yg_glyph.hints
+        sets = self.yg_glyph.names.get_named_sets()
+        if len(sets) > 0:
+            for s in sets:
+                if show_sets:
+                    for h in hints:
+                        if h.contains_points(s[1]):
+                            result.append(s[0])
+                            break
+                else:
+                    result.append(s[0])
+        return result
+    
+
+    def set_set_view(self, b: bool) -> None:
+        if not b:
+            for h in self.yg_set_view_dict.values():
+                h.setVisible(False)
+                h.label.hide()
+        else:
+            sets = self.yg_glyph.names.get_named_sets()
+            used_set_list = self.used_sets()
+            for s in sets:
+                if s[0] in used_set_list:
+                    self.yg_set_view_dict[s[0]].setVisible(False)
+                    self.yg_set_view_dict[s[0]].label.hide()
+                else:
+                    self.yg_set_view_dict[s[0]].setVisible(True)
+                    self.yg_set_view_dict[s[0]].label.show()
+
+
+
     def install_hints(self, hint_list: List[ygHint]) -> None:
         """Installs a collection of hints sent from the model.
 
@@ -2114,11 +2126,8 @@ class ygGlyphScene(QGraphicsScene):
                 h._remove_labels()
                 self.removeItem(h)
         for s in self.yg_set_view_dict.values():
-            if s in self.items():
-                s._remove_labels()
-                self.removeItem()
-        # This may seem crazy, but it seems most reliable and stable if we
-        # delete all touch data and build it again.
+            s._remove_labels()
+            self.removeItem(s)
         self.untouch_all()
         self.yg_hint_view_list.clear()
         self.yg_set_view_dict.clear()
@@ -2131,16 +2140,14 @@ class ygGlyphScene(QGraphicsScene):
         sets = self.yg_glyph.names.get_named_sets()
         hints = self.yg_glyph.hints
         if len(sets) > 0:
-            used_set_list = []
+            used_set_list = self.used_sets()
             for s in sets:
-                for h in hints:
-                    if h.contains_points(s[1]):
-                        used_set_list.append(s[0])
-            for s in sets:
-                if not s[0] in used_set_list:
-                    sv = self._make_visible_hint(ygHint(self.yg_glyph, {'ptid': s[1]}, nohint=True))
-                    sv._set_name(s[0])
-                    self.yg_set_view_dict[s[0]] = sv
+                sv = self._make_visible_hint(ygHint(self.yg_glyph, {'ptid': s[1]}, nohint=True))
+                sv._set_name(s[0])
+                self.yg_set_view_dict[s[0]] = sv
+                if s[0] in used_set_list:
+                    sv.setVisible(False)
+                    sv.label.hide()
         self.update()
         self.yg_selection.send_signal()
 
@@ -2161,10 +2168,11 @@ class ygGlyphScene(QGraphicsScene):
         # Exactly one hint selected
         # hint type is shift, align, or interpolate [1, 2]
         # exactly one hint selected
-        if (profile[0] == 0
-            and profile[1] > 0
-            and profile[3][0] in [1, 2]
-            and profile[4] == 1
+        if (profile[SELPROFILE_TOUCHED_POINTS] == 0
+            and profile[SELPROFILE_SELECTED_SETS] == 0
+            and profile[SELPROFILE_UNTOUCHED_POINTS] > 0
+            and profile[SELPROFILE_HINT_TYPES][0] in [1, 2]
+            and profile[SELPROFILE_SELECTED_HINTS] == 1
         ):
             objects = self.selected_objects(False)
             hints = []
@@ -2185,11 +2193,11 @@ class ygGlyphScene(QGraphicsScene):
         # or any hints are selected,
         # then we do nothing.
         if (
-            profile[0] == 0
-            or profile[1] > 0
-            or len(profile[2]) != 1
-            or not profile[2][0] in [1, 2]
-            or len(profile[3]) != 0
+            profile[SELPROFILE_TOUCHED_POINTS] == 0
+            or profile[SELPROFILE_UNTOUCHED_POINTS] > 0
+            or len(profile[SELPROFILE_OWNER_TYPES]) != 1
+            or not profile[SELPROFILE_OWNER_TYPES][0] in [1, 2]
+            or profile[SELPROFILE_SELECTED_HINTS] != 0
         ):
             return
         selected_points = self.selected_objects(True)
@@ -2214,14 +2222,6 @@ class ygGlyphScene(QGraphicsScene):
     #
     # Utilities
     #
-
-    #def get_scene(self) -> "ygGlyphScene":
-    #    """Returns the current scene (always this object!)
-    #
-    #    Returns:
-    #    ygGlyphScene: this scene
-    #    """
-    #    return self
 
     def _mouse_over_point(self, qp: QPoint) -> ygPointView:
         """In ygGlyphScene. Determines whether the mouse is positioned over a point.
@@ -2281,7 +2281,7 @@ class ygGlyphScene(QGraphicsScene):
         return qr
 
 
-    def selection_profile(self) -> Tuple[int, int, List[int], List[int], int]:
+    def selection_profile(self) -> Tuple[int, int, int, int, List[int], List[int], int]:
         """Surveys the current selection and returns a tuple containing:
         - The number of touched points
         - The number of selected sets
@@ -2397,22 +2397,6 @@ class ygGlyphScene(QGraphicsScene):
 
     def current_axis(self) -> str:
         return self.yg_glyph.axis
-
-    #def _distance(
-    #    self, pt_a: Union[ygPointView, ygPoint], pt_b: Union[ygPointView, ygPoint]
-    #) -> int:
-    #    """Returns the distance between two points (in font units) along
-    #    the current axis.
-    #    """
-    #    pa = self._model_point(pt_a)
-    #    pb = self._model_point(pt_b)
-    #    if self.current_axis() == "y":
-    #        return abs(pa.font_y - pb.font_y)
-    #    return abs(pa.font_x - pb.font_x)
-
-    #
-    # Factories
-    #
 
     def _make_visible_hint(self, hint: ygHint) -> ygHintView:
         """Builds ygHintView objects from ygHint objects and adds them to
@@ -2599,15 +2583,15 @@ class ygGlyphScene(QGraphicsScene):
                     hint_type = "stem"
                 ref_name = ""
                 target_names = []
+                # pp may be a mix of ygPointView and ygHintView (hint-type=nohint) objects.
                 for ppp in pp:
                     if type(ppp) is ygPointView:
                         if ppp.touched:
                             ref_name = self._model_point(ppp).preferred_label()
                         else:
-                            # if this is a ygHint (a set), extract the point list.
                             target_names.append(self._model_point(ppp).preferred_label())
                     elif type(ppp) is ygHintView and ppp.yg_hint.hint_type == "nohint":
-                        target_names = ppp.yg_hint.target
+                        target_names = [ppp.yg_hint.name]
                 if type(target_names) is ygSet:
                     target_names = target_names.point_list
                 if len(target_names) == 1 or hint_type_num == 3:
@@ -2633,15 +2617,6 @@ class ygGlyphScene(QGraphicsScene):
                 # 2 touched pts, 1 or more untouched pts
                 # 2 touched pts, 1 set.
                 # (It looks like we are getting the right input.)
-
-                # OLD COMMENT (to help with cleanup)
-                # If two of the three selected points are touched, they are the
-                # reference points, and the untouched point is the target.
-                # Otherwise, sort the points by x or y position: the middle one
-                # is the target, and the ones on the ends are reference points
-                # (this should not be necessary now).
-                # If the program makes the wrong choice, user can rearrange
-                # things in the editor.
                 touched_points = []
                 other_objects = []
                 for t in pp:
@@ -2653,11 +2628,9 @@ class ygGlyphScene(QGraphicsScene):
                 if not len(other_objects):
                     for t in pp:
                         if type(t) is ygHintView:
-                            other_objects = t.yg_hint.target_list()
-                            #other_objects = [t.yg_hint.setname]
+                            other_objects = [t.yg_hint.name]
                 if len(other_objects) == 1:
                     other_objects = other_objects[0]
-
                 # Think about this more. Why does mypy not like it?
                 h = {"ptid": other_objects, "ref": touched_points, "rel": hint_type}  # type: ignore
                 new_yg_hint = ygHint(self.yg_glyph, h)
@@ -3217,6 +3190,7 @@ class ygGlyphView(QGraphicsView):
             )
         self.preferences["top_window"].connect_editor_signals()
 
+
     @pyqtSlot()
     def make_control_value(self) -> None:
         self.yg_glyph_scene.make_control_value()
@@ -3291,7 +3265,6 @@ class ygGlyphView(QGraphicsView):
         if self.yg_glyph_scene:
             if checked and self.yg_glyph_scene.yg_glyph.axis != "x":
                 self.yg_glyph_scene.yg_glyph.switch_to_axis("x")
-                #win = self.parent().parent()
                 self.parent().parent().set_window_title()  # type: ignore
 
 
@@ -3300,8 +3273,6 @@ class ygGlyphView(QGraphicsView):
         if self.yg_glyph_scene:
             if checked and self.yg_glyph_scene.yg_glyph.axis != "y":
                 self.yg_glyph_scene.yg_glyph.switch_to_axis("y")
-                #win = self.parent().parent()
-                #win.set_window_title()  # type: ignore
                 self.parent().parent().set_window_title()  # type: ignore
 
     @pyqtSlot()

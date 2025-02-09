@@ -30,6 +30,13 @@ class ygPreferences(dict):
         self["top_window_pos_y"] = None
         self["top_window_height"] = None
         self["top_window_width"] = None
+        self["show_named_sets"] = True
+
+    def set_set_view(self, b: bool) -> None:
+        self["show_named_sets"] = b
+
+    def set_view(self) -> bool:
+        return self["show_named_sets"]
 
     def set_top_window_size(self, x: int, y: int) -> None:
         self["top_window_height"] = int(y)

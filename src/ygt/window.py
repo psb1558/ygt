@@ -103,7 +103,6 @@ class ygPreviewFontMaker(QThread):
                 self.glyph_list.append(g.decode(encoding="utf-8"))
             except Exception:
                 self.glyph_list.append(g)
-        # self.glyph_list = glyph_list
         self.error = False
 
     def run(self) -> None:
@@ -233,14 +232,12 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self.spacer_action = self.toolbar.addWidget(self.spacer)
-        #self.preview_container = QVBoxLayout()
         self.qs = QSplitter(self)
         self.glyph_pane: Optional[ygGlyphView] = None
         self.preview_glyph_name: Optional[str] = None
         self.preview_glyph_name_list: list = []
         self.yg_font: Optional[ygFont] = None
         self.source_editor: Optional[ygYAMLEditor] = None
-        #self.preview_scroller: Optional[QScrollArea] = None
         self.yg_preview = None # type: Optional[ygPreview]
         self.yg_string_preview: Optional[ygStringPreview] = None
         self.app = app
@@ -268,10 +265,10 @@ class MainWindow(QMainWindow):
         self.feature_menu = None
         self.feature_reset_action = None
         self.custom_feature_action = None
-        #self.window_list: list = []
         self.preview_maker: Optional[ygPreviewFontMaker] = None
         self.font_generator: Optional[ygFontGenerator] = None
         self.auto_preview_update = True
+        
 
         #
         # Build menus and toolbar
@@ -490,9 +487,12 @@ class MainWindow(QMainWindow):
 
         self.font_view_action = self.view_menu.addAction("Show Font Viewer")
 
-        # self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
+        self.set_view_action = self.view_menu.addAction("Show Named Sets")
+        self.set_view_action.setCheckable(True)
+        self.set_view_action.setChecked(True)
 
         self.view_menu.setEnabled(False)
+        self.view_menu.aboutToShow.connect(self.view_menu_about_to_show)
 
         #
         # Code Menu
@@ -826,6 +826,16 @@ class MainWindow(QMainWindow):
             )
             self.font_viewer = None
 
+    @pyqtSlot()
+    def toggle_set_view(self) -> None:
+        self.preferences.set_set_view(not self.showing_named_sets)
+        self.glyph_pane.yg_glyph_scene.set_set_view(self.showing_named_sets)
+        #self.glyph_pane.yg_glyph_scene.update()
+
+    @property
+    def showing_named_sets(self) -> bool:
+        return self.preferences.set_view()
+
     #
     # Indices vs. coordinates outline display
     #
@@ -891,14 +901,10 @@ class MainWindow(QMainWindow):
         self.custom_feature_action.setEnabled(len(features) > 0)
             
 
-    #@pyqtSlot()
-    #def view_menu_about_to_show(self) -> None:
-    #    if self.points_as_coords:
-    #        self.index_label_action.setEnabled(True)
-    #        self.coord_label_action.setEnabled(False)
-    #    else:
-    #        self.index_label_action.setEnabled(False)
-    #        self.coord_label_action.setEnabled(True)
+    @pyqtSlot()
+    def view_menu_about_to_show(self) -> None:
+        self.set_view_action.setChecked(self.preferences["show_named_sets"])
+        self.set_view_action.setEnabled(True)
 
     @pyqtSlot()
     def file_menu_about_to_show(self) -> None:
@@ -1058,6 +1064,7 @@ class MainWindow(QMainWindow):
         self.glyph_pane.setup_goto_signal(self.show_find_dialog)
         self.glyph_pane.setup_toggle_drag_mode_signal(self.set_panning_editing)
         self.font_view_action.triggered.connect(self.show_font_view)
+        self.set_view_action.triggered.connect(self.toggle_set_view)
 
     def setup_undo_connections(self) -> None:
         self.undo_action.triggered.connect(self.undo_group.undo)
@@ -1343,7 +1350,6 @@ class MainWindow(QMainWindow):
             else:
                 result = 0
         except FileNotFoundError:
-            # emsg = "Can't find file '" + str(f[0]) + "'."
             if type(f) is tuple:
                 fn = f[0]
             elif type(f) is str:
@@ -1538,7 +1544,6 @@ class MainWindow(QMainWindow):
             self.set_up_feature_list()
             self.setup_editor_connections()
             self.setup_preview_instance_connections()
-            # self.setup_point_label_connections()
             # Should we send a signal for preview update from here?
             self._preview_current_glyph()
         return 0
@@ -1547,11 +1552,11 @@ class MainWindow(QMainWindow):
     # GUI management
     #
 
-    #def setup_stem_buttons(self, axis):
-    #    pass
-
     @pyqtSlot(object)
     def selection_changed(self, selprof: list):
+        """
+            Enable or disable buttons based on the current selection_profile.
+        """
 
         def selected_points():
             return selprof[SELPROFILE_TOUCHED_POINTS] + selprof[SELPROFILE_UNTOUCHED_POINTS]
@@ -2024,7 +2029,6 @@ def main():
     # print(dir(hb._harfbuzz.Buffer))
 
     app = QApplication([])
-    #print(QGuiApplication.styleHints().colorScheme())
 
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         font_path = os.path.join(

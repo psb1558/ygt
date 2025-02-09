@@ -25,7 +25,6 @@ from .cvGuesser import instanceChecker
 from .freetypeFont import freetypeFont
 from .harfbuzzFont import harfbuzzFont
 
-# from .ygSchema import error_message, set_error_message, is_cv_delta_valid
 import defcon # type: ignore
 from ufo2ft import compileTTF # type: ignore
 
@@ -768,8 +767,6 @@ class ygFont(QObject):
         if not self.glyphs.has_glyph(gname):
             return False
         glyph_program = self.glyphs.get_glyph(gname)
-        #if not ("y" in glyph_program or "x" in glyph_program):
-        #    return False
         y_len = 0
         x_len = 0
         if "y" in glyph_program and "points" in glyph_program["y"]:
@@ -796,8 +793,6 @@ class ygFont(QObject):
                     print(e)
                     print("Exception '", g, "'", sep="")
                     pass
-                # if self.glyphs.has_glyph(g):
-                #     print("glyph ", g, " is still hanging around!", sep="")
 
     def get_glyph(self, gname: str) -> "dict":
         """Get the source for a glyph's hints. If the glyph has no hints yet,
@@ -1100,12 +1095,6 @@ class ygSet:
     @property
     def point_list(self) -> list:
         return self._point_list
-
-    #def id_list(self) -> list:
-    #    l = []
-    #    for p in self._point_list:
-    #        l.append(p.preferred_label())
-    #    return l
 
     def main_point(self) -> ygPoint:
         """Our use of an on-screen box may have made this useless. See if we
@@ -2726,9 +2715,6 @@ class ygGlyph(QObject):
                 result.extend(self.search_source(ppt["points"], search_set, ptype))
         return result
 
-    #def glyph_name(self) -> str:
-    #    return self.gname
-
     @property
     def xoffset(self) -> int:
         xo = self.props.get_property("xoffset")
@@ -2750,7 +2736,6 @@ class ygGlyph(QObject):
         if "macro" in n:
             return "macro"
         if "rel" in n:
-            #if n["rel"] == "blackdist" or n["rel"] == "whitedist" or n["rel"] == "graydist":
             if n["rel"] in obsolete_hint_types:
                 n["rel"] = "stem"
             return n["rel"]
@@ -2798,10 +2783,6 @@ class ygGlyph(QObject):
 
     def switch_to_axis(self, new_axis: str) -> None:
         new_axis = "x" if self.axis == "y" else "y"
-        #if self.axis == "y":
-        #    new_axis = "x"
-        #else:
-        #    new_axis = "y"
         self.undo_stack.push(switchAxisCommand(self, self.preferences, new_axis))
 
     #
@@ -2846,7 +2827,6 @@ class ygGlyph(QObject):
                 del s["x"]
         except Exception:
             print("x or y not in glyph source (2). This should not happen!")
-        # if not any([have_y, have_x, "names" in s, "props" in s]):
         if not self.yg_font.has_hints(self.gname):
             self.yg_font.del_glyph(self.gname)
 
@@ -3078,8 +3058,6 @@ class ygGlyph(QObject):
 
     @pyqtSlot(object)
     def hints_changed(self, hint_list: list) -> None:
-        # for h in hint_list:
-        #     print("From hints_changed: ", h.hint_type, h.target)
         self._hints_changed(hint_list)
 
     def _hints_changed(
@@ -3110,10 +3088,6 @@ class ygGlyphs:
         self.font = font
         if not "glyphs" in font.source:
             font.source["glyphs"] = {}
-        #try:
-        #    self._data = source["glyphs"]
-        #except KeyError:
-        #    self._data = {}
 
     @property
     def _data(self):
@@ -3123,9 +3097,6 @@ class ygGlyphs:
         if not gname in self._data:
             self.init_glyph(gname)
         return self._data[gname]
-
-    #def glyph_list(self) -> list:
-    #    return list(self._data.keys())
 
     def install_glyph_source(self, gname: str, gsource: dict) -> None:
         self._data[gname] = gsource
@@ -3303,18 +3274,6 @@ class ygHint(QObject):
     def source(self) -> dict:
         return self._source
 
-    # The next two are not used right now. Note that parent() conflicts
-    # with the superclass, so if we decide to use it, we have to
-    # rename it.
-
-    # def parent(self):
-    #    if "parent" in self.source:
-    #        return self.source["parent"]
-
-    # def children(self):
-    #    if "points" in self.source:
-    #        return self.source["points"]
-
     @property
     def id(self):
         return self._id
@@ -3326,13 +3285,6 @@ class ygHint(QObject):
 
         """
         return self._source["ptid"]
-
-    # This is not used right now
-
-    # @target.setter
-    # def target(self, tgt: Any) -> None:
-    #     """tgt can be a point identifier or a set of them. no ygPoint objects."""
-    #     self.source["ptid"] = tgt
 
     def target_list(self, index_only: bool = False) -> list:
         """Always returns a list. Does not recurse."""
@@ -3363,7 +3315,6 @@ class ygHint(QObject):
                         rlist.append(pp.index)
                     else:
                         rlist.append(pp)
-                    #rlist.append(lambda: pp.index if type(pp) is ygPoint else pp)
                 return rlist
             else:
                 return [i.index]
@@ -3577,11 +3528,6 @@ class ygHint(QObject):
     def cut_in(self) -> bool:
         return True
 
-    # not used right now.
-
-    #def hint_has_changed(self, h: "ygHint") -> None:
-    #    self.hint_changed_signal.emit(h)
-
     def add_hint(self, hint: "ygHint") -> None:
         """Add a hint. This simply calls add_hint in the glyph"""
         if self.yg_glyph != None:
@@ -3639,10 +3585,6 @@ class ygHint(QObject):
             self.yg_glyph.undo_stack.push(
                 setMacFuncOtherArgsCommand(self.yg_glyph, self, d)
             )
-
-    #def print(self, *args, **kwargs):
-    #    __builtin__.print(self._hint_string)
-    #    return __builtin__.print(*args, **kwargs)
 
     def __str__(self):
         return self._hint_string
@@ -3816,8 +3758,6 @@ class ygprep(ygSourceable):
         self.yg_font.undo_stack.push(
             saveEditBoxCommand(self.yg_font, self, c, "Save CVT Program Edits")
         )
-        # self.data["code"] = c["code"]
-        # self._save(c)
         self.set_clean(True)
 
 
@@ -3853,10 +3793,6 @@ class ygDefaults(ygSourceable):
         self.font.undo_stack.push(
             saveEditBoxCommand(self.font, self, c, "Edit Font Defaults")
         )
-        # k = c.keys()
-        # for kk in k:
-        #    self.data[kk] = c[kk]
-        # self._save(c)
         self.set_clean(True)
 
     def clear_rounding(self):
