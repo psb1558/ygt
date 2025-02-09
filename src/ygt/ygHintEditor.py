@@ -1978,10 +1978,11 @@ class ygGlyphScene(QGraphicsScene):
                 mpts.append(self._model_point(p))
             self.yg_glyph.names.add(mpts, text)
             ptlist = self.yg_glyph.names.get(text)
-            tmp_yg_hint = ygHint(self.yg_glyph, {"ptid": ptlist}, nohint=True)
-            tmp_set_view = self._make_visible_hint(tmp_yg_hint)
-            tmp_set_view._set_name(text)
-            self.yg_set_view_dict[text] = tmp_set_view
+            if type(ptlist) is list:
+                tmp_yg_hint = ygHint(self.yg_glyph, {"ptid": ptlist}, nohint=True)
+                tmp_set_view = self._make_visible_hint(tmp_yg_hint)
+                tmp_set_view._set_name(text)
+                self.yg_set_view_dict[text] = tmp_set_view
             # What is this doing here? Do we need it?
             self.set_point_display(
                 (
