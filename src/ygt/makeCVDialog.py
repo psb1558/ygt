@@ -26,7 +26,7 @@ from .ygModel import (
     ygFont,
     ygGlyph,
     ygPoint,
-    ygcvt
+    ygcvt,
 )
 from .ygPreferences import ygPreferences
 
@@ -171,7 +171,9 @@ class cvEditPane(QWidget, cvSource):
         self._cvt.del_cv(self._current_cv_name)
         self.cv_list.clear()
         try:
-            self._current_cv_name = list(sorted(self._cvt.keys, key=lambda s: s.casefold()))[0]
+            self._current_cv_name = list(
+                sorted(self._cvt.keys, key=lambda s: s.casefold())
+            )[0]
         except IndexError:
             return
         self.refresh()
@@ -233,22 +235,22 @@ class cvEditPane(QWidget, cvSource):
 
     def from_current_cv(self, s: str):
         try:
-            return self._current_cv[s] # type: ignore
+            return self._current_cv[s]  # type: ignore
         except KeyError:
             return None
 
-    def set_in_current_cv(self, k: str, s: Any, fallback = Optional[str]) -> None:
+    def set_in_current_cv(self, k: str, s: Any, fallback=Optional[str]) -> None:
         if s == "None" or s == "" or s == None:
             if fallback != None:
                 self._cvt.set_cv_property(self.current_cv_name(), k, fallback)
             else:
-                if k in self._current_cv: # type: ignore
+                if k in self._current_cv:  # type: ignore
                     self._cvt.del_cv(k)
         else:
             self._cvt.set_cv_property(self.current_cv_name(), k, s)
 
     def has_key(self, k: str) -> bool:
-        return k in self._current_cv # type: ignore
+        return k in self._current_cv  # type: ignore
 
     def del_key(self, k: str) -> None:
         self._cvt.del_cv_property(self.current_cv_name(), k)
@@ -560,7 +562,7 @@ class cvWidget(QWidget):
 
         self.general_tab_layout = QVBoxLayout()
         self.cv_type_widget = cvTypeWidget(self.cv_source)
-        #self.cv_color_widget = cvColorWidget(self.cv_source)
+        # self.cv_color_widget = cvColorWidget(self.cv_source)
         self.cv_axis_widget = cvAxisWidget(self.cv_source)
         self.cv_val_widget = cvValueWidget(self.cv_source)
         self.cv_name_widget = cvNameWidget(self.cv_source, owner=self.owner)
@@ -609,8 +611,8 @@ class cvWidget(QWidget):
         self.cv_above_names_widget = cvNamesWidget(
             self.cv_source, "above", self.yg_font, ppem_widget=self.cv_above_ppem_widget
         )
-        self.cv_below_ppem_widget.name_widget = self.cv_below_names_widget # type: ignore
-        self.cv_above_ppem_widget.name_widget = self.cv_above_names_widget # type: ignore
+        self.cv_below_ppem_widget.name_widget = self.cv_below_names_widget  # type: ignore
+        self.cv_above_ppem_widget.name_widget = self.cv_above_names_widget  # type: ignore
 
         self.link_widgets = []
 
@@ -644,7 +646,7 @@ class cvWidget(QWidget):
             self.delta_button_layout = QHBoxLayout()
             add_delta_button = QPushButton("Add")
             del_delta_button = QPushButton("Delete")
-            add_delta_button.clicked.connect(self.delta_pane.model().new_row) # type: ignore
+            add_delta_button.clicked.connect(self.delta_pane.model().new_row)  # type: ignore
             del_delta_button.clicked.connect(self.del_delta_row)
             self.delta_button_layout.addWidget(add_delta_button)
             self.delta_button_layout.addWidget(del_delta_button)
@@ -658,10 +660,10 @@ class cvWidget(QWidget):
             self.variants_tab_layout = QVBoxLayout()
             self.var_widgets = []
             self.var_layouts = []
-            master_keys = self.masters.keys # type: ignore
+            master_keys = self.masters.keys  # type: ignore
             for k in master_keys:
                 self.var_layouts.append(QHBoxLayout())
-                self.var_layouts[-1].addWidget(QLabel(self.masters.get_master_name(k))) # type: ignore
+                self.var_layouts[-1].addWidget(QLabel(self.masters.get_master_name(k)))  # type: ignore
                 self.var_widgets.append(cvVarWidget(k, self.cv_source))
                 self.var_layouts[-1].addWidget(self.var_widgets[-1])
 
@@ -671,14 +673,14 @@ class cvWidget(QWidget):
             self.link_tab_layout.addLayout(w)
         if self.variants_tab:
             for w in self.var_layouts:
-                self.variants_tab_layout.addLayout(w) # type: ignore
+                self.variants_tab_layout.addLayout(w)  # type: ignore
 
         self.general_tab.setLayout(self.general_tab_layout)
         self.link_tab.setLayout(self.link_tab_layout)
         if self.delta_tab:
-            self.delta_tab.setLayout(self.delta_tab_layout) # type: ignore
+            self.delta_tab.setLayout(self.delta_tab_layout)  # type: ignore
         if self.variants_tab:
-            self.variants_tab.setLayout(self.variants_tab_layout) # type: ignore
+            self.variants_tab.setLayout(self.variants_tab_layout)  # type: ignore
         self.layout_obj.addWidget(self.tabs)
         self.setLayout(self.layout_obj)
 
@@ -686,7 +688,7 @@ class cvWidget(QWidget):
     def del_delta_row(self) -> None:
         i = self.delta_pane.selectedIndexes()
         if len(i) > 0:
-            self.delta_pane.model().deleteRows(i[0].row(), 1) # type: ignore
+            self.delta_pane.model().deleteRows(i[0].row(), 1)  # type: ignore
 
     def refresh(self, cv_source: cvSource) -> None:
         """If we're coming from the source pane, every cv in the
@@ -699,7 +701,7 @@ class cvWidget(QWidget):
         self.cv_name_widget.refresh(self.cv_source)
         self.cv_type_widget.refresh(self.cv_source)
         self.cv_axis_widget.refresh(self.cv_source)
-        #self.cv_color_widget.refresh(self.cv_source)
+        # self.cv_color_widget.refresh(self.cv_source)
         self.cv_val_widget.refresh(self.cv_source)
         self.cv_cat_widget.refresh(self.cv_source)
         self.cv_suffix_widget.refresh(self.cv_source)
@@ -715,7 +717,7 @@ class cvWidget(QWidget):
         self.cv_name_widget.fixup()
         self.cv_type_widget.fixup()
         self.cv_axis_widget.fixup()
-        #self.cv_color_widget.fixup()
+        # self.cv_color_widget.fixup()
         self.cv_val_widget.fixup()
         self.cv_cat_widget.fixup()
         self.cv_suffix_widget.fixup()
@@ -879,13 +881,13 @@ class miscDefaultsWidget(QWidget):
         self.ignore_signal = False
 
         self.tt_defaults = QCheckBox("Use TrueType defaults")
-        s =  "<span>If</span> this is checked, all instructions in the CVT program that set "
+        s = "<span>If</span> this is checked, all instructions in the CVT program that set "
         s += "defaults will be ignored."
         self.tt_defaults.setToolTip(s)
         self.tt_defaults.stateChanged.connect(self.toggle_tt_defaults)
 
         self.init_graphics = QCheckBox("Initialize graphics")
-        s =  "<span>If</span> this is checked, code to initialize graphics variables will "
+        s = "<span>If</span> this is checked, code to initialize graphics variables will "
         s += "be inserted at the beginning of each glyph program. This should "
         s += "normally be left unchecked, as these variables are seldom "
         s += "consulted in modern TrueType hinting."
@@ -893,13 +895,13 @@ class miscDefaultsWidget(QWidget):
         self.init_graphics.stateChanged.connect(self.toggle_init_graphics)
 
         self.assume_always_y = QCheckBox("Assume axis always y")
-        s =  "<span>Instructs</span> the compiler to assume that you are only hinting on "
+        s = "<span>Instructs</span> the compiler to assume that you are only hinting on "
         s += "y axis. When this is checked, Ygt will perform several optimizations."
         self.assume_always_y.setToolTip(s)
         self.assume_always_y.stateChanged.connect(self.toggle_assume_always_y)
 
         self.counterclockwise = QCheckBox("Outer contours counter-clockwise")
-        s =  "<span>When</span> outer contours are counter-clockwise, Ygt will guess distance types "
+        s = "<span>When</span> outer contours are counter-clockwise, Ygt will guess distance types "
         s += "wrongly. Check this box and it will guess correctly. You should also "
         s += "select View→Point coordinates since contours will probably be reversed "
         s += "when you generate the font, throwing off the point indices."
@@ -907,27 +909,27 @@ class miscDefaultsWidget(QWidget):
         self.counterclockwise.stateChanged.connect(self.toggle_counterclockwise)
 
         self.cleartype = QCheckBox("Cleartype")
-        s =  "<span>If</span> this box is checked, MS Windows will render your font"
+        s = "<span>If</span> this box is checked, MS Windows will render your font"
         s += "in native ClearType mode."
         self.cleartype.setToolTip(s)
         self.cleartype.stateChanged.connect(self.toggle_cleartype)
 
         self.mergemode = QCheckBox("Merge mode")
-        s =  "<span>Check</span> this box if you are hinting a font containing hints that you "
+        s = "<span>Check</span> this box if you are hinting a font containing hints that you "
         s += "want to retain. Glyphs that you’ve hinted will use your hints. Your functions "
         s += "and control values will be appended to the ones already in the font."
         self.mergemode.setToolTip(s)
         self.mergemode.stateChanged.connect(self.toggle_mergemode)
 
         self.replaceprep = QCheckBox("Replace CVT program")
-        s =  "<span>Only</span> available when merge mode is active. If you check this box, "
+        s = "<span>Only</span> available when merge mode is active. If you check this box, "
         s += "the CVT program generated by Ygt will replace the one in the font. Otherwise, "
         s += "the Ygt CVT program will be appended to the existing one."
         self.replaceprep.setToolTip(s)
         self.replaceprep.stateChanged.connect(self.toggle_replaceprep)
 
         self.functionbase = functionBaseWidget(self.defaults)
-        s =  "In merge mode, <span>set</span> 'function-base' to a non-zero value if Ygt guesses wrongly "
+        s = "In merge mode, <span>set</span> 'function-base' to a non-zero value if Ygt guesses wrongly "
         s += "about the highest-numbered function in the font to which you are adding hints."
         self.functionbase.setToolTip(s)
 
@@ -938,10 +940,12 @@ class miscDefaultsWidget(QWidget):
         self.layout_obj.addWidget(self.counterclockwise, 1, 2)
         self.layout_obj.addWidget(self.mergemode, 2, 2)
         self.layout_obj.addWidget(self.replaceprep, 3, 2)
-        self.functionbase.setFixedWidth(int(self.functionbase.width() /4))
+        self.functionbase.setFixedWidth(int(self.functionbase.width() / 4))
         function_base_layout = QHBoxLayout()
         function_base_layout.addWidget(QLabel("Function base"))
-        function_base_layout.addWidget(self.functionbase, alignment = Qt.AlignmentFlag.AlignLeft)
+        function_base_layout.addWidget(
+            self.functionbase, alignment=Qt.AlignmentFlag.AlignLeft
+        )
         self.layout_obj.addLayout(function_base_layout, 4, 2)
 
         self.setLayout(self.layout_obj)
@@ -1009,7 +1013,10 @@ class miscDefaultsWidget(QWidget):
     def toggle_replaceprep(self) -> None:
         if self.ignore_signal:
             return
-        if bool(self.defaults.get_default("merge-mode")) and self.replaceprep.isChecked():
+        if (
+            bool(self.defaults.get_default("merge-mode"))
+            and self.replaceprep.isChecked()
+        ):
             self.defaults.set_default({"replace-prep": True})
         else:
             self.defaults.del_default("replace-prep")
@@ -1064,7 +1071,10 @@ class makeCVDialog(QDialog, cvSource):
     preferences (ygPreferences): the preferences for this app.
 
     """
-    def __init__(self, p1: ygPoint, p2: ygPoint, yg_glyph: ygGlyph, preferences: ygPreferences) -> None:
+
+    def __init__(
+        self, p1: ygPoint, p2: ygPoint, yg_glyph: ygGlyph, preferences: ygPreferences
+    ) -> None:
         super().__init__()
         self.top_window = preferences.top_window()
         self.yg_font = yg_glyph.yg_font
@@ -1142,7 +1152,7 @@ class makeCVDialog(QDialog, cvSource):
             else:
                 if k in self.cv:
                     del self.cv[k]
-                #if k in self._current_cv:
+                # if k in self._current_cv:
                 #    del self._current_cv[k]
         else:
             self.cv[k] = s
@@ -1598,7 +1608,7 @@ class cvValueWidget(QLineEdit):
                 i = int(t)
             except ValueError:
                 i = 0
-            self.cv_source.set_in_current_cv("val", i, fallback = 0)
+            self.cv_source.set_in_current_cv("val", i, fallback=0)
             self.set_clean()
 
     @pyqtSlot()
@@ -1713,12 +1723,12 @@ class cvNamesWidget(QComboBox):
     """
 
     def __init__(
-            self,
-            cv_source: cvSource,
-            above_below: str,
-            yg_font: ygFont,
-            ppem_widget: cvPPEMWidget = None
-        ) -> None:
+        self,
+        cv_source: cvSource,
+        above_below: str,
+        yg_font: ygFont,
+        ppem_widget: cvPPEMWidget = None,
+    ) -> None:
         super().__init__()
         self.cv_source = cv_source
         self.yg_font = yg_font

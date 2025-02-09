@@ -1,15 +1,16 @@
 from typing import Optional
-import freetype as ft # type: ignore
+import freetype as ft  # type: ignore
 import numpy
+
 # import copy
 from tempfile import SpooledTemporaryFile
 from PyQt6.QtGui import QColor, QPen, QImage, QPainter
 from PyQt6.QtCore import QLine
 
 RENDER_GRAYSCALE = 1
-RENDER_LCD_1     = 2
-RENDER_LCD_2     = 3
-RENDER_MONO      = 4
+RENDER_LCD_1 = 2
+RENDER_LCD_2 = 3
+RENDER_MONO = 4
 
 
 class ygLetterBox:
@@ -53,7 +54,7 @@ class freetypeFont:
         render_mode: int = RENDER_LCD_1,
         hinting_on: bool = True,
         instance: str = None,
-        keep_open: bool = False
+        keep_open: bool = False,
     ) -> None:
         self.valid = True
         try:
@@ -84,12 +85,12 @@ class freetypeFont:
         self.instance = instance
         self.hinting_on = hinting_on
         self.bw_colors = self.mk_bw_color_list()
-        self.bw_colors_dark = self.mk_bw_color_list(dark = True)
+        self.bw_colors_dark = self.mk_bw_color_list(dark=True)
         self.draw_char = self._draw_char_lcd
         self.set_render_mode(render_mode)
         self.face.set_char_size(self.char_size)
         self._get_font_metrics()
-        #self.last_glyph_index = None
+        # self.last_glyph_index = None
         self.rect_list: list = []
 
     def mk_bw_color_list(self, dark: bool = False) -> list:
@@ -185,7 +186,7 @@ class freetypeFont:
         r["bitmap_left"] = self.glyph_slot.bitmap_left
         r["advance"] = round(self.glyph_slot.advance.x / 64)
         return r
-    
+
     def monomap_to_array(self, bitmap):
         data = [0] * (bitmap.rows * bitmap.width)
         for y in range(bitmap.rows):
@@ -194,7 +195,7 @@ class freetypeFont:
                 rowstart = y * bitmap.width + byte_index * 8
                 num_bits_done = byte_index * 8
                 bits = 8
-                if ((bitmap.width - num_bits_done) < 8):
+                if (bitmap.width - num_bits_done) < 8:
                     bits = bitmap.width - num_bits_done
                 for bit_index in range(bits):
                     bit = byte_value & (1 << (7 - bit_index))
@@ -220,18 +221,17 @@ class freetypeFont:
         else:
             return numpy.array(data, dtype=numpy.ubyte).reshape(rows, int(width / 3), 3)
 
-
     def _draw_char_lcd(
-            self,
-            painter,
-            x,
-            y,
-            spacing_mark = False,
-            dark_theme = False,
-            is_target = False,
-            x_offset = 0,
-            y_offset = 0,
-        ):
+        self,
+        painter,
+        x,
+        y,
+        spacing_mark=False,
+        dark_theme=False,
+        is_target=False,
+        x_offset=0,
+        y_offset=0,
+    ):
         """Draws a bitmap with subpixel rendering (suitable for an lcd screen)
 
         Params:
@@ -260,10 +260,10 @@ class freetypeFont:
         height, width, channel = Z.shape
         bytesPerLine = channel * width
 
-        have_outline = (not (0 in list(Z.shape)))
+        have_outline = not (0 in list(Z.shape))
 
         if not dark_theme:
-            Z = (255-Z)
+            Z = 255 - Z
 
         # Get starting position and metrics. For zero-width marks, we expand the width,
         # but only if spacing_mark=True.
@@ -278,11 +278,17 @@ class freetypeFont:
 
         # Get QImage from Z; set composition mode; draw the glyph.
         if have_outline:
-            img = QImage(Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888)
+            img = QImage(
+                Z.data, width, height, bytesPerLine, QImage.Format.Format_RGB888
+            )
             if dark_theme:
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Screen)
+                painter.setCompositionMode(
+                    QPainter.CompositionMode.CompositionMode_Screen
+                )
             else:
-                painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Multiply)
+                painter.setCompositionMode(
+                    QPainter.CompositionMode.CompositionMode_Multiply
+                )
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, on=False)
             painter.drawImage(starting_xpos, starting_ypos, img)
 
@@ -312,18 +318,17 @@ class freetypeFont:
             )
         )
         return gdata["advance"]
-    
 
     def _draw_char_mono(
-            self,
-            painter,
-            x,
-            y,
-            spacing_mark=False,
-            dark_theme = False,
-            is_target = False,
-            x_offset = 0,
-            y_offset = 0,
+        self,
+        painter,
+        x,
+        y,
+        spacing_mark=False,
+        dark_theme=False,
+        is_target=False,
+        x_offset=0,
+        y_offset=0,
     ):
         gdata = self._get_bitmap_metrics()
         bm = self.mk_array(gdata, self.render_mode)
@@ -372,18 +377,17 @@ class freetypeFont:
         )
         return gdata["advance"]
 
-
     def _draw_char_grayscale(
-            self,
-            painter,
-            x,
-            y,
-            spacing_mark=False,
-            dark_theme = False,
-            is_target = False,
-            x_offset = 0,
-            y_offset = 0,
-        ):
+        self,
+        painter,
+        x,
+        y,
+        spacing_mark=False,
+        dark_theme=False,
+        is_target=False,
+        x_offset=0,
+        y_offset=0,
+    ):
         """Draws a bitmap with grayscale rendering
 
         Params:
@@ -451,7 +455,7 @@ class freetypeFont:
             return r
         except Exception as e:
             return None
-        
+
     def names_to_indices(self, l):
         result = []
         for n in l:
@@ -465,7 +469,7 @@ class freetypeFont:
             print("Error in index_to_name:")
             print(e)
             return ".notdef"
-        
+
     def indices_to_names(self, index_list):
         result = []
         for i in index_list:
@@ -489,18 +493,18 @@ class freetypeFont:
                 pass
         return indices
 
-    def draw_string(self,
-                    painter,
-                    s: str | list,
-                    x,
-                    y,
-                    positions: list = [],
-                    x_limit = 200,
-                    y_increment = 67,
-                    dark_theme = False,
-        ):
-
-        #self.last_glyph_index = None
+    def draw_string(
+        self,
+        painter,
+        s: str | list,
+        x,
+        y,
+        positions: list = [],
+        x_limit=200,
+        y_increment=67,
+        dark_theme=False,
+    ):
+        # self.last_glyph_index = None
         self.reset_rect_list()
 
         if type(s) is str:
@@ -530,18 +534,18 @@ class freetypeFont:
                 painter,
                 xpos,
                 ypos,
-                dark_theme = dark_theme,
-                x_offset = x_offset,
-                y_offset = y_offset,
-                )
+                dark_theme=dark_theme,
+                x_offset=x_offset,
+                y_offset=y_offset,
+            )
             if x_advance >= 0:
                 adv = x_advance
             xpos += adv
             if xpos >= x_limit:
                 xpos = x
                 ypos += y_increment
-                #self.last_glyph_index = None
+                # self.last_glyph_index = None
             if ypos > y + y_increment:
                 break
-            #self.last_glyph_index = i
+            # self.last_glyph_index = i
         return self.rect_list

@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QPainter
 from PyQt6.QtCore import Qt
 
+
 class ygLabel(QWidget):
     # In Qt one commonly adds a QPixmap to a QLabel to display images in a widget;
     # but the image is always antialiased. Since our glyph images are already
@@ -20,5 +21,7 @@ class ygLabel(QWidget):
             return
         qp = QPainter(self)
         qp.setRenderHint(QPainter.RenderHint.Antialiasing, on=False)
-        self.style().drawItemPixmap(qp, self.rect(), Qt.AlignmentFlag.AlignCenter, self.pm)
+        self.style().drawItemPixmap(
+            qp, self.rect(), Qt.AlignmentFlag.AlignCenter, self.pm
+        )
         qp.end()

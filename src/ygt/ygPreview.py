@@ -7,7 +7,7 @@ from .freetypeFont import (
     RENDER_LCD_1,
     RENDER_LCD_2,
     RENDER_MONO,
-    #adjust_gamma,
+    # adjust_gamma,
 )
 from PyQt6.QtWidgets import (
     QWidget,
@@ -21,7 +21,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPalette, QPixmap, QGuiApplication
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, pyqtSlot, QLine
-#import cv2
+
+# import cv2
 from .ygLabel import ygLabel
 
 
@@ -42,8 +43,8 @@ class ygPreviewContainer(QScrollArea):
         self._layout.addWidget(string_preview)
         self.setLayout(self._layout)
 
-class ygPreview(QLabel):
 
+class ygPreview(QLabel):
     sig_preview_paint_done = pyqtSignal(object)
 
     def __init__(self, top_window) -> None:
@@ -93,9 +94,13 @@ class ygPreview(QLabel):
         self.instance: Optional[str] = None
         self.hb_instance_changed = False
 
-        self.background_color = self.default_background = self.palette().color(QPalette.ColorRole.Base)
+        self.background_color = self.default_background = self.palette().color(
+            QPalette.ColorRole.Base
+        )
         # Figure out if we have a dark or a light theme.
-        self.dark_theme = (QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark)
+        self.dark_theme = (
+            QGuiApplication.styleHints().colorScheme() == Qt.ColorScheme.Dark
+        )
         self.theme_choice = "auto"
         self.colors = None
         self.change_theme(self.theme_choice)
@@ -136,16 +141,16 @@ class ygPreview(QLabel):
         """Pre-build a list of grayscale colors--for the big preview."""
         l = [0] * 256
 
-        dark_theme = (self.theme_choice == "dark")
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
 
         for count, c in enumerate(l):
             if dark_theme:
-                l[count] = QColor(255, 255, 255, count) # type: ignore
+                l[count] = QColor(255, 255, 255, count)  # type: ignore
             else:
-                l[count] = QColor(0, 0, 0, count) # type: ignore
-        return l # type: ignore
+                l[count] = QColor(0, 0, 0, count)  # type: ignore
+        return l  # type: ignore
 
     def fetch_glyph(self, font, glyph_index):
         """Get a temporary FreeType font, then build the specified glyph.
@@ -339,7 +344,7 @@ class ygPreview(QLabel):
 
     @pyqtSlot()
     def set_instance(self) -> None:
-        self.instance = self.sender().text() # type: ignore
+        self.instance = self.sender().text()  # type: ignore
         self._set_instance()
 
     def _set_instance(self) -> None:
@@ -386,7 +391,7 @@ class ygPreview(QLabel):
         if not self.render_mode in [RENDER_GRAYSCALE, RENDER_MONO]:
             line_length = int(line_length / 3)
 
-        dark_theme = (self.theme_choice == "dark")
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
 
@@ -420,7 +425,7 @@ class ygPreview(QLabel):
 
     def make_pixmap_mono(self) -> None:
         """Paint monochrome glyph."""
-        dark_theme = (self.theme_choice == "dark")
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
 
@@ -460,10 +465,9 @@ class ygPreview(QLabel):
 
         self.sig_preview_paint_done.emit(None)
 
-
     def make_pixmap_grayscale(self) -> None:
         """Paint grayscale glyph."""
-        dark_theme = (self.theme_choice == "dark")
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
 
@@ -493,11 +497,9 @@ class ygPreview(QLabel):
         self.setPixmap(self.pixmap)
         self.sig_preview_paint_done.emit(None)
 
-
     def make_pixmap_lcd1(self) -> None:
-        """ Make glyph rendered as subpixel 1
-        """
-        dark_theme = (self.theme_choice == "dark")
+        """Make glyph rendered as subpixel 1"""
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
 
@@ -546,11 +548,9 @@ class ygPreview(QLabel):
 
         self.sig_preview_paint_done.emit(None)
 
-
     def make_pixmap_lcd2(self) -> None:
-        """ Make glyph rendered as subpixel 1
-        """
-        dark_theme = (self.theme_choice == "dark")
+        """Make glyph rendered as subpixel 1"""
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
 
@@ -567,7 +567,7 @@ class ygPreview(QLabel):
             return
         xposition = self.horizontal_margin
         yposition = self.vertical_margin + (self.top_char_margin * self.pixel_size)
-        dark_theme = (self.theme_choice == "dark")
+        dark_theme = self.theme_choice == "dark"
         if self.theme_choice == "auto":
             dark_theme = self.dark_theme
         for row in self.Z:
@@ -652,8 +652,7 @@ class ygStringPreviewPanel(ygLabel):
         painter.fillRect(rect, brush)
 
     def make_pixmap_a(self) -> None:
-        """ Draw the size array.
-        """
+        """Draw the size array."""
         target_size = self.yg_preview.char_size
         if self.pixmap == None:
             self.pixmap = QPixmap(self.width(), self.height())
@@ -669,12 +668,12 @@ class ygStringPreviewPanel(ygLabel):
         xposition = 25
         yposition = 66
 
-        dark_theme = (self.yg_preview.theme_choice == "dark")
+        dark_theme = self.yg_preview.theme_choice == "dark"
         if self.yg_preview.theme_choice == "auto":
             dark_theme = self.yg_preview.dark_theme
 
         for s in range(10, 100):
-            this_is_target = (s == target_size)
+            this_is_target = s == target_size
             self.face.set_params(
                 glyph=self.yg_preview.glyph_index,
                 render_mode=self.yg_preview.render_mode,
@@ -686,8 +685,8 @@ class ygStringPreviewPanel(ygLabel):
                 painter,
                 xposition,
                 yposition,
-                spacing_mark = True,
-                dark_theme = dark_theme,
+                spacing_mark=True,
+                dark_theme=dark_theme,
                 is_target=this_is_target,
             )
             xposition += advance
@@ -702,7 +701,7 @@ class ygStringPreviewPanel(ygLabel):
         self.setPixmap(self.pixmap)
 
     def make_pixmap_b(self) -> None:
-        """ Draw a string. """
+        """Draw a string."""
         if self.pixmap == None:
             self.pixmap == QPixmap(self.width(), self.height())
         self.pixmap.fill(self.yg_preview.background_color)
@@ -713,7 +712,7 @@ class ygStringPreviewPanel(ygLabel):
         xposition = 25
         yposition = 66
         self.face = self.yg_preview.face
-        dark_theme = (self.yg_preview.theme_choice == "dark")
+        dark_theme = self.yg_preview.theme_choice == "dark"
         if self.yg_preview.theme_choice == "auto":
             dark_theme = self.yg_preview.dark_theme
         self.rect_list = self.face.draw_string(
@@ -722,9 +721,9 @@ class ygStringPreviewPanel(ygLabel):
             self._full_glyph_list,
             xposition,
             yposition,
-            positions = self._full_pos_list,
-            x_limit = PREVIEW_WIDTH - 50,
-            dark_theme = dark_theme
+            positions=self._full_pos_list,
+            x_limit=PREVIEW_WIDTH - 50,
+            dark_theme=dark_theme,
         )
         painter.end()
         self.setPixmap(self.pixmap)
@@ -746,7 +745,6 @@ class ygStringPreviewPanel(ygLabel):
 
 
 class ygStringPreview(QWidget):
-
     sig_string_changed = pyqtSignal(object)
 
     def __init__(self, yg_preview: ygPreview, top_window) -> None:
@@ -758,7 +756,7 @@ class ygStringPreview(QWidget):
         self.horizontal_margin = PREVIEW_HORI_MARGIN
 
         self._layout = QVBoxLayout()
-        self._layout.setContentsMargins(0,0,0,0)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
         self.setFixedWidth(PREVIEW_WIDTH)
         self.setMinimumHeight(STRING_PREVIEW_HEIGHT)
@@ -793,7 +791,7 @@ class ygStringPreview(QWidget):
     @property
     def full_glyph_list(self):
         return self.panel._full_glyph_list
-    
+
     @full_glyph_list.setter
     def full_glyph_list(self, l):
         self.panel._full_glyph_list.clear()

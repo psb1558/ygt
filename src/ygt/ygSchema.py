@@ -1,5 +1,5 @@
 from typing import Any
-from schema import Or, Optional, Schema, SchemaError, Use, And # type: ignore
+from schema import Or, Optional, Schema, SchemaError, Use, And  # type: ignore
 
 # from .ygModel import unicode_categories
 import re
@@ -37,7 +37,7 @@ def is_cv_distance_valid(s: Any) -> bool:
         f = float(sss)
         return f >= -4.0 and f <= 4.0
     if type(sss) is str:
-        ss = sss.split("/", 1) # type: ignore
+        ss = sss.split("/", 1)  # type: ignore
         try:
             left = int(ss[0])
             right = int(ss[1])
@@ -126,9 +126,7 @@ nested_point_struct = {
     #     "stem", "blackdist", "whitedist", "graydist", "shift", "align", "interpolate"
     # ),
     Optional("min"): bool,
-    "rel": Or(
-        "stem", "shift", "align", "interpolate"
-    ),
+    "rel": Or("stem", "shift", "align", "interpolate"),
     Optional("points"): validate_points,
 }
 
@@ -337,12 +335,12 @@ def name_checker(s: str) -> bool:
     return bool(re.match("^[a-zA-Z][0-9A-Za-z-_]*$", s))
 
 
-#cvar_entry_struct = [
+# cvar_entry_struct = [
 #    {
 #        "regions": [{"tag": tag_checker, "val": float}],
 #        "vals": [{"nm": name_checker, "val": int}],
 #    }
-#]
+# ]
 
 point_schema = Schema(point_struct)
 nested_point_schema = Schema(nested_point_struct)
@@ -360,7 +358,7 @@ def is_valid(t: Any) -> bool:
 
 cv_delta_schema = Schema(cv_delta_struct)
 cvt_schema = Schema(cvt_entry_struct)
-#cvar_schema = Schema(cvar_entry_struct)
+# cvar_schema = Schema(cvar_entry_struct)
 prep_schema = Schema({"code": str})
 function_schema = Schema(function_entry_struct)
 macro_schema = Schema(macro_entry_struct)
@@ -389,7 +387,7 @@ def is_cvt_valid(t: dict) -> bool:
 
 
 # Not needed, since we no longer used this structure.
-#def is_cvar_valid(t: dict) -> bool:
+# def is_cvar_valid(t: dict) -> bool:
 #    try:
 #        cvar_schema.validate(t)
 #        return True
@@ -453,6 +451,7 @@ def are_properties_valid(t: dict) -> bool:
         set_error_message("Error in glyph properties: " + str(s))
     return False
 
-#Not currently used.
-#def always_valid(t) -> bool:
+
+# Not currently used.
+# def always_valid(t) -> bool:
 #    return True

@@ -1,4 +1,11 @@
-from PyQt6.QtWidgets import QDialog, QLineEdit, QCompleter, QVBoxLayout, QDialogButtonBox
+from PyQt6.QtWidgets import (
+    QDialog,
+    QLineEdit,
+    QCompleter,
+    QVBoxLayout,
+    QDialogButtonBox,
+)
+
 
 class ygGlyphPicker(QDialog):
     def __init__(self, glyph_name_list, parent):

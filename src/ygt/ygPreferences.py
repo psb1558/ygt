@@ -11,6 +11,7 @@ from yaml import Loader, Dumper
 
 RECENTS_LIST_LENGTH = 10
 
+
 class ygPreferences(dict):
     def __init__(self, *args, **kwargs) -> None:
         super(ygPreferences, self).__init__(*args, **kwargs)
@@ -98,7 +99,7 @@ class ygPreferences(dict):
     def show_off_curve_points(self) -> bool:
         return self["show_off_curve_points"]
 
-    def set_show_off_curve_points(self, b: bool): # type: ignore
+    def set_show_off_curve_points(self, b: bool):  # type: ignore
         self["show_off_curve_points"] = b
 
     def show_point_numbers(self) -> bool:
@@ -175,8 +176,9 @@ def open_config(top_window: Any) -> ygPreferences:
 # Not doing types for the winreg functions because the winreg module
 # can't be imported on the Mac, where checking is being done.
 
+
 def read_win_registry(top_window):
-    path = winreg.HKEY_CURRENT_USER # type: ignore
+    path = winreg.HKEY_CURRENT_USER  # type: ignore
     p = ygPreferences()
     try:
         key = winreg.OpenKeyEx(path, r"SOFTWARE\\ygt\\")
@@ -259,9 +261,7 @@ def write_win_registry(prefs):
         winreg.SetValueEx(
             yg_key, "auto_preview", 0, winreg.REG_DWORD, int(prefs["auto_preview"])
         )
-        winreg.SetValueEx(
-            yg_key, "recents", 0, winreg.REG_MULTI_SZ, prefs["recents"]
-        )
+        winreg.SetValueEx(yg_key, "recents", 0, winreg.REG_MULTI_SZ, prefs["recents"])
         winreg.SetValueEx(
             yg_key, "top_window_pos_x", 0, winreg.REG_DWORD, prefs["top_window_pos_x"]
         )

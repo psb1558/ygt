@@ -1,6 +1,6 @@
 from typing import Optional
 from fontTools.varLib import instancer  # type: ignore
-from fontTools.ttLib.ttFont import TTFont # type: ignore
+from fontTools.ttLib.ttFont import TTFont  # type: ignore
 
 
 class instanceChecker:

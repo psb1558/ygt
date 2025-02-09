@@ -9,7 +9,7 @@ from PyQt6.QtCore import (
     QAbstractTableModel,
 )
 from PyQt6.QtGui import QUndoCommand, QUndoStack, QAction
-from fontTools import ttLib, ufoLib # type: ignore
+from fontTools import ttLib, ufoLib  # type: ignore
 import yaml
 from yaml import Dumper, parse
 import os
@@ -25,12 +25,10 @@ from .cvGuesser import instanceChecker
 from .freetypeFont import freetypeFont
 from .harfbuzzFont import harfbuzzFont
 
-import defcon # type: ignore
-from ufo2ft import compileTTF # type: ignore
+import defcon  # type: ignore
+from ufo2ft import compileTTF  # type: ignore
 
-obsolete_hint_types = [
-    "blackdist", "whitedist", "graydist"
-]
+obsolete_hint_types = ["blackdist", "whitedist", "graydist"]
 
 hint_type_nums = {
     "anchor": 0,
@@ -95,15 +93,15 @@ unicode_cat_names = {
     "LC": "Letter, cased",
     "Lm": "Letter, modifier",
     "Lo": "Letter, other",
-    "L":  "Letter",
+    "L": "Letter",
     "Mn": "Mark, nonspacing",
     "Mc": "Mark, spacing",
     "Me": "Mark, enclosing",
-    "M":  "Mark",
+    "M": "Mark",
     "Nd": "Number, decimal",
     "Nl": "Number, letter",
     "No": "Number, other",
-    "N":  "Number",
+    "N": "Number",
     "Pc": "Punctuation, connector",
     "Pd": "Punctuation, dash",
     "Ps": "Punctuation, open",
@@ -111,22 +109,22 @@ unicode_cat_names = {
     "Pi": "Punctuation, initial quote",
     "Pf": "Punctuation, final quote",
     "Po": "Punctuation, other",
-    "P":  "Punctuation",
+    "P": "Punctuation",
     "Sm": "Symbol, math",
     "Sc": "Symbol, currency",
     "Sk": "Symbol, modifier",
     "So": "Symbol, other",
-    "S":  "Symbol",
+    "S": "Symbol",
     "Zs": "Separator, space",
     "Zl": "Separator, line",
     "Zp": "Separator, paragraph",
-    "Z":  "Separator",
+    "Z": "Separator",
     "Cc": "Other, control",
     "Cf": "Other, format",
     "Cs": "Other, surrogate",
     "Co": "Other, private use",
     "Cn": "Other, not assigned",
-    "C":  "Other",
+    "C": "Other",
 }
 
 INITIAL_CV_DELTA = {"size": 25, "distance": 0.0}
@@ -268,7 +266,7 @@ class SourceFile:
             # This shouldn't happen.
             self.load_successful = False
             return
-            #raise Exception("Bad filename " + str(self.filename))
+            # raise Exception("Bad filename " + str(self.filename))
 
         # Read the yaml source. Either the skeleton created earlier (but shouldn't
         # it be here?), a yaml file, or a yaml file in a ufo.
@@ -301,7 +299,7 @@ class SourceFile:
         else:
             if os.path.exists(self.filename):
                 f = ufoLib.UFOWriter(self.filename)
-                f.writeData("org.ygthinter/source.yaml", yy.encode()) # type: ignore
+                f.writeData("org.ygthinter/source.yaml", yy.encode())  # type: ignore
                 f.close()
             else:
                 if top_window:
@@ -371,7 +369,7 @@ class ygFont(QObject):
                     [
                         "Error",
                         "File load error",
-                        "Can't load Ygt source, probably because the file can't be found."
+                        "Can't load Ygt source, probably because the file can't be found.",
                     ]
                 )
                 self.load_successful = False
@@ -394,8 +392,12 @@ class ygFont(QObject):
         if not fontfile:
             if self.main_window:
                 self.main_window.show_error_message(
-                    ["Error", "Font not specified", "Didn't find the name of a font file in the source"]
-                    )
+                    [
+                        "Error",
+                        "Font not specified",
+                        "Didn't find the name of a font file in the source",
+                    ]
+                )
                 self.load_successful = False
                 return
             else:
@@ -417,10 +419,12 @@ class ygFont(QObject):
         elif extension == ".ufo":
             try:
                 ufo = defcon.Font(fontfile)
-                self.ft_font = compileTTF(ufo, useProductionNames=False, reverseDirection=False)
-                tf = SpooledTemporaryFile(max_size=3000000, mode='b')
+                self.ft_font = compileTTF(
+                    ufo, useProductionNames=False, reverseDirection=False
+                )
+                tf = SpooledTemporaryFile(max_size=3000000, mode="b")
                 self.ft_font.save(tf, 1)
-                self.freetype_font = freetypeFont(tf, keep_open = True)
+                self.freetype_font = freetypeFont(tf, keep_open=True)
                 self.harfbuzz_font = harfbuzzFont(tf, self.freetype_font)
                 # tf.close()
             except Exception as e:
@@ -432,7 +436,7 @@ class ygFont(QObject):
                     [
                         "Error",
                         "Font file not found",
-                        "Can't find font file" + str(fontfile)
+                        "Can't find font file" + str(fontfile),
                     ]
                 )
                 self.load_successful = False
@@ -674,7 +678,7 @@ class ygFont(QObject):
                 def_inst = k
                 break
         return def_inst
-    
+
     def instance_coordinates(self, inst: str) -> dict:
         return self.instances[inst]
 
@@ -756,13 +760,13 @@ class ygFont(QObject):
             )
 
     def is_composite(self, gname: str) -> bool:
-        return self.ft_font['glyf'][gname].isComposite()
+        return self.ft_font["glyf"][gname].isComposite()
 
     def has_hints(self, gname: str) -> bool:
         """
-          Returns True if program for glyph exists and there is
-          (1) code on either the x or the y axis or
-          (2) a "names" section or (3) a "props" section.
+        Returns True if program for glyph exists and there is
+        (1) code on either the x or the y axis or
+        (2) a "names" section or (3) a "props" section.
         """
         if not self.glyphs.has_glyph(gname):
             return False
@@ -773,7 +777,7 @@ class ygFont(QObject):
             y_len = len(glyph_program["y"]["points"])
         if y_len == 0 and "x" in glyph_program and "points" in glyph_program["x"]:
             x_len = len(glyph_program["x"]["points"])
-        has_code = (y_len > 0 or x_len > 0)
+        has_code = y_len > 0 or x_len > 0
         return any([has_code, "names" in glyph_program, "props" in glyph_program])
 
     def del_glyph(self, gname: str) -> None:
@@ -814,14 +818,14 @@ class ygFont(QObject):
             return self.unicode_to_name[ord(char)]
         except Exception:
             return ".notdef"
-        
+
     def additional_component_names(self, glyph_list):
         """Get list of components for all the glyphs in glyph_list.
-           Recurse if necessary. Don't worry about redundancies in list.
+        Recurse if necessary. Don't worry about redundancies in list.
         """
         result = []
         for gn in glyph_list:
-            cn = self.ft_font['glyf'][gn].getComponentNames(self.ft_font['glyf'])
+            cn = self.ft_font["glyf"][gn].getComponentNames(self.ft_font["glyf"])
             if len(cn):
                 for ccn in cn:
                     result.append(ccn)
@@ -842,7 +846,7 @@ class ygFont(QObject):
 
     # It appears that this never gets called. And if this doesn't get called,
     # neither does glyphs.save().
-    #def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
+    # def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
     #    """Save a y or x block to the in-memory source."""
     #    self.glyphs.save(gname, axis, source)
     #    #if not self.glyphs.has_glyph(gname):
@@ -1028,7 +1032,7 @@ class ygPoint:
             return self.id == other.id
         except AttributeError:
             return False
-        
+
     def __str__(self):
         return str(self.index)
 
@@ -1132,7 +1136,7 @@ class ygSet:
             if pt in self:
                 result.append(pt)
         return result
-    
+
     def __str__(self):
         result = "["
         for count, p in enumerate(self._point_list):
@@ -1144,6 +1148,7 @@ class ygSet:
                 result += str(p)
         result += "]"
         return result
+
 
 #
 # Undo / Redo
@@ -1666,9 +1671,7 @@ class updateSourceCommand(glyphEditCommand):
             try:
                 self.yg_glyph.gsource[self.yg_glyph.axis]["points"].clear()
                 for ss in self.s:
-                    self.yg_glyph.gsource[self.yg_glyph.axis][
-                        "points"
-                    ].append(ss)
+                    self.yg_glyph.gsource[self.yg_glyph.axis]["points"].append(ss)
                 self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
                 self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
             except Exception as e:
@@ -1816,9 +1819,9 @@ class swapMacFuncPointsCommand(glyphEditCommand):
                         self.hint.source["ptid"][self.new_name],
                     )
                 except Exception as e:
-                    self.hint.source["ptid"][self.new_name] = self.hint._source[
-                        "ptid"
-                    ][self.old_name]
+                    self.hint.source["ptid"][self.new_name] = self.hint._source["ptid"][
+                        self.old_name
+                    ]
                     del self.hint.source["ptid"][self.old_name]
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "swapMacFuncPointsCommand").test()
@@ -2020,7 +2023,7 @@ class deletePointsCommand(glyphEditCommand):
             self.hint._delete_points(self.p_list)
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "deletePointsCommand").test()
-        #self.yg_glyph._hints_changed(self.yg_glyph.hints)
+        # self.yg_glyph._hints_changed(self.yg_glyph.hints)
         self.send_signal()
 
 
@@ -2039,7 +2042,7 @@ class switchAxisCommand(QUndoCommand):
         self.top_window.current_axis = self.yg_glyph.axis = self.new_axis
         self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
         self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
-        #self.yg_glyph._hints_changed(self.yg_glyph.hints, dirty=False)
+        # self.yg_glyph._hints_changed(self.yg_glyph.hints, dirty=False)
         self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
         self.yg_glyph.send_yaml_to_editor()
         self.top_window.set_window_title()
@@ -2139,11 +2142,20 @@ class glyphSourceTester:
 
     def test(self) -> None:
         try:
-            if self.yg_glyph.yg_font.glyphs._data is not self.yg_glyph.yg_font.source["glyphs"]:
+            if (
+                self.yg_glyph.yg_font.glyphs._data
+                is not self.yg_glyph.yg_font.source["glyphs"]
+            ):
                 print("Glyph blocks not the same")
             if not self.yg_glyph.yg_font.glyphs.has_glyph(self.yg_glyph.gname):
                 # If this fails, the next will throw an exception.
-                print("(from", self.caller, ") glyph name ", self.yg_glyph.gname, " not in source")
+                print(
+                    "(from",
+                    self.caller,
+                    ") glyph name ",
+                    self.yg_glyph.gname,
+                    " not in source",
+                )
             if (
                 self.yg_glyph.gsource
                 != self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]
@@ -2268,7 +2280,7 @@ class ygGlyph(QObject):
         if self.top_window != None:
             self.set_auto_preview_connection()
 
-    #def report_vars(self) -> None:
+    # def report_vars(self) -> None:
     #    print("Glyph name: " + self.gname)
     #    print("Size of undo stack: " + str(self.undo_stack.count()))
     #    print("Code for glyph:")
@@ -2500,7 +2512,7 @@ class ygGlyph(QObject):
     @property
     def axis(self) -> str:
         return self._current_axis
-    
+
     @axis.setter
     def axis(self, a: str) -> None:
         if a in ["y", "x"]:
@@ -2511,11 +2523,11 @@ class ygGlyph(QObject):
     @property
     def yg_font(self) -> ygFont:
         return self._yg_font
-    
+
     @property
     def gname(self) -> str:
         return self._gname
-    
+
     @property
     def gsource(self) -> dict:
         return self._gsource
@@ -2534,7 +2546,7 @@ class ygGlyph(QObject):
 
         """
         return self._yaml_mk_hint_list(self.current_block, validate=True)
-    
+
     def hints_using_set(self, nm) -> list:
         hint_list = self.hints
         hints_containing = []
@@ -3024,14 +3036,10 @@ class ygGlyph(QObject):
 
     def set_auto_preview_connection(self) -> None:
         if self.top_window.auto_preview_update:
-            self.sig_hints_changed.connect(
-                self.top_window.preview_current_glyph
-            )
+            self.sig_hints_changed.connect(self.top_window.preview_current_glyph)
         else:
             try:
-                self.sig_hints_changed.disconnect(
-                    self.top_window.preview_current_glyph
-                )
+                self.sig_hints_changed.disconnect(self.top_window.preview_current_glyph)
             except Exception as e:
                 # print(e)
                 pass
@@ -3060,14 +3068,10 @@ class ygGlyph(QObject):
     def hints_changed(self, hint_list: list) -> None:
         self._hints_changed(hint_list)
 
-    def _hints_changed(
-            self,
-            hint_list: list,
-            dirty: bool = True
-        ) -> None:
+    def _hints_changed(self, hint_list: list, dirty: bool = True) -> None:
         """
-            This method interacts directly with graphical objects: ygGlyphScene
-            and fontViewWindow. Try to do it a different way.
+        This method interacts directly with graphical objects: ygGlyphScene
+        and fontViewWindow. Try to do it a different way.
         """
         if dirty:
             self.set_dirty()
@@ -3110,7 +3114,7 @@ class ygGlyphs:
 
     def has_glyph(self, gname: str) -> bool:
         return gname in self._data
-    
+
     def save(self, gname: str, axis: str, source) -> None:
         if not gname in self._data:
             self._data[gname] = {}
@@ -3137,7 +3141,7 @@ class Comparable(object):
         recurse into dependent hints to build a complete list.
 
         """
-        hint = ygHint(None, obj) # type: ignore
+        hint = ygHint(None, obj)  # type: ignore
         if key == "ptid":
             p = hint.target
         else:
@@ -3318,14 +3322,14 @@ class ygHint(QObject):
                 return rlist
             else:
                 return [i.index]
-        
+
     def _ptid_to_objects(self):
         _target_list = self.target_list()
         pt_list = []
         for t in _target_list:
             pt_list.append(self.yg_glyph.resolve_point_identifier(t))
         return pt_list
-        
+
     def contains_points(self, p: Any) -> bool:
         """Returns True if point p or all points in list p are targets of this hint."""
         l = []
@@ -3343,7 +3347,7 @@ class ygHint(QObject):
             if not ppp in pt_list:
                 return False
         return True
-    
+
     def _add_points(self, p: list) -> None:
         """We should already have checked to make sure all points in p are
         untouched and that this hint is shift, align, or interpolate.
@@ -3358,9 +3362,7 @@ class ygHint(QObject):
 
     def add_points(self, p: list) -> None:
         if self.yg_glyph != None:
-            self.yg_glyph.undo_stack.push(
-                addPointsCommand(self.yg_glyph, self, p)
-            )
+            self.yg_glyph.undo_stack.push(addPointsCommand(self.yg_glyph, self, p))
 
     def _delete_points(self, p: list) -> None:
         if not len(p):
@@ -3388,9 +3390,7 @@ class ygHint(QObject):
 
     def delete_points(self, p: list) -> None:
         if self.yg_glyph != None:
-            self.yg_glyph.undo_stack.push(
-                deletePointsCommand(self.yg_glyph, self, p)
-            )
+            self.yg_glyph.undo_stack.push(deletePointsCommand(self.yg_glyph, self, p))
 
     @property
     def ref(self) -> Any:
@@ -3830,9 +3830,9 @@ class ygDefaults(ygSourceable):
 
 
 class ygCVDeltas(QAbstractTableModel):
-    """ Provides a view of the 'deltas' section of a CV and
-        implements a model to work with the QTableView for CVs
-        in the CV editing pane.
+    """Provides a view of the 'deltas' section of a CV and
+    implements a model to work with the QTableView for CVs
+    in the CV editing pane.
 
     """
 
@@ -3912,7 +3912,7 @@ class ygCVDeltas(QAbstractTableModel):
             return True
         return False
 
-    def insertRows(self, row, count, parent = QModelIndex()):
+    def insertRows(self, row, count, parent=QModelIndex()):
         """Actually just appends a new row to the existing structure. We never
         insert multiple rows, and we always append rather than insert.
 
@@ -3924,9 +3924,9 @@ class ygCVDeltas(QAbstractTableModel):
     def new_row(self):
         self.insertRows(0, 0)
 
-    def deleteRows(self, row, count, parent = QModelIndex()) -> bool:
+    def deleteRows(self, row, count, parent=QModelIndex()) -> bool:
         c = self.cvt.get_cv(self.name)
-        if "deltas" in c and row < len(c["deltas"]): # type: ignore
+        if "deltas" in c and row < len(c["deltas"]):  # type: ignore
             self.cvt.yg_font.undo_stack.push(
                 deleteCVDeltaCommand(self.cvt.yg_font, self, c, row)
             )
@@ -4155,9 +4155,7 @@ class ygMacros(ygSourceable):
             self.font.source["macros"][kk] = c[kk]
 
     def save(self, c: dict) -> None:
-        self.font.undo_stack.push(
-            saveEditBoxCommand(self.font, self, c, "Edit Macros")
-        )
+        self.font.undo_stack.push(saveEditBoxCommand(self.font, self, c, "Edit Macros"))
         # self._save(c)
         self.set_clean(True)
 
@@ -4272,7 +4270,7 @@ class ygPointNames(ygSourceable):
     def get(self, n: str) -> Any:
         if self.has_name(n):
             return self.yg_glyph.gsource["names"][n]
-        
+
     def get_named_sets(self) -> List:
         """Returns a list of tuples (name,ygSet). Empty list if none found."""
         result = []
@@ -4280,7 +4278,7 @@ class ygPointNames(ygSourceable):
             namedict = self.yg_glyph.gsource["names"]
             k = namedict.keys()
             for kk in k:
-                if type(namedict[kk]) is list: # ***
+                if type(namedict[kk]) is list:  # ***
                     result.append((kk, ygSet(namedict[kk])))
         return result
 

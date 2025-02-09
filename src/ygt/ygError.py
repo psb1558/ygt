@@ -1,6 +1,8 @@
 from typing import Any, Optional
+
 # from collections import deque
 from PyQt6.QtWidgets import QPlainTextEdit
+
 # from PyQt6.QtCore import Qt, QSize, QThread, pyqtSlot, pyqtSignal, QObject, QEvent
 
 

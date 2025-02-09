@@ -6,7 +6,7 @@ import yaml
 import re
 from yaml import Dumper
 import copy
-from schema import SchemaError # type: ignore
+from schema import SchemaError  # type: ignore
 from .ygSchema import is_valid, set_error_message, error_message, have_error_message
 from .ygModel import ygSourceable
 from .ygPreferences import ygPreferences
@@ -39,12 +39,10 @@ class ygYAMLEditor(QPlainTextEdit):
     sig_status = pyqtSignal(object)
     sig_error = pyqtSignal(object)
 
-    def __init__(self, preferences, parent = None) -> None:
+    def __init__(self, preferences, parent=None) -> None:
         super().__init__()
         self.setAttribute(Qt.WidgetAttribute.WA_AcceptTouchEvents, False)
-        self.setStyleSheet(
-            "ygYAMLEditor {font-family: Source Code Pro, monospace; }"
-        )
+        self.setStyleSheet("ygYAMLEditor {font-family: Source Code Pro, monospace; }")
         # ; background-color: white
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.preferences = preferences
@@ -194,12 +192,12 @@ class editorPane(QPlainTextEdit):
     sig_error = pyqtSignal(object)
 
     def __init__(
-            self,
-            owner: "editorDialog",
-            sourceable: ygSourceable,
-            validator: Callable,
-            save_on_focus_out: bool = False
-        ) -> None:
+        self,
+        owner: "editorDialog",
+        sourceable: ygSourceable,
+        validator: Callable,
+        save_on_focus_out: bool = False,
+    ) -> None:
         super().__init__()
         self.save_on_focus_out = save_on_focus_out
         self.owner = owner
@@ -305,13 +303,13 @@ class editorPane(QPlainTextEdit):
 
 class editorDialog(QDialog):
     def __init__(
-            self,
-            preferences: ygPreferences,
-            sourceable: ygSourceable,
-            title: str,
-            validator: Callable,
-            top_structure: str = "dict"
-        ) -> None:
+        self,
+        preferences: ygPreferences,
+        sourceable: ygSourceable,
+        title: str,
+        validator: Callable,
+        top_structure: str = "dict",
+    ) -> None:
         super().__init__()
         self.title = title
         self.set_dialog_title(True)
@@ -364,7 +362,7 @@ class editorDialog(QDialog):
 
 
 class ygGlyphHighlighter(QSyntaxHighlighter):
-    def __init__(self, parent = None) -> None:
+    def __init__(self, parent=None) -> None:
         QSyntaxHighlighter.__init__(self, parent)
         self._mappings: dict = {}
 
@@ -380,8 +378,9 @@ class ygGlyphHighlighter(QSyntaxHighlighter):
                 end = match.end()
                 self.setFormat(start, end - start, format)
 
+
 class ygDeleteGlyphProgramsDialog(QDialog):
-    def __init__(self, parent = None) -> None:
+    def __init__(self, parent=None) -> None:
         super().__init__()
         self.result = ""
         self.ed_pane = QPlainTextEdit()

@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QLabel,
 )
+
 # from .ygHintEditor import ygHintView
 
 
@@ -79,7 +80,7 @@ class macfuncDialog(QDialog):
                     # self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
                     self.widgets[-1].itemAt(1).widget().setValidator(QIntValidator())
                     if default_value:
-                        self.widgets[-1].itemAt(1).widget().setText(str(default_value)) # type: ignore
+                        self.widgets[-1].itemAt(1).widget().setText(str(default_value))  # type: ignore
                 elif self.yg_callable[kk]["type"] == "float":
                     self.widgets.append(QHBoxLayout())
                     self.widgets[-1].addWidget(QLabel(kk))
@@ -93,7 +94,7 @@ class macfuncDialog(QDialog):
                     # self.widgets[-1].itemAt(1).widget().setInputMask("####") # type: ignore
                     self.widgets[-1].itemAt(1).widget().setValidator(QDoubleValidator())
                     if default_value:
-                        self.widgets[-1].itemAt(1).widget().setText(str(default_value)) # type: ignore
+                        self.widgets[-1].itemAt(1).widget().setText(str(default_value))  # type: ignore
                 else:
                     pass
         for w in self.widgets:
@@ -104,9 +105,9 @@ class macfuncDialog(QDialog):
     def accept(self) -> None:
         self.result_dict = {"nm": self.yg_hint.macfunc_name}
         for w in self.widgets:
-            if w.itemAt(1).widget().text() != "None": # type: ignore
-                self.result_dict[w.itemAt(0).widget().text()] = ( # type: ignore
-                    w.itemAt(1).widget().text() # type: ignore
+            if w.itemAt(1).widget().text() != "None":  # type: ignore
+                self.result_dict[w.itemAt(0).widget().text()] = (  # type: ignore
+                    w.itemAt(1).widget().text()  # type: ignore
                 )
         # So param_list is the answer from this dialog. Don't plug it into the
         # hint here, but rather in a QUndoCommand.
