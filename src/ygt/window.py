@@ -1604,12 +1604,6 @@ class MainWindow(QMainWindow):
         def selected_sets():
             return selprof[SELPROFILE_SELECTED_SETS]
 
-        # def untouched_sets():
-        #    return selprof[SELPROFILE_UNTOUCHED_SETS]
-
-        # def touched_sets():
-        #    return selprof[SELPROFILE_TOUCHED_SETS]
-
         def in_hint_types(h):
             return h in selprof[SELPROFILE_HINT_TYPES]
 
@@ -1625,16 +1619,25 @@ class MainWindow(QMainWindow):
         self.align_action.setEnabled(False)
         self.interpolate_action.setEnabled(False)
 
+        # print("selected hints:", selected_hints())
+        # print("selected points:", selected_points())
+        # print("selected sets:", selected_sets())
+        # print("untouched points", untouched_points())
+        # print("touched points", touched_points())
+        # print("hint types:", selprof[SELPROFILE_HINT_TYPES])
+        # print("in hint type 0:", in_hint_types(0))
+
         # fix up make cv button
-        if selected_points() in [1, 2] and selected_sets == 0:
+        if selected_points() in [1, 2] and selected_sets() == 0:
             self.make_cv_action.setEnabled(True)
 
         # if one hint of the appropriate type is selected.
         if (
-            selected_hints == 1
-            and in_hint_types(0)
-            or in_hint_types(3)
-            and selected_points == 0
+            selected_hints() == 1
+            and selprof[SELPROFILE_HINT_TYPES][0] in [0,3]
+            #and (in_hint_types(0)
+            #or in_hint_types(3))
+            and selected_points() == 0
         ):
             self.make_cv_guess_action.setEnabled(True)
 
@@ -1978,6 +1981,12 @@ class MainWindow(QMainWindow):
                 self.del_from_win_list(self)
                 event.accept()
 
+    def changeEvent(self, event):
+        """This can be used to automatically change theme when
+        user switches to or from Dark Theme. Not hooked up
+        right now."""
+        pass
+    
     # Could be property
     def all_clean(self) -> bool:
         for w in self.win_list:
@@ -2066,7 +2075,7 @@ class mainWinEventFilter(QObject):
 def main():
     # import uharfbuzz
     # from inspect import getfullargspec, signature
-    # print(dir(QApplication.instance))
+    # print(dir(QMainWindow))
     # print(dir(QPainter))
     # print(dir(hb._harfbuzz.hb_font_set_var_named_instance))
     # print(dir(hb._harfbuzz.Buffer))
