@@ -14,7 +14,8 @@ from .ygPreferences import ygPreferences
 
 # From https://stackoverflow.com/questions/8640959/
 # how-can-i-control-what-scalar-form-pyyaml-uses-for-my-data
-# Presumed public domain, since it was posted in a public forum.
+# Presumed public domain, since it was posted in a public forum
+# in answer to a query.
 def str_presenter(dumper, data):
     if len(data.splitlines()) > 1:  # check for multiline string
         return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
@@ -171,7 +172,7 @@ class ygYAMLEditor(QPlainTextEdit):
 
 class editorPane(QPlainTextEdit):
     """An editor for any chunk of code from current file, e.g. functions.
-    This validates as the user types, but it only emits an error two
+    This validates as the user types, but it only emits an error five
     seconds after user has stopped typing. This cuts back on unnecessary
     messages when (for example) a user is typing "true"--which is not
     valid until the word is complete.
@@ -275,7 +276,7 @@ class editorPane(QPlainTextEdit):
             self.set_error_state(not v)
             self.owner.set_dialog_title(True)
         else:
-            self._timer.start(2000)
+            self._timer.start(5000)
             self.owner.set_dialog_title(False)
         self.dirty = True
 

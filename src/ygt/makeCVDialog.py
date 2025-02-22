@@ -15,8 +15,9 @@ from PyQt6.QtWidgets import (
     QTableView,
     QCheckBox,
     QListWidgetItem,
+    QAbstractItemView,
 )
-from PyQt6.QtCore import Qt, pyqtSlot, QEvent
+from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QIntValidator, QDoubleValidator
 from .ygModel import (
     unicode_cat_names,
@@ -120,6 +121,7 @@ class cvEditPane(QWidget, cvSource):
         self.button_layout = QHBoxLayout()
 
         self.cv_list = QListWidget()
+        self.cv_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.cv_list.addItems(self.sorted_cv_list)
         self.current_list_item = self.cv_list.item(0)
         self.cv_list.setCurrentItem(self.current_list_item)
@@ -239,13 +241,15 @@ class cvEditPane(QWidget, cvSource):
         except KeyError:
             return None
 
-    def set_in_current_cv(self, k: str, s: Any, fallback=Optional[str]) -> None:
-        if s == "None" or s == "" or s == None:
+    def set_in_current_cv(self, k: str, s: Any, fallback: Optional[str]=None) -> None:
+        if s in ["None", "none", "", None]:
             if fallback != None:
                 self._cvt.set_cv_property(self.current_cv_name(), k, fallback)
             else:
-                if k in self._current_cv:  # type: ignore
-                    self._cvt.del_cv(k)
+                try:
+                    self._cvt.del_cv_property(self.current_cv_name(), k)
+                except Exception:
+                    pass
         else:
             self._cvt.set_cv_property(self.current_cv_name(), k, s)
 
@@ -1146,7 +1150,8 @@ class makeCVDialog(QDialog, cvSource):
             pass
 
     def set_in_current_cv(self, k: str, s: Any, fallback=None) -> None:
-        if s == "None" or s == "" or s == None:
+        #if s == "None" or s == "" or s == None:
+        if s in ["None", "none", "", None]:
             if fallback != None:
                 self.cv[k] = fallback
             else:
@@ -1275,50 +1280,50 @@ class cvTypeWidget(QComboBox):
         self.setCurrentText(self.cv_source.from_current_cv("type"))
 
 
-class cvColorWidget(QComboBox):
-    """Widget for choosing a distance type.
+# class cvColorWidget(QComboBox):
+#     """Widget for choosing a distance type.
 
-    params:
+#     params:
 
-    cv_source (cvSource): Data for currently selected CV.
+#     cv_source (cvSource): Data for currently selected CV.
 
-    """
+#     """
 
-    def __init__(self, cv_source: cvSource) -> None:
-        super().__init__()
-        self.cv_source = cv_source
-        self.addItem("None")
-        self.addItem("black")
-        self.addItem("white")
-        self.addItem("gray")
-        col = self.cv_source.from_current_cv("col")
-        self.setCurrentText((lambda: "None" if not col else col)())
-        self.currentTextChanged.connect(self.text_changed)
-        self.last_val = self.currentText()
+#     def __init__(self, cv_source: cvSource) -> None:
+#         super().__init__()
+#         self.cv_source = cv_source
+#         self.addItem("None")
+#         self.addItem("black")
+#         self.addItem("white")
+#         self.addItem("gray")
+#         col = self.cv_source.from_current_cv("col")
+#         self.setCurrentText((lambda: "None" if not col else col)())
+#         self.currentTextChanged.connect(self.text_changed)
+#         self.last_val = self.currentText()
 
-    def _text(self) -> str:
-        return self.currentText()
+#     def _text(self) -> str:
+#         return self.currentText()
 
-    def fixup(self) -> None:
-        new_text = self.currentText()
-        if new_text != self.last_val:
-            if self.cv_source.current_cv():
-                if new_text != "None":
-                    self.cv_source.set_in_current_cv("col", new_text, None)
-                else:
-                    self.cv_source.del_key("col")
-            self.last_val = new_text
+#     def fixup(self) -> None:
+#         new_text = self.currentText()
+#         if new_text != self.last_val:
+#             if self.cv_source.current_cv():
+#                 if new_text != "None":
+#                     self.cv_source.set_in_current_cv("col", new_text, None)
+#                 else:
+#                     self.cv_source.del_key("col")
+#             self.last_val = new_text
 
-    @pyqtSlot()
-    def text_changed(self) -> None:
-        self.fixup()
+#     @pyqtSlot()
+#     def text_changed(self) -> None:
+#         self.fixup()
 
-    def refresh(self, cv_source: cvSource) -> None:
-        self.cv_source = cv_source
-        if self.cv_source.has_key("col"):
-            self.setCurrentText(self.cv_source.from_current_cv("col"))
-        else:
-            self.setCurrentText("None")
+#     def refresh(self, cv_source: cvSource) -> None:
+#         self.cv_source = cv_source
+#         if self.cv_source.has_key("col"):
+#             self.setCurrentText(self.cv_source.from_current_cv("col"))
+#         else:
+#             self.setCurrentText("None")
 
 
 class cvAxisWidget(QComboBox):
@@ -1420,6 +1425,10 @@ class cvSuffixWidget(QLineEdit):
 
     cv_source (cvSource): Data for currently selected CV.
 
+    NB The suffix widget has stopped working, and I have no idea why. There have
+    been very few changes to this dialog: mainly deletion of the color box. Why
+    would have make a difference?
+
     """
 
     def __init__(self, cv_source: cvSource) -> None:
@@ -1446,6 +1455,8 @@ class cvSuffixWidget(QLineEdit):
         if self.dirty:
             self.cv_source.set_in_current_cv("suffix", self._text(), None)
             self.set_clean()
+        else:
+            print("not dirty")
 
     @pyqtSlot()
     def text_changed(self) -> None:
@@ -1457,7 +1468,11 @@ class cvSuffixWidget(QLineEdit):
     def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         suff = self.cv_source.from_current_cv("suffix")
-        self.setText((lambda: "None" if not suff else suff)())
+        #self.setText((lambda: "None" if not suff else suff)())
+        if not suff:
+            self.setText("None")
+        else:
+            self.setText(suff)
         self.set_clean()
 
 
@@ -1602,6 +1617,7 @@ class cvValueWidget(QLineEdit):
         self.dirty = False
 
     def fixup(self) -> None:
+        # cvValueWidget.fixup:
         t = self._text()
         if t != self.last_val:
             try:

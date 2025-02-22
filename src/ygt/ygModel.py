@@ -1021,7 +1021,6 @@ class ygPoint:
         try:
             return int(self.index)
         except TypeError:
-            print("TypeError: " + str(self.index))
             return str(self.index)
 
     def set_preferred_name(self, n: str) -> None:
@@ -1675,7 +1674,6 @@ class updateSourceCommand(glyphEditCommand):
                 self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
                 self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
             except Exception as e:
-                print(e)
                 self.undo_state.restore()
                 self.valid = False
         self.redo_state = glyphSaver(self.yg_glyph)
@@ -2150,12 +2148,7 @@ class glyphSourceTester:
             if not self.yg_glyph.yg_font.glyphs.has_glyph(self.yg_glyph.gname):
                 # If this fails, the next will throw an exception.
                 print(
-                    "(from",
-                    self.caller,
-                    ") glyph name ",
-                    self.yg_glyph.gname,
-                    " not in source",
-                )
+                    "(from", self.caller, ") glyph name ", self.yg_glyph.gname," not in source",)
             if (
                 self.yg_glyph.gsource
                 != self.yg_glyph.yg_font.source["glyphs"][self.yg_glyph.gname]
@@ -3041,7 +3034,6 @@ class ygGlyph(QObject):
             try:
                 self.sig_hints_changed.disconnect(self.top_window.preview_current_glyph)
             except Exception as e:
-                # print(e)
                 pass
 
     def set_yaml_editor(self, ed: Any) -> None:

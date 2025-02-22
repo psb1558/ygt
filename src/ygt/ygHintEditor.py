@@ -724,6 +724,7 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
         hint_type: str,
         id: Any = None,
         parent=None,
+        line_dashed=False,
     ) -> None:
         # "axis" param not used. Get rid of it.
         super().__init__()
@@ -744,6 +745,7 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             self.id = uuid.uuid1()
         # parent setup not needed
         self.parent = parent
+        self.line_dashed = line_dashed
         self._center_point = QPointF(0, 0)
         self.setCursor(Qt.CursorShape.CrossCursor)
         begin_a = p1.attachment_point(p2.center_point)
@@ -886,6 +888,8 @@ class ygHintStem(QGraphicsPathItem, ygGraphicalHintComponent):
             pen.setColor(SELECTED_HINT_COLOR[hint_type])
         else:
             pen.setColor(HINT_COLOR[hint_type])
+        if self.line_dashed:
+            pen.setDashPattern([2, 2])
         # if hint_type == "whitedist":
         #     pen.setDashPattern([2, 2])
         # if hint_type == "graydist":
@@ -2461,7 +2465,8 @@ class ygGlyphScene(QGraphicsScene):
                 print("Warning: ref is None (target is " + str(target) + ")")
             ref = self.resolve_point_identifier(hint.ref)
             gref = self.yg_point_view_index[ref.id]
-            ha = ygHintStem(gref, gtarget, self.yg_glyph.axis, hint_type, parent=self)
+            dashed = hint_type_num == 3 and not hint.min_dist
+            ha = ygHintStem(gref, gtarget, self.yg_glyph.axis, hint_type, parent=self, line_dashed=dashed)
             hb = ygHintButton(self, ha.center_point(), hint)
             ah = ygArrowHead(
                 ha.endPoint(), ha.arrowhead_direction, hint_type, ha.id, parent=self
@@ -3209,7 +3214,6 @@ class ygGlyphView(QGraphicsView):
             self.yg_font.get_glyph_index(g, short_index=True)
             self.switch_to(g, caller="go_to_glyph")
         except Exception as e:
-            # print(e)
             self.yg_font.send_error_message(
                 {"msg": "Can't load requested glyph.", "mode": "dialog"}
             )
