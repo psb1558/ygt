@@ -36,9 +36,6 @@ hint_type_nums = {
     "shift": 1,
     "interpolate": 2,
     "stem": 3,
-    # "whitedist": 3,
-    # "blackdist": 3,
-    # "graydist": 3,
     "move": 3,
     "macro": 4,
     "function": 4,
@@ -386,7 +383,6 @@ class ygFont(QObject):
         if d and os.path.isdir(d) and d != os.getcwd():
             os.chdir(d)
 
-        # self.source = self.source_file.source
         self.font_files = FontFiles(self.source)
         fontfile = self.font_files.in_font
         if not fontfile:
@@ -406,7 +402,6 @@ class ygFont(QObject):
         split_fn = os.path.splitext(str(fontfile))
         extension = split_fn[1]
         ft_open_error = False
-        # self.freetype_font = None
         # Here we get *three* copies of the font in memory: one in FontTools format,
         # one FreeType, one Harfbuzz. Is there any way around this?
         if extension == ".ttf":
@@ -426,7 +421,6 @@ class ygFont(QObject):
                 self.ft_font.save(tf, 1)
                 self.freetype_font = freetypeFont(tf, keep_open=True)
                 self.harfbuzz_font = harfbuzzFont(tf, self.freetype_font)
-                # tf.close()
             except Exception as e:
                 print(e)
                 ft_open_error = True
@@ -843,16 +837,6 @@ class ygFont(QObject):
                 result.append(gn)
         result.extend(self.additional_component_names(result))
         return list(set(result))
-
-    # It appears that this never gets called. And if this doesn't get called,
-    # neither does glyphs.save().
-    # def save_glyph_source(self, source: dict, axis: str, gname: str) -> None:
-    #    """Save a y or x block to the in-memory source."""
-    #    self.glyphs.save(gname, axis, source)
-    #    #if not self.glyphs.has_glyph(gname):
-    #    #    # Treating self.glyphs like a dict here. But it's not! it's a ygGlyphs object.
-    #    #    self.glyphs[gname] = {}
-    #    #self.glyphs[gname][axis] = source
 
     def setup_signal(self, func) -> None:
         self.sig_cvt_changed.connect(func)
@@ -1322,8 +1306,6 @@ class setDefaultCommand(fontInfoEditCommand):
             self.cv_delta.dataChanged.emit(self.index, self.index)
         else:
             self.yg_defaults._set_default(self.d)
-            # for key, value in self.d.items():
-            #    self.yg_defaults.data[key] = value
         self.send_signal()
 
 
@@ -2021,7 +2003,6 @@ class deletePointsCommand(glyphEditCommand):
             self.hint._delete_points(self.p_list)
             self.redo_state = glyphSaver(self.yg_glyph)
         glyphSourceTester(self.yg_glyph, "deletePointsCommand").test()
-        # self.yg_glyph._hints_changed(self.yg_glyph.hints)
         self.send_signal()
 
 
@@ -2040,7 +2021,6 @@ class switchAxisCommand(QUndoCommand):
         self.top_window.current_axis = self.yg_glyph.axis = self.new_axis
         self.yg_glyph._yaml_add_parents(self.yg_glyph.current_block)
         self.yg_glyph._yaml_supply_refs(self.yg_glyph.current_block)
-        # self.yg_glyph._hints_changed(self.yg_glyph.hints, dirty=False)
         self.yg_glyph.sig_hints_changed.emit(self.yg_glyph.hints)
         self.yg_glyph.send_yaml_to_editor()
         self.top_window.set_window_title()
@@ -4298,27 +4278,3 @@ class ygHintSorter:
         for l in ll:
             result.append(l._source)
         return result
-
-
-# class ygPointSorter:
-#     """Will sort a list of points into left-to-right or up-to-down order,
-#     depending on the current axis.
-#     """
-
-#     def __init__(self, axis: str) -> None:
-#         self.axis = axis
-
-#     def _ptcoords(self, p: ygPoint) -> int:
-#         if type(p) is ygPoint:
-#             rx = p.font_x
-#             ry = p.font_y
-#         else:
-#             rx = p.boundingRect().x()
-#             ry = p.boundingRect().y()
-#         if self.axis == "y":
-#             return ry
-#         else:
-#             return rx
-
-#    def sort(self, pt_list: list) -> None:
-#        pt_list.sort(key=self._ptcoords)
