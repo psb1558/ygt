@@ -121,6 +121,7 @@ nested_point_struct = {
     Optional("dist"): str,
     Optional("pos"): str,
     Optional("round"): is_round_valid,
+    Optional("cut-in"): Or(int, float),
     # Optional("min"): bool,
     # "rel": Or(
     #     "stem", "blackdist", "whitedist", "graydist", "shift", "align", "interpolate"
@@ -139,6 +140,7 @@ point_struct = {
             Optional("dist"): str,
             Optional("pos"): str,
             Optional("round"): is_round_valid,
+            Optional("cut-in"): Or(int, float),
             Optional("min"): bool,
             Optional("function"): Or(str, dict),
             Optional("macro"): Or(str, dict),

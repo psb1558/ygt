@@ -228,11 +228,6 @@ def random_id(s):
 
 class SourceFile:
     """The yaml source read from and written to by this program.
-
-    To do: Source file may be read from and written to the data
-    directory of a UFO. As there can be only one instruction
-    file for a font, the filename should always be the same so
-    that you only need the pathname of the UFO to locate it.
     """
 
     def __init__(self, yaml_source: Union[dict, str], yaml_filename: str = "") -> None:
@@ -1006,6 +1001,9 @@ class ygPoint:
             return int(self.index)
         except TypeError:
             return str(self.index)
+        
+    def y_pos(self) -> int:
+        return self.font_y
 
     def set_preferred_name(self, n: str) -> None:
         self.preferred_name = n
@@ -4016,6 +4014,17 @@ class ygcvt(ygSourceable):
                 return abs(tgt.font_y - ref.font_y)
             else:
                 return abs(tgt.font_x - ref.font_x)
+            
+    def get_closest_cv_name_and_val(self, cvlist: list, val: int) -> tuple:
+        vlist = []
+        for c in cvlist:
+            vv = self.get_cv(c)
+            if type(vv) is dict:
+                vlist.append(vv["val"])
+            else:
+                vlist.append(vv)
+        cc = self._closest(vlist, val)
+        return (cvlist[vlist.index(cc)], cc)
 
     def get_closest_cv_name(self, cvlist: list, hint: ygHint) -> str:
         """cvlist is a list of cv names."""

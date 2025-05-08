@@ -17,7 +17,6 @@ from .ygModel import (
     ygGlyph,
     unicode_cat_names,
 )
-from .ygStems import stemFinder
 from PyQt6.QtCore import (
     Qt,
     QPoint,
@@ -38,8 +37,6 @@ from PyQt6.QtGui import (
     QPolygonF,
     QAction,
     QPainter,
-    QPalette,
-    QStyleHints,
     QGuiApplication,
 )
 from PyQt6.QtWidgets import (
@@ -60,11 +57,12 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QGraphicsProxyWidget,
     QStyleOptionGraphicsItem,
-    QHBoxLayout,
 )
 from fontTools.pens.basePen import BasePen  # type: ignore
 
 from .ygPreferences import ygPreferences
+
+from .ygStems import keyPointList
 
 
 HINT_ARROW_WIDTH = 3
@@ -3166,6 +3164,8 @@ class ygGlyphView(QGraphicsView):
             # new line:
             new_glyph.axis = self.preferences.top_window().current_axis
             self.yg_glyph_scene = ygGlyphScene(self.preferences, new_glyph, owner=self)
+        # For testing point sorting and grouping.
+        # keyPointList(new_glyph).all_segments()
         self.preferences.set_current_glyph(self.yg_font.full_name, gname)
         self.setScene(self.yg_glyph_scene)
         self.centerOn(self.yg_glyph_scene.center_x, self.sceneRect().center().y())

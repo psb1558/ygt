@@ -130,7 +130,7 @@ class ygYAMLEditor(QPlainTextEdit):
             self._timer.start(2000)
 
     def setup_editor(self) -> None:
-        tags = r"\b(ptid|ref|rel|macro|function|pos|dist|points|round|min)\:"
+        tags = r"\b(ptid|ref|rel|macro|function|pos|dist|points|round|cut-in|min)\:"
         twospace = r"(  |\- )"
         fourspace = r"(    |  \- )"
         sixspace = r"(      |    \- )"

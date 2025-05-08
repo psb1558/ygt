@@ -322,7 +322,6 @@ class fontInfoWindow(QWidget):
     def event(self, event) -> bool:
         if event.type() == event.Type.WindowActivate:
             self.undo_state_active()
-            # self.yg_font.undo_stack.setActive(True)
         return super().event(event)
 
 
@@ -483,12 +482,6 @@ class masterWidget(QWidget):
         for n in self.names:
             n.refresh(m)
 
-    # def event(self, event):
-    #    print(event)
-    #    print(event.type())
-    #    print(event.spontaneous())
-    #    return super().event(event)
-
 
 class cvDeltaWidget(QTableView):
     """A table for creating and editing CV Deltas.
@@ -566,7 +559,6 @@ class cvWidget(QWidget):
 
         self.general_tab_layout = QVBoxLayout()
         self.cv_type_widget = cvTypeWidget(self.cv_source)
-        # self.cv_color_widget = cvColorWidget(self.cv_source)
         self.cv_axis_widget = cvAxisWidget(self.cv_source)
         self.cv_val_widget = cvValueWidget(self.cv_source)
         self.cv_name_widget = cvNameWidget(self.cv_source, owner=self.owner)
@@ -598,10 +590,6 @@ class cvWidget(QWidget):
         self.gen_widgets.append(QHBoxLayout())
         self.gen_widgets[-1].addWidget(QLabel("suffix"))
         self.gen_widgets[-1].addWidget(self.cv_suffix_widget)
-
-        # self.gen_widgets.append(QHBoxLayout())
-        # self.gen_widgets[-1].addWidget(QLabel("distance type"))
-        # self.gen_widgets[-1].addWidget(self.cv_color_widget)
 
         # Set up link tab
 
@@ -705,7 +693,6 @@ class cvWidget(QWidget):
         self.cv_name_widget.refresh(self.cv_source)
         self.cv_type_widget.refresh(self.cv_source)
         self.cv_axis_widget.refresh(self.cv_source)
-        # self.cv_color_widget.refresh(self.cv_source)
         self.cv_val_widget.refresh(self.cv_source)
         self.cv_cat_widget.refresh(self.cv_source)
         self.cv_suffix_widget.refresh(self.cv_source)
@@ -721,7 +708,6 @@ class cvWidget(QWidget):
         self.cv_name_widget.fixup()
         self.cv_type_widget.fixup()
         self.cv_axis_widget.fixup()
-        # self.cv_color_widget.fixup()
         self.cv_val_widget.fixup()
         self.cv_cat_widget.fixup()
         self.cv_suffix_widget.fixup()
@@ -732,10 +718,6 @@ class cvWidget(QWidget):
         if self.masters:
             for w in self.var_widgets:
                 w.fixup()
-
-    # def event(self, event):
-    #    print(event)
-    #    return super().event(event)
 
 
 class defaultsPane(QWidget):
@@ -791,21 +773,6 @@ class hintRoundWidget(QWidget):
         self.stem_layout.addWidget(self.stem_checkbox)
         self.layout_obj.addLayout(self.stem_layout)
 
-        # self.blackdist_layout = QHBoxLayout()
-        # self.blackdist_checkbox = QCheckBox("Black distance")
-        # self.blackdist_layout.addWidget(self.blackdist_checkbox)
-        # self.layout_obj.addLayout(self.blackdist_layout)
-
-        # self.whitedist_layout = QHBoxLayout()
-        # self.whitedist_checkbox = QCheckBox("White distance")
-        # self.whitedist_layout.addWidget(self.whitedist_checkbox)
-        # self.layout_obj.addLayout(self.whitedist_layout)
-
-        # self.graydist_layout = QHBoxLayout()
-        # self.graydist_checkbox = QCheckBox("Gray distance")
-        # self.graydist_layout.addWidget(self.graydist_checkbox)
-        # self.layout_obj.addLayout(self.graydist_layout)
-
         self.shift_layout = QHBoxLayout()
         self.shift_checkbox = QCheckBox("Shift")
         self.shift_layout.addWidget(self.shift_checkbox)
@@ -825,9 +792,6 @@ class hintRoundWidget(QWidget):
 
         self.anchor_checkbox.stateChanged.connect(self.button_state_changed)
         self.stem_checkbox.stateChanged.connect(self.button_state_changed)
-        # self.blackdist_checkbox.stateChanged.connect(self.button_state_changed)
-        # self.whitedist_checkbox.stateChanged.connect(self.button_state_changed)
-        # self.graydist_checkbox.stateChanged.connect(self.button_state_changed)
         self.shift_checkbox.stateChanged.connect(self.button_state_changed)
         self.align_checkbox.stateChanged.connect(self.button_state_changed)
         self.interpolate_checkbox.stateChanged.connect(self.button_state_changed)
@@ -841,9 +805,6 @@ class hintRoundWidget(QWidget):
         r = {}
         r["anchor"] = self.anchor_checkbox.isChecked()
         r["stem"] = self.stem_checkbox.isChecked()
-        # r["blackdist"] = self.blackdist_checkbox.isChecked()
-        # r["whitedist"] = self.whitedist_checkbox.isChecked()
-        # r["graydist"] = self.graydist_checkbox.isChecked()
         r["shift"] = self.shift_checkbox.isChecked()
         r["align"] = self.align_checkbox.isChecked()
         r["interpolate"] = self.interpolate_checkbox.isChecked()
@@ -856,9 +817,6 @@ class hintRoundWidget(QWidget):
         self.ignore_signal = True
         self.anchor_checkbox.setChecked(self.defaults.rounding_state("anchor"))
         self.stem_checkbox.setChecked(self.defaults.rounding_state("stem"))
-        # self.blackdist_checkbox.setChecked(self.defaults.rounding_state("blackdist"))
-        # self.whitedist_checkbox.setChecked(self.defaults.rounding_state("whitedist"))
-        # self.graydist_checkbox.setChecked(self.defaults.rounding_state("graydist"))
         self.shift_checkbox.setChecked(self.defaults.rounding_state("shift"))
         self.align_checkbox.setChecked(self.defaults.rounding_state("align"))
         self.interpolate_checkbox.setChecked(
@@ -905,15 +863,16 @@ class miscDefaultsWidget(QWidget):
         self.assume_always_y.stateChanged.connect(self.toggle_assume_always_y)
 
         self.counterclockwise = QCheckBox("Outer contours counter-clockwise")
-        s = "<span>When</span> outer contours are counter-clockwise, Ygt will guess distance types "
-        s += "wrongly. Check this box and it will guess correctly. You should also "
-        s += "select View→Point coordinates since contours will probably be reversed "
+        s = "<span>When</span> outer contours are counter-clockwise, Ygt may make mistaken "
+        s += "guesses. Check this box and it will guess correctly. You should also "
+        s += "select \"On-curve labels as coordinates\" from the context menu "
+        s += "since contours will probably be reversed "
         s += "when you generate the font, throwing off the point indices."
         self.counterclockwise.setToolTip(s)
         self.counterclockwise.stateChanged.connect(self.toggle_counterclockwise)
 
         self.cleartype = QCheckBox("Cleartype")
-        s = "<span>If</span> this box is checked, MS Windows will render your font"
+        s = "<span>If</span> this box is checked, MS Windows will render your font "
         s += "in native ClearType mode."
         self.cleartype.setToolTip(s)
         self.cleartype.stateChanged.connect(self.toggle_cleartype)
@@ -1150,15 +1109,12 @@ class makeCVDialog(QDialog, cvSource):
             pass
 
     def set_in_current_cv(self, k: str, s: Any, fallback=None) -> None:
-        #if s == "None" or s == "" or s == None:
         if s in ["None", "none", "", None]:
             if fallback != None:
                 self.cv[k] = fallback
             else:
                 if k in self.cv:
                     del self.cv[k]
-                # if k in self._current_cv:
-                #    del self._current_cv[k]
         else:
             self.cv[k] = s
 
@@ -1220,11 +1176,6 @@ class cvNameWidget(QLineEdit):
     def fixup(self) -> None:
         t = self._text()
         if self.isEnabled() and self.dirty and t != self.last_val:
-            # If the cv name changes, the original cv in the source tree
-            # has to be deleted and a new cv entered under the new name.
-            # We can either do that (at some risk of bugginess) or disable
-            # the cv name widget when the cv is being edited (as opposed
-            # to created).
             old_name = self.cv_source.current_cv_name()
             self.cv_source.set_cv_name(t)
             if self.owner != None:
@@ -1278,52 +1229,6 @@ class cvTypeWidget(QComboBox):
     def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         self.setCurrentText(self.cv_source.from_current_cv("type"))
-
-
-# class cvColorWidget(QComboBox):
-#     """Widget for choosing a distance type.
-
-#     params:
-
-#     cv_source (cvSource): Data for currently selected CV.
-
-#     """
-
-#     def __init__(self, cv_source: cvSource) -> None:
-#         super().__init__()
-#         self.cv_source = cv_source
-#         self.addItem("None")
-#         self.addItem("black")
-#         self.addItem("white")
-#         self.addItem("gray")
-#         col = self.cv_source.from_current_cv("col")
-#         self.setCurrentText((lambda: "None" if not col else col)())
-#         self.currentTextChanged.connect(self.text_changed)
-#         self.last_val = self.currentText()
-
-#     def _text(self) -> str:
-#         return self.currentText()
-
-#     def fixup(self) -> None:
-#         new_text = self.currentText()
-#         if new_text != self.last_val:
-#             if self.cv_source.current_cv():
-#                 if new_text != "None":
-#                     self.cv_source.set_in_current_cv("col", new_text, None)
-#                 else:
-#                     self.cv_source.del_key("col")
-#             self.last_val = new_text
-
-#     @pyqtSlot()
-#     def text_changed(self) -> None:
-#         self.fixup()
-
-#     def refresh(self, cv_source: cvSource) -> None:
-#         self.cv_source = cv_source
-#         if self.cv_source.has_key("col"):
-#             self.setCurrentText(self.cv_source.from_current_cv("col"))
-#         else:
-#             self.setCurrentText("None")
 
 
 class cvAxisWidget(QComboBox):
@@ -1455,8 +1360,6 @@ class cvSuffixWidget(QLineEdit):
         if self.dirty:
             self.cv_source.set_in_current_cv("suffix", self._text(), None)
             self.set_clean()
-        else:
-            print("not dirty")
 
     @pyqtSlot()
     def text_changed(self) -> None:
@@ -1468,7 +1371,6 @@ class cvSuffixWidget(QLineEdit):
     def refresh(self, cv_source: cvSource) -> None:
         self.cv_source = cv_source
         suff = self.cv_source.from_current_cv("suffix")
-        #self.setText((lambda: "None" if not suff else suff)())
         if not suff:
             self.setText("None")
         else:

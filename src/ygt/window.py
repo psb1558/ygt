@@ -14,8 +14,7 @@ from .ygHintEditor import (
     SELPROFILE_TOUCHED_POINTS,
     SELPROFILE_SELECTED_SETS,
     SELPROFILE_UNTOUCHED_POINTS,
-    SELPROFILE_UNUSED,
-    SELPROFILE_OWNER_TYPES,
+    # SELPROFILE_OWNER_TYPES,
     SELPROFILE_HINT_TYPES,
     SELPROFILE_SELECTED_HINTS,
 )
@@ -42,17 +41,13 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QMessageBox,
     QInputDialog,
-    QLineEdit,
     QFileDialog,
     QDialog,
-    QScrollArea,
     QSizePolicy,
     QGraphicsView,
     QLabel,
     QProgressBar,
-    QVBoxLayout,
     QMenu,
-    QAbstractItemView,
 )
 from PyQt6.QtGui import (
     QKeySequence,
@@ -64,8 +59,6 @@ from PyQt6.QtGui import (
     QCloseEvent,
     QAction,
     QFontDatabase,
-    QStyleHints,
-    QGuiApplication,
 )
 from fontTools import ttLib, ufoLib  # type: ignore
 from .harfbuzzFont import harfbuzzFont, hbFeatureDialog
@@ -665,6 +658,13 @@ class MainWindow(QMainWindow):
         )
         self.anchor_action.setEnabled(False)
 
+        self.name_points_action = self.toolbar.addAction("Name Points (N)")
+        self.name_points_action.setIcon(
+            QIcon(QPixmap(os.path.join(self.icon_path, "name_point.png")))
+        )
+        self.name_points_action.setShortcut(QKeySequence(Qt.Key.Key_N))
+        self.name_points_action.setEnabled(False)
+
         self.make_cv_guess_action = self.toolbar.addAction("Guess Control Value (?)")
         self.make_cv_guess_action.setIcon(
             QIcon(QPixmap(os.path.join(self.icon_path, "cv_guess.png")))
@@ -859,7 +859,6 @@ class MainWindow(QMainWindow):
     def toggle_set_view(self) -> None:
         self.preferences.set_set_view(not self.showing_named_sets)
         self.glyph_pane.yg_glyph_scene.set_set_view(self.showing_named_sets)
-        # self.glyph_pane.yg_glyph_scene.update()
 
     @property
     def showing_named_sets(self) -> bool:
@@ -1036,6 +1035,7 @@ class MainWindow(QMainWindow):
         self.shift_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.align_action.triggered.connect(self.glyph_pane.make_hint_from_selection)
         self.make_cv_action.triggered.connect(self.glyph_pane.make_control_value)
+        self.name_points_action.triggered.connect(self.glyph_pane.name_points)
         self.make_cv_guess_action.triggered.connect(self.glyph_pane.guess_cv)
         self.vertical_action.toggled.connect(self.glyph_pane.switch_to_y)
         self.horizontal_action.toggled.connect(self.glyph_pane.switch_to_x)
@@ -1614,6 +1614,7 @@ class MainWindow(QMainWindow):
         # First turn off all buttons.
         self.make_cv_action.setEnabled(False)
         self.make_cv_guess_action.setEnabled(False)
+        self.name_points_action.setEnabled(False)
         self.anchor_action.setEnabled(False)
         self.stem_action.setEnabled(False)
         self.shift_action.setEnabled(False)
@@ -1631,6 +1632,9 @@ class MainWindow(QMainWindow):
         # fix up make cv button
         if selected_points() in [1, 2] and selected_sets() == 0:
             self.make_cv_action.setEnabled(True)
+
+        if selected_points() > 0 and selected_sets() == 0 and selected_hints() == 0:
+            self.name_points_action.setEnabled(True)
 
         # if one hint of the appropriate type is selected.
         if (
