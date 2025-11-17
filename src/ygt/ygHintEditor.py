@@ -62,7 +62,7 @@ from fontTools.pens.basePen import BasePen  # type: ignore
 
 from .ygPreferences import ygPreferences
 
-from .ygStems import keyPointList
+#from .ygStems import keyPointList
 
 
 HINT_ARROW_WIDTH = 3
